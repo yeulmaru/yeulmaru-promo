@@ -88,6 +88,7 @@ button{font-family:inherit;cursor:pointer}
 .c.past{background:var(--past-bg)}
 .c.today{background:var(--today-bg)}
 .c.sel{box-shadow:inset 0 0 0 2px var(--accent);background:rgba(74,77,231,0.04)}
+.perf-tag{font-size:9px;font-weight:600;color:var(--accent);background:var(--accent-light);padding:1px 6px;border-radius:6px;margin-left:4px;white-space:nowrap;letter-spacing:0.3px}
 .dn{font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text)}
 .dn.nm{color:rgba(0,0,0,0.1)}
 .dn.past{color:rgba(0,0,0,0.15)}
@@ -245,6 +246,35 @@ const MENUS=[
   {label:'\uC5F0\uAC04 \uC77C\uC815',id:'annual'},
   {label:'\uC124\uC815',id:'settings'},
 ];
+
+const PERFS=[
+{s:'2026-01-09',e:'2026-01-09',n:'신년음악회'},
+{s:'2026-01-24',e:'2026-01-25',n:'다웃파이어'},
+{s:'2026-04-09',e:'2026-04-09',n:'브런치 Ⅰ'},
+{s:'2026-04-16',e:'2026-04-19',n:'실내악'},
+{s:'2026-05-07',e:'2026-05-07',n:'김영욱'},
+{s:'2026-05-14',e:'2026-05-16',n:'백층집'},
+{s:'2026-05-23',e:'2026-05-23',n:'편한음악'},
+{s:'2026-05-30',e:'2026-05-30',n:'국심오케'},
+{s:'2026-06-04',e:'2026-06-04',n:'브런치 Ⅱ'},
+{s:'2026-06-13',e:'2026-06-13',n:'노인의 꿈'},
+{s:'2026-06-19',e:'2026-06-20',n:'헬로!오페라'},
+{s:'2026-09-03',e:'2026-09-03',n:'브런치 Ⅲ'},
+{s:'2026-09-10',e:'2026-09-10',n:'섬 박람회'},
+{s:'2026-09-12',e:'2026-09-12',n:'조재혁'},
+{s:'2026-09-18',e:'2026-09-20',n:'그날들'},
+{s:'2026-10-01',e:'2026-10-03',n:'달샤베트'},
+{s:'2026-10-09',e:'2026-10-10',n:'춘자씨'},
+{s:'2026-10-14',e:'2026-10-14',n:'트리플 빌'},
+{s:'2026-10-27',e:'2026-10-27',n:'피아노×2'},
+{s:'2026-11-06',e:'2026-11-07',n:'그때도 오늘'},
+{s:'2026-11-20',e:'2026-11-21',n:'헬로!오페라'},
+{s:'2026-11-26',e:'2026-11-28',n:'러커스'},
+{s:'2026-12-03',e:'2026-12-03',n:'브런치 Ⅳ'},
+{s:'2026-12-15',e:'2026-12-20',n:'쉬어매드'},
+{s:'2026-12-24',e:'2026-12-25',n:'성탄 발레'},
+];
+function getPerf(d){const k=dk(d);return PERFS.find(p=>k>=p.s&&k<=p.e);}
 let password='',records=[],currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth()+1;
 let selected=null,editing=null,panelOpen=false;
 
@@ -335,7 +365,8 @@ function renderCal(){
       if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
       h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}" data-cell data-key="${key}" onclick="clickDate('${key}')" style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
-      h+=`<div class="${dnCls}">${td&&!nm?`<span class="today-badge">${d.getDate()}</span>`:d.getDate()}</div>`;
+      const perf=nm?null:getPerf(d);
+      h+=`<div class="${dnCls}">${td&&!nm?`<span class="today-badge">${d.getDate()}</span>`:d.getDate()}${perf&&!nm?`<span class="perf-tag">${perf.n}</span>`:''}</div>`;
       recs.slice(0,3).forEach(r=>{
         const p=r['\uD50C\uB7AB\uD3FC 1']||'',col=platColor(p),title=r['\uCF58\uD150\uCE20 \uC81C\uBAA9']||'',pastCls=past?'past':'future',timeCol=past?'var(--past-text)':col;
         h+=`<div class="ev"><span class="ev-time" style="color:${timeCol}">${''}</span><span class="ev-plat" style="color:${timeCol}">${platShort(p)}</span><span class="ev-title ${pastCls}">${title}</span></div>`;
