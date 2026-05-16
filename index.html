@@ -279,9 +279,9 @@ function getDdayText(dd){if(dd>0)return'D-'+dd;if(dd===0)return'D-Day';return'D+
 function renderPerfHtml(perf,td,past){
 if(!perf)return'';
 var n=perf.n,dd=perf.dday;
-if(past)return'<span style="background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.22);padding:2px 7px;border-radius:6px;margin-left:6px;font-size:9px;font-weight:500">'+n+'</span>';
-if(td)return'<span style="background:rgba(255,255,255,0.85);color:#111;padding:2px 7px;border-radius:6px;margin-left:6px;font-size:9px;font-weight:700">'+n+'</span>'+(dd!==null?'<span style="margin-left:8px;font-size:9px;color:#111">'+getDdayText(dd)+'</span>':'');
-return'<span style="background:var(--accent);color:#fff;padding:2px 7px;border-radius:6px;margin-left:6px;font-size:9px;font-weight:600">'+n+'</span><span style="font-size:9px;font-weight:700;color:var(--text);margin-left:4px">'+n+'</span>'+(dd!==null?'<span style="margin-left:8px;font-size:9px;color:var(--dim)">'+getDdayText(dd)+'</span>':'');
+if(past)return'<span style="background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.22);padding:2px 7px;border-radius:6px;margin-left:6px;font-size:9px">\uACF5\uC5F0</span><span style="margin-left:4px;font-size:9px;color:rgba(0,0,0,0.18)">'+n+'</span>';
+if(td)return'<span style="background:rgba(255,255,255,0.85);color:#111;padding:2px 7px;border-radius:6px;margin-left:6px;font-size:9px;font-weight:600">\uACF5\uC5F0</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:#111">'+n+'</span>'+(dd!==null?'<span style="margin-left:10px;font-size:9px;color:#111">'+getDdayText(dd)+'</span>':'');
+return'<span style="background:var(--accent);color:#fff;padding:2px 7px;border-radius:6px;margin-left:6px;font-size:9px;font-weight:600">\uACF5\uC5F0</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:var(--text)">'+n+'</span>'+(dd!==null?'<span style="margin-left:10px;font-size:9px;color:var(--dim)">'+getDdayText(dd)+'</span>':'');
 }
 let password='',records=[],currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth()+1;
 let selected=null,editing=null,panelOpen=false;
@@ -340,12 +340,11 @@ function _typeLoop(elId,text,speed){
   function tick(){
     if(_typingId!==myId)return;
     el=document.getElementById(elId);if(!el)return;
-    if(pause>0){pause--;requestAnimationFrame(tick);return;}
-    if(i<=text.length){el.textContent=text.slice(0,i);i++;}
-    else{pause=40;i=0;}
-    setTimeout(tick,speed);
+    if(pause>0){pause--;setTimeout(tick,16);return;}
+    if(i<=text.length){el.textContent=text.slice(0,i);i++;setTimeout(tick,speed);}
+    else{pause=30;i=0;setTimeout(tick,16);}
   }
-  tick();
+  setTimeout(tick,100);
 }
 async function loadData(){
   var cal=document.getElementById('cal');
