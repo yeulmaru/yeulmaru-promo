@@ -275,7 +275,7 @@ const PERFS=[
 {s:'2026-12-03',e:'2026-12-03',n:'브런치 Ⅳ',f:'브런치 콘서트 Ⅳ',t:'c'},
 {s:'2026-12-15',e:'2026-12-20',n:'쉬어매드',f:'쉬어매드니스',t:'c'},
 {s:'2026-12-24',e:'2026-12-25',n:'성탄 발레',f:'호두까기인형',t:'c'},
-
+];
 function getPerfs(d){var k=dk(d),now=new Date();now.setHours(0,0,0,0);return PERFS.filter(function(p){return k>=p.s&&k<=p.e}).map(function(p){var sd=new Date(p.s);sd.setHours(0,0,0,0);var ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});var diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});});}
 function getDdayText(dd){if(dd>0)return'D-'+dd;if(dd===0)return'D-Day';return'D+'+Math.abs(dd);}
 function renderPerfsHtml(perfs,td,past){
