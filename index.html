@@ -285,10 +285,11 @@ return exh.map(function(x){var active=k>=x.s&&k<=x.e&&new Date(x.e)>=now;return{
 function renderExhibitBadge(d,nm){
 if(nm)return'';
 var st=getExhibitStatus(d);
-var h='<div style="position:absolute;bottom:5px;left:8px;right:8px;display:flex;flex-direction:column;gap:2px">';
-st.forEach(function(x){
-h+='<div style="height:1px;border-radius:1px;background:'+(x.on?'#F0C4B8':'rgba(0,0,0,0.05)')+'"></div>';
-});
+var colors=['#006B3C','#E84393'];
+var h='<div style="position:absolute;bottom:8px;left:0;right:0;display:flex;flex-direction:column;gap:3px;padding:0">';
+for(var i=0;i<st.length;i++){
+h+='<div style="height:1.5px;background:'+(st[i].on?colors[i]:'rgba(0,0,0,0.04)')+'"></div>';
+}
 return h+'</div>';
 }
 function getDdayText(dd){if(dd>0)return'D-'+dd;if(dd===0)return'D-Day';return'D+'+Math.abs(dd);}
