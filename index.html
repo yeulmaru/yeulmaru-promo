@@ -285,10 +285,9 @@ return exh.map(function(x){var active=k>=x.s&&k<=x.e&&new Date(x.e)>=now;return{
 function renderExhibitBadge(d,nm){
 if(nm)return'';
 var st=getExhibitStatus(d);
-var h='<div style="position:absolute;bottom:6px;right:6px;display:flex;flex-direction:column;gap:2px;align-items:flex-end">';
+var h='<div style="position:absolute;bottom:5px;left:8px;right:8px;display:flex;flex-direction:column;gap:2px">';
 st.forEach(function(x){
-if(x.on)h+='<span style="font-size:7px;padding:2px 6px;border-radius:4px;background:#F0C4B8;color:#333;font-weight:600;letter-spacing:0.3px">'+x.id+'</span>';
-else h+='<span style="font-size:7px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.15);font-weight:500;letter-spacing:0.3px">'+x.id+'</span>';
+h+='<div style="height:1px;border-radius:1px;background:'+(x.on?'#F0C4B8':'rgba(0,0,0,0.05)')+'"></div>';
 });
 return h+'</div>';
 }
