@@ -285,10 +285,10 @@ return exh.map(function(x){var active=k>=x.s&&k<=x.e&&new Date(x.e)>=now;return{
 function renderExhibitBadge(d,nm){
 if(nm)return'';
 var st=getExhibitStatus(d);
-var h='<div style="position:absolute;top:5px;right:6px;display:flex;gap:2px">';
+var h='<div style="position:absolute;bottom:6px;right:6px;display:flex;flex-direction:column;gap:2px;align-items:flex-end">';
 st.forEach(function(x){
-if(x.on)h+='<span style="font-size:7px;padding:1px 5px;border-radius:4px;background:var(--accent);color:#fff;font-weight:600;letter-spacing:0.3px">'+x.id+'</span>';
-else h+='<span style="font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.15);font-weight:500">'+x.id+'</span>';
+if(x.on)h+='<span style="font-size:7px;padding:2px 6px;border-radius:4px;background:#F0C4B8;color:#333;font-weight:600;letter-spacing:0.3px">'+x.id+'</span>';
+else h+='<span style="font-size:7px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.15);font-weight:500;letter-spacing:0.3px">'+x.id+'</span>';
 });
 return h+'</div>';
 }
