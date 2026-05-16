@@ -248,40 +248,44 @@ const MENUS=[
 ];
 
 const PERFS=[
-{s:'2026-01-09',e:'2026-01-09',n:'신년음악회'},
-{s:'2026-01-24',e:'2026-01-25',n:'다웃파이어'},
-{s:'2026-04-09',e:'2026-04-09',n:'브런치 Ⅰ'},
-{s:'2026-04-16',e:'2026-04-19',n:'실내악'},
-{s:'2026-05-07',e:'2026-05-07',n:'김영욱'},
-{s:'2026-05-14',e:'2026-05-16',n:'백층집'},
-{s:'2026-05-23',e:'2026-05-23',n:'편한음악'},
-{s:'2026-05-30',e:'2026-05-30',n:'국심오케'},
-{s:'2026-06-04',e:'2026-06-04',n:'브런치 Ⅱ'},
-{s:'2026-06-13',e:'2026-06-13',n:'노인의 꿈'},
-{s:'2026-06-19',e:'2026-06-20',n:'헬로!오페라'},
-{s:'2026-09-03',e:'2026-09-03',n:'브런치 Ⅲ'},
-{s:'2026-09-10',e:'2026-09-10',n:'섬 박람회'},
-{s:'2026-09-12',e:'2026-09-12',n:'조재혁'},
-{s:'2026-09-18',e:'2026-09-20',n:'그날들'},
-{s:'2026-10-01',e:'2026-10-03',n:'달샤베트'},
-{s:'2026-10-09',e:'2026-10-10',n:'춘자씨'},
-{s:'2026-10-14',e:'2026-10-14',n:'트리플 빌'},
-{s:'2026-10-27',e:'2026-10-27',n:'피아노×2'},
-{s:'2026-11-06',e:'2026-11-07',n:'그때도 오늘'},
-{s:'2026-11-20',e:'2026-11-21',n:'헬로!오페라'},
-{s:'2026-11-26',e:'2026-11-28',n:'러커스'},
-{s:'2026-12-03',e:'2026-12-03',n:'브런치 Ⅳ'},
-{s:'2026-12-15',e:'2026-12-20',n:'쉬어매드'},
-{s:'2026-12-24',e:'2026-12-25',n:'성탄 발레'},
-];
-function getPerf(d){const k=dk(d);const p=PERFS.find(p=>k>=p.s&&k<=p.e);if(p){const now=new Date();now.setHours(0,0,0,0);const sd=new Date(p.s);sd.setHours(0,0,0,0);const ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});const diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});}return null;}
+{s:'2026-01-09',e:'2026-01-09',n:'신년음악회',f:'신년음악회',t:'c'},
+{s:'2026-01-24',e:'2026-01-25',n:'다웃파이어',f:'미세스 다웃파이어',t:'c'},
+{s:'2026-02-27',e:'2026-06-28',n:'우리 SUM',f:'어린이미술전 <우리 SUM 타볼래?>',t:'e'},
+{s:'2026-03-27',e:'2026-06-21',n:'섬냥이',f:"기획전시 '섬냥이 in 장도'",t:'e'},
+{s:'2026-04-09',e:'2026-04-09',n:'브런치 Ⅰ',f:'브런치 콘서트 Ⅰ',t:'c'},
+{s:'2026-04-16',e:'2026-04-19',n:'실내악',f:'실내악페스티벌',t:'c'},
+{s:'2026-05-07',e:'2026-05-07',n:'김영욱',f:'김영욱 × 콜레기움 무지쿰 서울',t:'c'},
+{s:'2026-05-14',e:'2026-05-16',n:'백층집',f:'100층짜리 집',t:'c'},
+{s:'2026-05-23',e:'2026-05-23',n:'편한음악',f:'한국페스티발앙상블',t:'c'},
+{s:'2026-05-30',e:'2026-05-30',n:'국심오케',f:'국립심포니오케스트라',t:'c'},
+{s:'2026-06-04',e:'2026-06-04',n:'브런치 Ⅱ',f:'브런치 콘서트 Ⅱ',t:'c'},
+{s:'2026-06-13',e:'2026-06-13',n:'노인의 꿈',f:'노인의 꿈',t:'c'},
+{s:'2026-06-19',e:'2026-06-20',n:'헬로!오페라',f:'헬로!오페라 세비야의 이발사',t:'c'},
+{s:'2026-09-03',e:'2026-09-03',n:'브런치 Ⅲ',f:'브런치 콘서트 Ⅲ',t:'c'},
+{s:'2026-09-10',e:'2026-09-10',n:'섬 박람회',f:'여수세계섬박람회 기념 음악회',t:'c'},
+{s:'2026-09-12',e:'2026-09-12',n:'조재혁',f:'조재혁 리사이틀',t:'c'},
+{s:'2026-09-18',e:'2026-09-20',n:'그날들',f:'그날들',t:'c'},
+{s:'2026-10-01',e:'2026-10-03',n:'달샤베트',f:'달샤베트',t:'c'},
+{s:'2026-10-09',e:'2026-10-10',n:'춘자씨',f:'이상한 나라의 춘자씨',t:'c'},
+{s:'2026-10-14',e:'2026-10-14',n:'트리플 빌',f:'국립현대무용단 트리플 빌',t:'c'},
+{s:'2026-10-27',e:'2026-10-27',n:'피아노×2',f:'다비드 바뱅 & 아드리앙 몽도',t:'c'},
+{s:'2026-11-06',e:'2026-11-07',n:'그때도 오늘',f:'그때도 오늘',t:'c'},
+{s:'2026-11-20',e:'2026-11-21',n:'헬로!오페라',f:'헬로!오페라 마술피리',t:'c'},
+{s:'2026-11-26',e:'2026-11-28',n:'러커스',f:'러커스더스쿨',t:'c'},
+{s:'2026-12-03',e:'2026-12-03',n:'브런치 Ⅳ',f:'브런치 콘서트 Ⅳ',t:'c'},
+{s:'2026-12-15',e:'2026-12-20',n:'쉬어매드',f:'쉬어매드니스',t:'c'},
+{s:'2026-12-24',e:'2026-12-25',n:'성탄 발레',f:'호두까기인형',t:'c'},
+
+function getPerfs(d){var k=dk(d),now=new Date();now.setHours(0,0,0,0);return PERFS.filter(function(p){return k>=p.s&&k<=p.e}).map(function(p){var sd=new Date(p.s);sd.setHours(0,0,0,0);var ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});var diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});});}
 function getDdayText(dd){if(dd>0)return'D-'+dd;if(dd===0)return'D-Day';return'D+'+Math.abs(dd);}
-function renderPerfHtml(perf,td,past){
-if(!perf)return'';
-var n=perf.n,dd=perf.dday;
-if(past)return'<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;margin-left:6px;font-size:8px;background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.22)">\uACF5</span><span style="margin-left:4px;font-size:9px;color:rgba(0,0,0,0.18)">'+n+'</span>';
-if(td)return'<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;margin-left:6px;font-size:8px;font-weight:600;background:rgba(255,255,255,0.85);color:#111">\uACF5</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:#111">'+n+'</span>'+(dd!==null&&dd!==0?'<span style="margin-left:10px;font-size:9px;color:#111">'+getDdayText(dd)+'</span>':'');
-return'<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;margin-left:6px;font-size:8px;font-weight:600;background:var(--accent);color:#fff">\uACF5</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:var(--text)">'+n+'</span>'+(dd!==null&&dd!==0?'<span style="margin-left:10px;font-size:9px;color:var(--dim)">'+getDdayText(dd)+'</span>':'');
+function renderPerfsHtml(perfs,td,past){
+if(!perfs||!perfs.length)return'';
+var out='';
+for(var i=0;i<perfs.length;i++){var perf=perfs[i],fn=perf.f||perf.n,dd=perf.dday,lb=perf.t==='e'?'\u{C804}':'\u{ACF5}';
+if(past)out+='<div style="display:flex;align-items:flex-start;margin-top:2px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.22);flex-shrink:0">'+lb+'</span><span style="margin-left:4px;font-size:9px;color:rgba(0,0,0,0.18);line-height:1.4">'+fn+'</span></div>';
+else if(td)out+='<div style="display:flex;align-items:flex-start;margin-top:2px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;background:rgba(255,255,255,0.85);color:#111;flex-shrink:0">'+lb+'</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:#111;line-height:1.4">'+fn+'</span></div>';
+else out+='<div style="display:flex;align-items:flex-start;margin-top:2px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;background:var(--accent);color:#fff;flex-shrink:0">'+lb+'</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:var(--text);line-height:1.4">'+fn+'</span>'+(dd!==null&&dd!==0?'<span style="margin-left:8px;font-size:9px;color:var(--dim);flex-shrink:0;white-space:nowrap">'+getDdayText(dd)+'</span>':'')+'</div>';
+}return out;
 }
 let password='',records=[],currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth()+1;
 let selected=null,editing=null,panelOpen=false;
@@ -389,8 +393,8 @@ function renderCal(){
       if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
       h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}" data-cell data-key="${key}" onclick="clickDate('${key}')" style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
-      const perf=nm?null:getPerf(d);
-      h+='<div class="'+dnCls+'">'+(td&&!nm?'<span class="today-badge">'+d.getDate()+'</span>':d.getDate())+renderPerfHtml(perf,td,past)+'</div>';
+      var perfs=nm?[]:getPerfs(d);
+      h+='<div class="'+dnCls+'">'+(td&&!nm?'<span class="today-badge">'+d.getDate()+'</span>':d.getDate())+'</div>'+renderPerfsHtml(perfs,td,past);
       recs.slice(0,3).forEach(r=>{
         const p=r['\uD50C\uB7AB\uD3FC 1']||'',col=platColor(p),title=r['\uCF58\uD150\uCE20 \uC81C\uBAA9']||'',pastCls=past?'past':'future',timeCol=past?'var(--past-text)':col;
         h+=`<div class="ev"><span class="ev-time" style="color:${timeCol}">${''}</span><span class="ev-plat" style="color:${timeCol}">${platShort(p)}</span><span class="ev-title ${pastCls}">${title}</span></div>`;
