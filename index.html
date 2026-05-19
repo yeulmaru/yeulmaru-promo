@@ -420,8 +420,12 @@ function renderCal(){
       var perfs=nm?[]:getPerfs(d);
       h+=renderExhibitBadge(d,nm)+'<div class="'+dnCls+'">'+(td&&!nm?'<span class="today-badge">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past)+'</div>';
       recs.slice(0,3).forEach(r=>{
-        const p=r['플랫폼 1']||'',col=platColor(p),title=r['콘텐츠 제목']||'',pastCls=past?'past':'future',timeCol=past?'var(--past-text)':col;
-        h+=`<div class="ev"><span class="ev-time" style="color:${timeCol}">${''}</span><span class="ev-plat" style="color:${timeCol}">${platShort(p)}</span><span class="ev-title ${pastCls}">${title}</span></div>`;
+        var p=r['플랫폼 1']||'',title=r['콘텐츠 제목']||'';
+        var ts=r['입력시간(KST)'],hhmm='';
+        if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1];
+        else if(typeof ts==='number'){var fr=ts%1,hh=Math.floor(fr*24),mm=Math.round((fr*24-hh)*60);hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+        var evCol=past?'var(--past-text)':td?'var(--accent)':'var(--text)';
+        h+='<div class="ev"><span class="ev-time" style="color:'+evCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+evCol+'">'+platShort(p)+'</span><span class="ev-title" style="color:'+evCol+'">'+title+'</span></div>';
       });
       if(recs.length>3)h+=`<div style="font-size:10px;color:var(--dim);padding-top:2px">+${recs.length-3}개</div>`;
       if(nm)h+='<div class="diag"></div>';
