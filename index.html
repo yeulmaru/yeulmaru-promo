@@ -78,7 +78,8 @@ button{font-family:inherit;cursor:pointer}
 
 /* ═══ CALENDAR ═══ */
 .cal{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid var(--glass-border)}
-.cal-head{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:5;background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.cal-head-wrap{position:sticky;top:56px;z-index:5;background:rgba(255,255,255,0.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:var(--radius-xl) var(--radius-xl) 0 0;border:1px solid var(--glass-border);border-bottom:1px solid var(--border);margin-bottom:-1px}
+.cal-head{display:grid;grid-template-columns:repeat(6,1fr)}
 .dh{padding:14px 8px;text-align:center;font-size:14px;font-weight:700;background:rgba(255,255,255,0.5);color:#666}
 .dh.sat{color:#3B7DD8}
 .dh.sun{color:#D64545}
@@ -202,7 +203,8 @@ button{font-family:inherit;cursor:pointer}
         </div>
         <div class="chips" id="chips"></div>
       </div>
-      <div class="cal" id="cal"></div>
+      <div class="cal-head-wrap" id="cal-head-wrap"></div>
+        <div class="cal" id="cal"></div>
     </div>
     <div id="panel" class="panel" style="display:none" data-panel></div>
   </div>
@@ -426,9 +428,7 @@ function renderCal(){
   for(let i=0;i<dates.length;i+=6)weeks.push(dates.slice(i,i+6));
   const todayKey=dk(new Date()),twIdx=weeks.findIndex(w=>w.some(d=>dk(d)===todayKey));
   const isThisMonth=currentYear===new Date().getFullYear()&&currentMonth===new Date().getMonth()+1;
-  let h='<div class="cal-head">';
-  DAYS.forEach((d,i)=>{h+=`<div class="dh${i===4?' sat':''}${i===5?' sun':''}" style="${i<5?'border-right:1px solid var(--border)':''}">${d}</div>`;});
-  h+='</div>';
+  document.getElementById('cal-head-wrap').innerHTML='<div class="cal-head">'+DAYS.map((d,i)=>'<div class="dh'+(i===4?' sat':'')+(i===5?' sun':'')+'" style="'+(i<5?'border-right:1px solid var(--border)':'')+'">'+d+'</div>').join('')+'</div>';let h='';
   weeks.forEach((week,wi)=>{
     const isTW=wi===twIdx;
     h+=`<div class="week${isTW?' tw':''}" style="${wi<weeks.length-1?'':'border-bottom:none'}">`;
