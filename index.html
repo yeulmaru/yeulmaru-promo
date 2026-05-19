@@ -433,8 +433,8 @@ function renderCal(){
         var nowH=new Date().getHours(),nowM=new Date().getMinutes(),evPast=false;
         if(td&&hhmm){var pp=hhmm.split(':');if(pp.length===2){var eh=parseInt(pp[0]),em=parseInt(pp[1]);if(eh<nowH||(eh===nowH&&em<=nowM))evPast=true;}}
         var timeCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':'var(--accent)'):'var(--text)';
-        var platCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':col):col;
-        var titleCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':'var(--text)'):'var(--text)';
+        var platCol=done?'#bbb':past?'var(--past-text)':col;
+        var titleCol=done?'#bbb':past?'var(--past-text)':'var(--text)';
         var deco=done?'text-decoration:line-through;':'';
         h+='<div class="ev" style="'+deco+'opacity:'+(done?'0.6':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600">'+platShort(p)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
       });
