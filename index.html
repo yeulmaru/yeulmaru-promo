@@ -245,7 +245,7 @@ const PLAT_COLORS={
   '카카오':'#C8900A','카카오톡':'#C8900A',
   '인스타':'#C02872','인스타그램':'#C02872',
   '유튜브':'#B71C1C','블로그':'#1B7A34',
-  '기타':'#2D5F8A','기타채널':'#2D5F8A',
+  '기타':'#2D5F8A','기타채널':'#2D5F8A','문자':'#8B5CF6',
 };
 function platColor(p){if(!p)return'#2D5F8A';for(const[k,v]of Object.entries(PLAT_COLORS)){if(p.includes(k))return v;}return'#2D5F8A';}
 function platShort(p){
@@ -416,6 +416,7 @@ function renderChips(){
     {label:'인스타',color:'#C02872',match:['인스타']},
     {label:'블로그\xB7맘카페',color:'#1B7A34',match:['블로그','맘카페']},
     {label:'B2B',color:'#2D5F8A',match:['B2B']},
+    {label:'문자',color:'#8B5CF6',match:['문자']},
   ];
   c.innerHTML=groups.map(g=>{const cnt=records.filter(r=>{const p=r['플랫폼 1']||'';return g.match.some(m=>p.includes(m));}).length;return`<div class="chip"><span class="chip-dot" style="background:${g.color}"></span><span class="chip-label">${g.label}</span><span class="chip-count">${cnt}</span></div>`;}).join('');
 }
