@@ -21,7 +21,7 @@
   --past-bg:rgba(0,0,0,0.02);--past-text:#aaa;
   --nm-bg:rgba(0,0,0,0.03);--today-bg:#4A4DE7;
   --green:#1A6B3C;
-  --kakao:#D4A528;--insta:#E0508C;--youtube:#B71C1C;--blog:#3DA355;--etc:#4A8ABF;
+  --kakao:#F2CC60;--insta:#FF80B0;--youtube:#B71C1C;--blog:#70D488;--etc:#80C0E8;
   --radius:16px;--radius-lg:20px;--radius-xl:24px;
 }
 body{background:var(--bg);color:var(--text);min-height:100vh}
@@ -236,10 +236,10 @@ button{font-family:inherit;cursor:pointer}
 <script>
 const API='https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
 const PLAT_COLORS={
-  '카카오':'#D4A528','카카오톡':'#D4A528',
-  '인스타':'#E0508C','인스타그램':'#E0508C',
-  '유튜브':'#B71C1C','블로그':'#3DA355',
-  '기타':'#4A8ABF','기타채널':'#4A8ABF',
+  '카카오':'#F2CC60','카카오톡':'#F2CC60',
+  '인스타':'#FF80B0','인스타그램':'#FF80B0',
+  '유튜브':'#B71C1C','블로그':'#70D488',
+  '기타':'#80C0E8','기타채널':'#80C0E8',
 };
 function platColor(p){if(!p)return'#2D5F8A';for(const[k,v]of Object.entries(PLAT_COLORS)){if(p.includes(k))return v;}return'#2D5F8A';}
 function platShort(p){
@@ -406,10 +406,10 @@ function render(){document.getElementById('nav-month').textContent=currentMonth;
 function renderChips(){
   const c=document.getElementById('chips');
   const groups=[
-    {label:'카카오',color:'#C8900A',match:['카카오']},
-    {label:'인스타',color:'#C02872',match:['인스타']},
+    {label:'카카오',color:'#F2CC60',match:['카카오']},
+    {label:'인스타',color:'#FF80B0',match:['인스타']},
     {label:'블로그\xB7맘카페',color:'#1B7A34',match:['블로그','맘카페']},
-    {label:'B2B',color:'#2D5F8A',match:['B2B']},
+    {label:'B2B',color:'#80C0E8',match:['B2B']},
   ];
   c.innerHTML=groups.map(g=>{const cnt=records.filter(r=>{const p=r['플랫폼 1']||'';return g.match.some(m=>p.includes(m));}).length;return`<div class="chip"><span class="chip-dot" style="background:${g.color}"></span><span class="chip-label">${g.label}</span><span class="chip-count">${cnt}</span></div>`;}).join('');
 }
@@ -441,7 +441,7 @@ function renderCal(){
         else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
         var nowH=new Date().getHours(),nowM=new Date().getMinutes(),evPast=false;
         if(td&&hhmm){var pp=hhmm.split(':');if(pp.length===2){var eh=parseInt(pp[0]),em=parseInt(pp[1]);if(eh<nowH||(eh===nowH&&em<=nowM))evPast=true;}}
-        var timeCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.7)'):'var(--text)';
+        var timeCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'rgba(255,255,255,0.5)':'#fff'):'var(--text)';
         var platCol=done?'#bbb':past?'var(--past-text)':td?col:col;
         var titleCol=done?'#bbb':past?'var(--past-text)':td?'#fff':'var(--text)';
         var deco=done?'text-decoration:line-through;':'';
