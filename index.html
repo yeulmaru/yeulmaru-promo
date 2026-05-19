@@ -459,27 +459,38 @@ function openPanel(dateObj,recs){
   var exh=getExhibitStatus(dateObj);
   var now=new Date();now.setHours(0,0,0,0);
   var hasSchedule=false;
-  // 공연 먼저
-  var concerts=perfs.filter(function(x){return x.t==='c';});
-  concerts.forEach(function(perf){
+  // 오픈된 공연 전체 (o:1 + 종료일 안 지남)
+  var now2=new Date();now2.setHours(0,0,0,0);
+  var openPerfs=PERFS.filter(function(p){
+    if(p.o!==1||p.t!=='c')return false;
+    var ed=new Date(p.e);ed.setHours(0,0,0,0);ed.setDate(ed.getDate()+1);
+    return now2<ed;
+  });
+  openPerfs.forEach(function(perf){
     hasSchedule=true;
-    var dd=perf.dday;
-    var ddText=dd===null?'':dd===0?'D-Day':dd>0?'D-'+dd:'D+'+Math.abs(dd);
+    var sd=new Date(perf.s);sd.setHours(0,0,0,0);
+    var ed=new Date(perf.e);ed.setHours(0,0,0,0);
+    var dd=(now2>=sd&&now2<=ed)?0:Math.round((sd-now2)/86400000);
+    var ddText=dd===0?'D-Day':dd>0?'D-'+dd:'';
     h+='<div style="display:flex;align-items:center;padding:10px 12px;background:rgba(74,77,231,0.06);border-radius:10px;margin-bottom:6px;gap:10px">';
     h+='<span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;font-size:8px;font-weight:700;background:var(--accent);color:#fff;flex-shrink:0">공</span>';
     h+='<div style="flex:1;min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+perf.f+'</div><div style="font-size:10px;color:var(--dim);margin-top:1px">4층 대극장</div></div>';
     if(ddText)h+='<span style="font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;flex-shrink:0">'+ddText+'</span>';
     h+='</div>';
   });
-  // 전시
-  exh.forEach(function(x){
-    if(!x.on)return;
+  // 오픈된 전시 전체 (o:1 + 종료일 안 지남)
+  var openExh=PERFS.filter(function(p){
+    if(p.o!==1||p.t!=='e')return false;
+    var ed=new Date(p.e);ed.setHours(0,0,0,0);ed.setDate(ed.getDate()+1);
+    return now2<ed;
+  });
+  openExh.forEach(function(x){
     hasSchedule=true;
-    var eName=x.id==='7층'?'어린이미술전 <우리 SUM 타볼래?>':"기획전시 '섬냥이 in 장도'";
-    var eVenue=x.id==='7층'?'7층 전시실':'장도 전시실';
-    var eStart=x.id==='7층'?new Date(2026,1,27):new Date(2026,2,27);
+    var eName=x.f||x.n;
+    var eVenue=x.n==='우리 SUM'?'7층 전시실':'장도 전시실';
+    var eStart=new Date(x.s);
     eStart.setHours(0,0,0,0);
-    var dayNum=Math.floor((now-eStart)/86400000)+1;
+    var dayNum=Math.floor((now2-eStart)/86400000)+1;
     h+='<div style="display:flex;align-items:center;padding:10px 12px;background:rgba(240,196,184,0.15);border-radius:10px;margin-bottom:6px;gap:10px">';
     h+='<span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;font-size:8px;font-weight:700;background:#F0C4B8;color:#333;flex-shrink:0">전</span>';
     h+='<div style="flex:1;min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+eName+'</div><div style="font-size:10px;color:var(--dim);margin-top:1px">'+eVenue+'</div></div>';
