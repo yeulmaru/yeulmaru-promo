@@ -425,16 +425,18 @@ function renderCal(){
       var perfs=nm?[]:getPerfs(d);
       h+=renderExhibitBadge(d,nm)+'<div class="'+dnCls+'">'+(td&&!nm?'<span class="today-badge">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past)+'</div>';
       recs.forEach(r=>{
-        var p=r['플랫폼 1']||'',title=r['콘텐츠 제목']||'',col=platColor(p);
+        var p=r['플랫폼 1']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
+        var done=st==='완료';
         var ts=r['입력시간(KST)'],hhmm='';
         if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1];
         else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
         var nowH=new Date().getHours(),nowM=new Date().getMinutes(),evPast=false;
         if(td&&hhmm){var pp=hhmm.split(':');if(pp.length===2){var eh=parseInt(pp[0]),em=parseInt(pp[1]);if(eh<nowH||(eh===nowH&&em<=nowM))evPast=true;}}
-        var timeCol=past?'var(--past-text)':td?(evPast?'#999':'var(--accent)'):'var(--text)';
-        var platCol=past?'var(--past-text)':td?(evPast?'#999':col):col;
-        var titleCol=past?'var(--past-text)':td?(evPast?'#999':'var(--text)'):'var(--text)';
-        h+='<div class="ev"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600">'+platShort(p)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
+        var timeCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':'var(--accent)'):'var(--text)';
+        var platCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':col):col;
+        var titleCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':'var(--text)'):'var(--text)';
+        var deco=done?'text-decoration:line-through;':'';
+        h+='<div class="ev" style="'+deco+'opacity:'+(done?'0.6':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600">'+platShort(p)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
       });
       if(nm)h+='<div class="diag"></div>';
       h+='</div>';
