@@ -153,6 +153,10 @@ button{font-family:inherit;cursor:pointer}
 .c-btn.no:hover{background:#C2DCEF;box-shadow:0 4px 12px rgba(43,127,203,0.18);transform:translateY(-1px)}
 .c-btn.yes{background:#EFEFEF;color:#999;font-weight:600}
 .c-btn.yes:hover{background:#E4E4E4;color:#777}
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);padding:14px 28px;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.12);font-size:13px;font-weight:600;color:var(--text);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success::before{content:"✓ ";color:#0F8B4C;font-weight:700;margin-right:4px}
+.toast.error::before{content:"✕ ";color:#E24B4A;font-weight:700;margin-right:4px}
 .modal{background:var(--surface-solid);border:1px solid var(--glass-border);border-radius:var(--radius-xl);padding:28px;width:400px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(74,77,231,0.12),0 8px 24px rgba(0,0,0,0.08);animation:fadeUp .25s ease}
 .modal h3{font-size:16px;font-weight:700}
 .modal .meta{font-size:12px;color:var(--dim);margin:2px 0 16px}
@@ -271,6 +275,8 @@ button{font-family:inherit;cursor:pointer}
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const API='https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
@@ -644,6 +650,18 @@ function confirmResolve(v){
   if(_confirmResolve){var r=_confirmResolve;_confirmResolve=null;r(v);}
 }
 
+let _toastTimer=null;
+function showToast(msg,type){
+  type=type||'success';
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+type;
+  void t.offsetWidth;
+  t.classList.add('show');
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(function(){t.classList.remove('show');},2500);
+}
+
 async function saveEntry(){
   const title=document.getElementById('f-title').value.trim();if(!title)return alert('콘텐츠 제목을 입력하세요');
   const dateKey=editing.dateKey;
@@ -673,13 +691,14 @@ async function saveEntry(){
     closeModal();
     await loadData();
     clickDate(dateKey);
+    showToast('저장되었습니다');
   }catch(e){alert('저장 실패: '+e.message);}
 }
 async function delEntry(){
   if(!editing?.existing)return;
   const dateKey=editing.dateKey;const ri=editing.existing._rowIndex;
   const ok=await showConfirm('정말로 삭제하시겠습니까?');if(!ok)return;
-  try{await api('DELETE','/api/records/'+ri);closeModal();await loadData();clickDate(dateKey);}catch(e){alert('삭제 실패: '+e.message);}
+  try{await api('DELETE','/api/records/'+ri);closeModal();await loadData();clickDate(dateKey);showToast('삭제되었습니다');}catch(e){alert('삭제 실패: '+e.message);}
 }
 
 async function deleteRec(rowIndex,dateKey){
@@ -690,6 +709,7 @@ async function deleteRec(rowIndex,dateKey){
     await loadData();
     const[y,m,d]=dateKey.split('-').map(Number);const dateObj=new Date(y,m-1,d);
     openPanel(dateObj,getRecsForDate(dateObj));
+    showToast('삭제되었습니다');
   }catch(e){alert('삭제 실패: '+e.message);}
 }
 
@@ -737,6 +757,7 @@ async function onCellDrop(ev,toKey){
     try{await api('DELETE','/api/records/'+drag.rowIndex);}
     catch(e){console.error('이동 후 기존 행 삭제 실패:',e);alert('이동됨. 단, 기존 행 삭제 실패로 중복이 생겼을 수 있어.');}
     await loadData();
+    showToast('이동되었습니다');
   }catch(e){alert('이동 실패: '+e.message);}
 }
 
