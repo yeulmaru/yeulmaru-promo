@@ -191,6 +191,10 @@ button{font-family:inherit;cursor:pointer}
 .modal textarea{resize:vertical;min-height:60px;line-height:1.5}
 .modal input[readonly]{background:#EEE;cursor:not-allowed;color:#666}
 .modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);background:#fff}
+.modal input.field-attention,.modal select.field-attention,.modal textarea.field-attention{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)!important;background:#fff!important;animation:fa-pulse 1.4s ease-out 2}
+@keyframes fa-pulse{0%{box-shadow:0 0 0 6px rgba(74,77,231,0.3),0 0 18px rgba(74,77,231,0.25)}100%{box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)}}
+.field-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:8px solid var(--accent);margin:5px auto 0;animation:fa-bounce 1.1s ease-in-out infinite}
+@keyframes fa-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 .modal-acts{display:flex;gap:8px;margin-top:24px;justify-content:flex-end}
 .m-btn{padding:10px 22px;border-radius:12px;font-size:13px;font-weight:600;border:none;transition:all .2s}
 .m-btn:hover{transform:translateY(-1px)}
@@ -834,7 +838,32 @@ function focusField(id){
   setTimeout(function(){
     if(typeof el.showPicker==='function'){try{el.showPicker();}catch(e){el.focus();}}
     else el.focus();
+    // 시각 강조 추가 (보라 outline + 화살표)
+    addFieldAttention(el);
   },300);
+}
+
+function addFieldAttention(el){
+  // 기존 강조 제거 (다른 필드에 남아있을 수 있음)
+  document.querySelectorAll('.field-attention').forEach(function(n){n.classList.remove('field-attention')});
+  document.querySelectorAll('.field-arrow').forEach(function(n){n.parentNode.removeChild(n)});
+  // 새 강조 추가
+  el.classList.add('field-attention');
+  var arrow=document.createElement('div');
+  arrow.className='field-arrow';
+  if(el.nextSibling)el.parentNode.insertBefore(arrow,el.nextSibling);
+  else el.parentNode.appendChild(arrow);
+  // 사용자가 입력/선택하면 즉시 제거
+  var remove=function(){
+    el.classList.remove('field-attention');
+    if(arrow.parentNode)arrow.parentNode.removeChild(arrow);
+    el.removeEventListener('input',remove);
+    el.removeEventListener('change',remove);
+  };
+  el.addEventListener('input',remove,{once:true});
+  el.addEventListener('change',remove,{once:true});
+  // 5초 후 자동 제거 (입력 없으면)
+  setTimeout(remove,5000);
 }
 
 async function saveEntry(){
