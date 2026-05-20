@@ -188,11 +188,11 @@ button{font-family:inherit;cursor:pointer}
 .modal .meta{font-size:12px;color:var(--dim);margin:2px 0 16px}
 .modal label{display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
 .modal label .req{color:var(--peach);margin-left:3px;font-weight:700}
-.modal input,.modal select,.modal textarea{width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;color:var(--text);font-size:13px;outline:none;transition:all .2s;font-family:inherit;box-sizing:border-box}
+.modal input:not([type="checkbox"]):not([type="radio"]),.modal select,.modal textarea{width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;color:var(--text);font-size:13px;outline:none;transition:all .2s;font-family:inherit;box-sizing:border-box}
 .modal textarea{resize:vertical;min-height:60px;line-height:1.5}
 .modal input[readonly]{background:#EEE;cursor:not-allowed;color:#666}
-.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);background:#fff}
-.modal input.field-attention,.modal select.field-attention,.modal textarea.field-attention{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)!important;background:#fff!important;animation:fa-pulse 1.4s ease-out 2}
+.modal input:not([type="checkbox"]):not([type="radio"]):focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);background:#fff}
+.modal input.field-attention:not([type="checkbox"]):not([type="radio"]),.modal select.field-attention,.modal textarea.field-attention{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)!important;background:#fff!important;animation:fa-pulse 1.4s ease-out 2}
 @keyframes fa-pulse{0%{box-shadow:0 0 0 6px rgba(74,77,231,0.3),0 0 18px rgba(74,77,231,0.25)}100%{box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)}}
 .field-arrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:8px solid var(--accent);margin:5px auto 0;animation:fa-bounce 1.1s ease-in-out infinite}
 @keyframes fa-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
