@@ -153,7 +153,7 @@ button{font-family:inherit;cursor:pointer}
 .c-btn.no:hover{background:#C2DCEF;box-shadow:0 4px 12px rgba(43,127,203,0.18);transform:translateY(-1px)}
 .c-btn.yes{background:#EFEFEF;color:#999;font-weight:600}
 .c-btn.yes:hover{background:#E4E4E4;color:#777}
-.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);padding:14px 28px;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.12);font-size:13px;font-weight:600;color:var(--text);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;white-space:nowrap}
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);padding:14px 28px;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.06);font-size:13px;font-weight:600;color:var(--text);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success::before{content:"✓ ";color:#0F8B4C;font-weight:700;margin-right:4px}
 .toast.error::before{content:"✕ ";color:#E24B4A;font-weight:700;margin-right:4px}
@@ -669,7 +669,7 @@ function showToast(msg,type){
 }
 
 function showOverlayLoad(msg){
-  msg=msg||'\uC801\uC6A9 \uC911\uC785\uB2C8\uB2E4... \uD83D\uDE09';
+  msg=msg||'\uBCC0\uACBD \uC911\uC785\uB2C8\uB2E4... \uD83D\uDC95';
   document.getElementById('overlay-load').classList.add('show');
   _typeLoop('ol-text',msg,65);
 }
