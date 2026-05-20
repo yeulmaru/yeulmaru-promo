@@ -183,6 +183,7 @@ button{font-family:inherit;cursor:pointer}
 .modal h3{font-size:16px;font-weight:700}
 .modal .meta{font-size:12px;color:var(--dim);margin:2px 0 16px}
 .modal label{display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.modal label .req{color:var(--peach);margin-left:3px;font-weight:700}
 .modal input,.modal select,.modal textarea{width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;color:var(--text);font-size:13px;outline:none;transition:all .2s;font-family:inherit;box-sizing:border-box}
 .modal textarea{resize:vertical;min-height:60px;line-height:1.5}
 .modal input[readonly]{background:#EEE;cursor:not-allowed;color:#666}
@@ -262,21 +263,21 @@ button{font-family:inherit;cursor:pointer}
       <option value="기타">기타</option>
     </select>
     <input type="text" id="f-plat-etc" placeholder="플랫폼명 입력" style="display:none;margin-top:6px">
-    <label>플랫폼 2</label>
+    <label>플랫폼 2<span class="req">*</span></label>
     <select id="f-plat2" style="display:none"></select>
     <input type="text" id="f-plat2-fixed" readonly value="-">
     <label>프로그램</label>
     <select id="f-program"></select>
-    <label>콘텐츠 제목</label>
+    <label>콘텐츠 제목<span class="req">*</span></label>
     <input type="text" id="f-title" placeholder="입력">
-    <label>콘텐츠 구분</label>
+    <label>콘텐츠 구분<span class="req">*</span></label>
     <select id="f-cat"><option value="">선택</option><option>공연</option><option>전시</option><option>교육</option><option>기타</option></select>
     <label>담당 부서</label>
     <input type="text" id="f-dept" readonly value="예술사업팀">
     <label>콘텐츠 형식 및 내용</label>
     <select id="f-format"><option value="">선택</option><option>이미지</option><option>영상</option><option>기타</option></select>
     <textarea id="f-content" rows="3" placeholder="내용을 설명해주세요." style="margin-top:6px"></textarea>
-    <label>게시 담당자</label>
+    <label>게시 담당자<span class="req">*</span></label>
     <select id="f-author"><option value="">선택</option><option>황세웅</option><option>심희은</option></select>
     <label>진행 상태</label>
     <select id="f-status"><option>예정</option><option>완료</option><option>취소</option><option>보류</option></select>
@@ -821,17 +822,29 @@ function hideOverlayLoad(){
   _typingId++;
 }
 
+function focusField(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  // 모달 안에서 부드러운 스크롤
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(function(){
+    if(typeof el.showPicker==='function'){try{el.showPicker();}catch(e){el.focus();}}
+    else el.focus();
+  },300);
+}
+
 async function saveEntry(){
-  const title=document.getElementById('f-title').value.trim();if(!title)return alert('콘텐츠 제목을 입력하세요');
+  const title=document.getElementById('f-title').value.trim();
+  if(!title){alert('콘텐츠 제목을 입력하세요');focusField('f-title');return;}
   const platSel=document.getElementById('f-plat').value;
   // plat2 필수 검증 (블로그·맘카페 / B2B / 문자)
   if(platSel==='블로그·맘카페'||platSel==='B2B'||platSel==='문자'){
-    if(!document.getElementById('f-plat2').value)return alert('플랫폼 2를 선택해주세요');
+    if(!document.getElementById('f-plat2').value){alert('플랫폼 2를 선택해주세요');focusField('f-plat2');return;}
   }
   // 콘텐츠 구분 필수
-  if(!document.getElementById('f-cat').value)return alert('콘텐츠 구분을 선택해주세요');
+  if(!document.getElementById('f-cat').value){alert('콘텐츠 구분을 선택해주세요');focusField('f-cat');return;}
   // 게시 담당자 필수
-  if(!document.getElementById('f-author').value)return alert('게시 담당자를 선택해주세요');
+  if(!document.getElementById('f-author').value){alert('게시 담당자를 선택해주세요');focusField('f-author');return;}
   const dateKey=editing.dateKey;
   const isEdit=!!(editing.existing);
   const existingRowIndex=editing.existing&&editing.existing._rowIndex;
