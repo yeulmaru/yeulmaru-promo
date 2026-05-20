@@ -157,6 +157,9 @@ button{font-family:inherit;cursor:pointer}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success::before{content:"✓ ";color:#0F8B4C;font-weight:700;margin-right:4px}
 .toast.error::before{content:"✕ ";color:#E24B4A;font-weight:700;margin-right:4px}
+.overlay-load{position:fixed;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:400;display:none;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#fff;letter-spacing:0.5px;text-shadow:0 2px 8px rgba(0,0,0,0.4);animation:fadeIn .2s ease}
+.overlay-load.show{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .modal{background:var(--surface-solid);border:1px solid var(--glass-border);border-radius:var(--radius-xl);padding:28px;width:400px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(74,77,231,0.12),0 8px 24px rgba(0,0,0,0.08);animation:fadeUp .25s ease}
 .modal h3{font-size:16px;font-weight:700}
 .modal .meta{font-size:12px;color:var(--dim);margin:2px 0 16px}
@@ -277,6 +280,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="overlay-load" id="overlay-load"><span id="ol-text"></span></div>
 
 <script>
 const API='https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
@@ -662,6 +666,16 @@ function showToast(msg,type){
   _toastTimer=setTimeout(function(){t.classList.remove('show');},2500);
 }
 
+function showOverlayLoad(msg){
+  msg=msg||'\uC801\uC6A9 \uC911\uC785\uB2C8\uB2E4... \uD83D\uDE09';
+  document.getElementById('overlay-load').classList.add('show');
+  _typeLoop('ol-text',msg,65);
+}
+function hideOverlayLoad(){
+  document.getElementById('overlay-load').classList.remove('show');
+  _typingId++;
+}
+
 async function saveEntry(){
   const title=document.getElementById('f-title').value.trim();if(!title)return alert('콘텐츠 제목을 입력하세요');
   const dateKey=editing.dateKey;
@@ -682,6 +696,7 @@ async function saveEntry(){
     plat2=document.getElementById('f-plat2').value;
   }
   const row=[records.length+1,kstStr,serial,y,m,d,dn+'요일',plat1,plat2,document.getElementById('f-cat').value,'예술사업팀',title,document.getElementById('f-format').value,document.getElementById('f-content').value,document.getElementById('f-author').value,document.getElementById('f-status').value,document.getElementById('f-memo').value];
+  showOverlayLoad();
   try{
     await api('POST','/api/records',{values:row});
     if(isEdit&&existingRowIndex){
@@ -693,17 +708,21 @@ async function saveEntry(){
     clickDate(dateKey);
     showToast('저장되었습니다');
   }catch(e){alert('저장 실패: '+e.message);}
+  finally{hideOverlayLoad();}
 }
 async function delEntry(){
   if(!editing?.existing)return;
   const dateKey=editing.dateKey;const ri=editing.existing._rowIndex;
   const ok=await showConfirm('정말로 삭제하시겠습니까?');if(!ok)return;
+  showOverlayLoad();
   try{await api('DELETE','/api/records/'+ri);closeModal();await loadData();clickDate(dateKey);showToast('삭제되었습니다');}catch(e){alert('삭제 실패: '+e.message);}
+  finally{hideOverlayLoad();}
 }
 
 async function deleteRec(rowIndex,dateKey){
   const ok=await showConfirm('정말로 삭제하시겠습니까?');
   if(!ok)return;
+  showOverlayLoad();
   try{
     await api('DELETE','/api/records/'+rowIndex);
     await loadData();
@@ -711,6 +730,7 @@ async function deleteRec(rowIndex,dateKey){
     openPanel(dateObj,getRecsForDate(dateObj));
     showToast('삭제되었습니다');
   }catch(e){alert('삭제 실패: '+e.message);}
+  finally{hideOverlayLoad();}
 }
 
 let _drag=null;
@@ -752,6 +772,7 @@ async function onCellDrop(ev,toKey){
   else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
   const kstStr=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${hhmm}`;
   const row=[records.length+1,kstStr,serial,y,m,d,dn+'요일',rec['플랫폼 1']||'',rec['플랫폼 2']||'',rec['콘텐츠 구분']||'',rec['담당 부서']||'예술사업팀',rec['콘텐츠 제목']||'',rec['콘텐츠 형식']||'',rec['콘텐츠 내용']||'',rec['게시 담당자']||'',rec['진행 상태']||'예정',rec['비고']||''];
+  showOverlayLoad();
   try{
     await api('POST','/api/records',{values:row});
     try{await api('DELETE','/api/records/'+drag.rowIndex);}
@@ -759,6 +780,7 @@ async function onCellDrop(ev,toKey){
     await loadData();
     showToast('이동되었습니다');
   }catch(e){alert('이동 실패: '+e.message);}
+  finally{hideOverlayLoad();}
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(_confirmResolve)confirmResolve(false);else{closeModal();closePanel();}}});
