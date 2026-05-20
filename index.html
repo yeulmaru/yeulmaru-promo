@@ -124,8 +124,8 @@ button{font-family:inherit;cursor:pointer}
 .panel-close:hover{background:var(--accent-light);color:var(--accent)}
 .panel-body{flex:1;padding:16px 24px;overflow-y:auto}
 .panel-empty{text-align:center;padding:40px 0;color:var(--dim);font-size:14px}
-.p-card{padding:16px;background:rgba(255,255,255,0.6);backdrop-filter:blur(8px);border-radius:var(--radius);margin-bottom:12px;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .2s}
-.p-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.06);transform:translateY(-1px)}
+.p-card{padding:16px;background:rgba(255,255,255,0.6);backdrop-filter:blur(8px);border-radius:var(--radius);margin-bottom:12px;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .2s;cursor:pointer}
+.p-card:hover{box-shadow:0 4px 16px rgba(74,77,231,0.1);transform:translateY(-1px);border-color:rgba(74,77,231,0.2)}
 .p-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .p-tag{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:transparent}
 .p-time{font-size:12px;color:var(--dim);font-weight:500}
@@ -140,6 +140,16 @@ button{font-family:inherit;cursor:pointer}
 /* ═══ MODAL ═══ */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(26,26,46,0.4);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
+.confirm-bg{display:none;position:fixed;inset:0;background:rgba(26,26,46,0.45);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center}
+.confirm-bg.show{display:flex}
+.confirm{background:#fff;border:1px solid var(--glass-border);border-radius:20px;padding:28px 28px 22px;width:340px;max-width:92vw;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.15);animation:fadeUp .2s ease}
+.confirm-msg{font-size:15px;font-weight:600;color:var(--text);margin-bottom:22px;line-height:1.5}
+.confirm-acts{display:flex;gap:10px;justify-content:center}
+.c-btn{padding:11px 26px;border-radius:12px;font-size:13.5px;border:none;cursor:pointer;transition:all .15s;min-width:90px}
+.c-btn.no{background:#D6E8F8;color:#2B7FCB;font-weight:700}
+.c-btn.no:hover{background:#C2DCEF;box-shadow:0 4px 12px rgba(43,127,203,0.18);transform:translateY(-1px)}
+.c-btn.yes{background:#EFEFEF;color:#999;font-weight:600}
+.c-btn.yes:hover{background:#E4E4E4;color:#777}
 .modal{background:var(--surface-solid);border:1px solid var(--glass-border);border-radius:var(--radius-xl);padding:28px;width:400px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(74,77,231,0.12),0 8px 24px rgba(0,0,0,0.08);animation:fadeUp .25s ease}
 .modal h3{font-size:16px;font-weight:700}
 .modal .meta{font-size:12px;color:var(--dim);margin:2px 0 16px}
@@ -245,6 +255,16 @@ button{font-family:inherit;cursor:pointer}
       <button class="m-btn del" id="btn-del" onclick="delEntry()" style="display:none">삭제</button>
       <button class="m-btn cancel" onclick="closeModal()">취소</button>
       <button class="m-btn save" onclick="saveEntry()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-bg" id="confirm-modal">
+  <div class="confirm">
+    <div class="confirm-msg" id="confirm-msg">정말로 삭제하시겠습니까?</div>
+    <div class="confirm-acts">
+      <button class="c-btn no" onclick="confirmResolve(false)">아니오</button>
+      <button class="c-btn yes" onclick="confirmResolve(true)">예</button>
     </div>
   </div>
 </div>
@@ -530,7 +550,7 @@ function openPanel(dateObj,recs){
   if(hasSchedule)h+='<div style="border-top:1px solid var(--border);margin:12px 0;"></div>';
   // 콘텐츠 섹션
   if(recs.length===0){h+='<div class="panel-empty"><div style="font-size:32px;margin-bottom:8px">📭</div><div>등록된 콘텐츠가 없습니다</div></div>';}
-  else{recs.forEach(function(r){var p2=r['플랫폼 1']||'',col=platColor(p2),title=r['콘텐츠 제목']||'',cat=r['콘텐츠 구분']||'',st=r['진행 상태']||'',ri=r._rowIndex;h+='<div class="p-card"><div class="p-card-head"><span class="p-tag" style="color:'+col+';border:1.5px solid '+col+'">'+platShort(p2)+'</span><button class="p-del" onclick="deleteRec('+ri+',\''+dk(dateObj)+'\')" title="삭제">✕</button></div><div class="p-title">'+title+'</div><div class="p-meta">'+(cat?'<span class="meta-chip">'+cat+'</span>':'')+(st?'<span class="meta-chip">'+st+'</span>':'')+'</div></div>';});}
+  else{recs.forEach(function(r){var p2=r['플랫폼 1']||'',col=platColor(p2),title=r['콘텐츠 제목']||'',cat=r['콘텐츠 구분']||'',st=r['진행 상태']||'',ri=r._rowIndex;var dkey=dk(dateObj);h+='<div class="p-card" onclick="editRec('+ri+',\''+dkey+'\',event)"><div class="p-card-head"><span class="p-tag" style="color:'+col+';border:1.5px solid '+col+'">'+platShort(p2)+'</span><button class="p-del" onclick="event.stopPropagation();deleteRec('+ri+',\''+dkey+'\')" title="삭제">✕</button></div><div class="p-title">'+title+'</div><div class="p-meta">'+(cat?'<span class="meta-chip">'+cat+'</span>':'')+(st?'<span class="meta-chip">'+st+'</span>':'')+'</div></div>';});}
   h+='<button class="add-btn" onclick="openModal(\''+dk(dateObj)+'\')">+ 새 콘텐츠 등록</button></div>';
   p.innerHTML=h;p.style.display='flex';
 }
@@ -557,10 +577,31 @@ function onPlatChange(){
     p2sel.innerHTML='<option value="">선택</option>'+opts.map(o=>'<option>'+o+'</option>').join('');
   }
 }
-function openModal(dateKey){
+function fillModalFields(rec){
+  var ts=rec['입력시간(KST)'],hhmm='10:00';
+  if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1].substr(0,5);
+  else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+  document.getElementById('f-time').value=hhmm;
+  var plat1=rec['플랫폼 1']||'';
+  var knownP1=['카카오톡','인스타그램','블로그·맘카페','B2B','문자'];
+  if(knownP1.indexOf(plat1)>-1){document.getElementById('f-plat').value=plat1;document.getElementById('f-plat-etc').value='';}
+  else if(plat1){document.getElementById('f-plat').value='기타';document.getElementById('f-plat-etc').value=plat1;}
+  else{document.getElementById('f-plat').value='카카오톡';document.getElementById('f-plat-etc').value='';}
+  onPlatChange();
+  var plat2=rec['플랫폼 2']||'';
+  if(plat2&&plat2!=='-'){var p2sel=document.getElementById('f-plat2');if(p2sel.style.display!=='none')p2sel.value=plat2;}
+  document.getElementById('f-title').value=rec['콘텐츠 제목']||'';
+  document.getElementById('f-cat').value=rec['콘텐츠 구분']||'';
+  document.getElementById('f-format').value=rec['콘텐츠 형식']||'';
+  document.getElementById('f-content').value=rec['콘텐츠 내용']||'';
+  document.getElementById('f-author').value=rec['게시 담당자']||'';
+  document.getElementById('f-status').value=rec['진행 상태']||'예정';
+  document.getElementById('f-memo').value=rec['비고']||'';
+}
+function openModal(dateKey,rec){
   const[y,m,d]=dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
-  editing={dateKey,existing:null};
-  document.getElementById('m-title').textContent='새 콘텐츠 등록';
+  editing={dateKey,existing:rec||null};
+  document.getElementById('m-title').textContent=rec?'콘텐츠 수정':'새 콘텐츠 등록';
   document.getElementById('m-meta').textContent=`${m}월 ${d}일 (${dn}요일)`;
   document.getElementById('f-time').value='10:00';
   document.getElementById('f-plat').value='카카오톡';
@@ -573,15 +614,39 @@ function openModal(dateKey){
   document.getElementById('f-status').value='예정';
   document.getElementById('f-memo').value='';
   onPlatChange();
-  document.getElementById('btn-del').style.display='none';
+  if(rec){fillModalFields(rec);document.getElementById('btn-del').style.display='inline-block';}
+  else{document.getElementById('btn-del').style.display='none';}
   document.getElementById('modal').classList.add('show');
   setTimeout(()=>document.getElementById('f-title').focus(),100);
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');editing=null;}
 
+function editRec(rowIndex,dateKey,ev){
+  if(ev&&ev.target&&ev.target.closest('.p-del'))return;
+  var rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  if(!rec)return;
+  openModal(dateKey,rec);
+}
+
+let _confirmResolve=null;
+function showConfirm(msg){
+  return new Promise(function(resolve){
+    _confirmResolve=resolve;
+    document.getElementById('confirm-msg').textContent=msg||'정말로 삭제하시겠습니까?';
+    document.getElementById('confirm-modal').classList.add('show');
+  });
+}
+function confirmResolve(v){
+  document.getElementById('confirm-modal').classList.remove('show');
+  if(_confirmResolve){var r=_confirmResolve;_confirmResolve=null;r(v);}
+}
+
 async function saveEntry(){
   const title=document.getElementById('f-title').value.trim();if(!title)return alert('콘텐츠 제목을 입력하세요');
-  const[y,m,d]=editing.dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
+  const dateKey=editing.dateKey;
+  const isEdit=!!(editing.existing);
+  const existingRowIndex=editing.existing&&editing.existing._rowIndex;
+  const[y,m,d]=dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
   const serial=Math.floor((dateObj.getTime()/86400000)+25569);
   const ft=document.getElementById('f-time').value||'10:00';
   const kstStr=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${ft}`;
@@ -596,12 +661,27 @@ async function saveEntry(){
     plat2=document.getElementById('f-plat2').value;
   }
   const row=[records.length+1,kstStr,serial,y,m,d,dn+'요일',plat1,plat2,document.getElementById('f-cat').value,'예술사업팀',title,document.getElementById('f-format').value,document.getElementById('f-content').value,document.getElementById('f-author').value,document.getElementById('f-status').value,document.getElementById('f-memo').value];
-  try{await api('POST','/api/records',{values:row});closeModal();await loadData();clickDate(editing.dateKey);}catch(e){alert('저장 실패: '+e.message);}
+  try{
+    await api('POST','/api/records',{values:row});
+    if(isEdit&&existingRowIndex){
+      try{await api('DELETE','/api/records/'+existingRowIndex);}
+      catch(e){console.error('수정 후 기존 행 삭제 실패:',e);alert('저장됨. 단, 기존 행 삭제 실패로 중복이 생겼을 수 있어. 패널에서 확인해줘.');}
+    }
+    closeModal();
+    await loadData();
+    clickDate(dateKey);
+  }catch(e){alert('저장 실패: '+e.message);}
 }
-async function delEntry(){if(!editing?.existing)return;if(!confirm('삭제하시겠습니까?'))return;try{await api('DELETE',`/api/records/${editing.existing._rowIndex}`);closeModal();await loadData();}catch(e){alert('삭제 실패: '+e.message);}}
+async function delEntry(){
+  if(!editing?.existing)return;
+  const dateKey=editing.dateKey;const ri=editing.existing._rowIndex;
+  const ok=await showConfirm('정말로 삭제하시겠습니까?');if(!ok)return;
+  try{await api('DELETE','/api/records/'+ri);closeModal();await loadData();clickDate(dateKey);}catch(e){alert('삭제 실패: '+e.message);}
+}
 
 async function deleteRec(rowIndex,dateKey){
-  if(!confirm('이 콘텐츠를 삭제하시겠습니까?'))return;
+  const ok=await showConfirm('정말로 삭제하시겠습니까?');
+  if(!ok)return;
   try{
     await api('DELETE','/api/records/'+rowIndex);
     await loadData();
@@ -610,8 +690,9 @@ async function deleteRec(rowIndex,dateKey){
   }catch(e){alert('삭제 실패: '+e.message);}
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePanel();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(_confirmResolve)confirmResolve(false);else{closeModal();closePanel();}}});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+document.getElementById('confirm-modal').addEventListener('click',e=>{if(e.target.id==='confirm-modal')confirmResolve(false);});
 </script>
 </body>
 </html>
