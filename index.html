@@ -428,12 +428,13 @@ function startClock(){function tick(){const n=new Date();document.getElementById
 var _typingId=0;
 function _typeLoop(elId,text,speed){
   var el=document.getElementById(elId);if(!el)return;
+  var chars=Array.from(text);
   var i=0,pause=0;_typingId++;var myId=_typingId;
   function tick(){
     if(_typingId!==myId)return;
     el=document.getElementById(elId);if(!el)return;
     if(pause>0){pause--;setTimeout(tick,16);return;}
-    if(i<=text.length){el.textContent=text.slice(0,i);i++;setTimeout(tick,speed);}
+    if(i<=chars.length){el.textContent=chars.slice(0,i).join('');i++;setTimeout(tick,speed);}
     else{pause=30;i=0;setTimeout(tick,16);}
   }
   setTimeout(tick,100);
