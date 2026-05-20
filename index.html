@@ -435,7 +435,7 @@ function renderCal(){
     const isTW=wi===twIdx;
     h+=`<div class="week${isTW?' tw':''}" style="${wi<weeks.length-1?'':'border-bottom:none'}">`;
     week.forEach((d,di)=>{
-      const key=dk(d),nm=d.getMonth()+1!==currentMonth,td=isToday(d),past=isThisMonth&&isPast(d)&&!td&&!isTW,isSat=di===4,isSun=di===5,isSel=selected===key,recs=nm?[]:getRecsForDate(d);
+      const key=dk(d),nm=d.getMonth()+1!==currentMonth,td=isToday(d),past=isThisMonth&&isPast(d)&&!td,isSat=di===4,isSun=di===5,isSel=selected===key,recs=nm?[]:getRecsForDate(d);
       let bg='rgba(255,255,255,0.3)';
       if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
@@ -450,11 +450,11 @@ function renderCal(){
         else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
         var nowH=new Date().getHours(),nowM=new Date().getMinutes(),evPast=false;
         if(td&&hhmm){var pp=hhmm.split(':');if(pp.length===2){var eh=parseInt(pp[0]),em=parseInt(pp[1]);if(eh<nowH||(eh===nowH&&em<=nowM))evPast=true;}}
-        var timeCol=done?'#bbb':past?'var(--past-text)':td?(evPast?'#999':'var(--accent)'):'var(--text)';
+        var timeCol=done?'#bbb':past?'var(--past-text)':td?'var(--accent)':'var(--text)';
         var platCol=done?'#bbb':past?'var(--past-text)':td?col:col;
         var titleCol=done?'#bbb':past?'var(--past-text)':'var(--text)';
         var deco=done?'text-decoration:line-through;':'';
-        h+='<div class="ev'+(td&&evPast?' ev-past':'')+'" style="'+deco+'opacity:'+(done?'0.6':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600">'+platShort(p)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
+        h+='<div class="ev'+(td&&evPast?' ev-past':'')+'" style="'+deco+'opacity:'+(done?'0.6':evPast?'0.5':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600">'+platShort(p)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
