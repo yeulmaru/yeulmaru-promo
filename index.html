@@ -717,7 +717,7 @@ async function delEntry(){
   const dateKey=editing.dateKey;const ri=editing.existing._rowIndex;
   const ok=await showConfirm('정말로 삭제하시겠습니까?');if(!ok)return;
   showOverlayLoad();
-  try{await api('DELETE','/api/records/'+ri);closeModal();await loadData();clickDate(dateKey);showToast('삭제되었습니다');}catch(e){alert('삭제 실패: '+e.message);}
+  try{await api('DELETE','/api/records/'+ri);closeModal();await loadData();closePanel();showToast('삭제되었습니다');}catch(e){alert('삭제 실패: '+e.message);}
   finally{hideOverlayLoad();}
 }
 
@@ -728,8 +728,7 @@ async function deleteRec(rowIndex,dateKey){
   try{
     await api('DELETE','/api/records/'+rowIndex);
     await loadData();
-    const[y,m,d]=dateKey.split('-').map(Number);const dateObj=new Date(y,m-1,d);
-    openPanel(dateObj,getRecsForDate(dateObj));
+    closePanel();
     showToast('삭제되었습니다');
   }catch(e){alert('삭제 실패: '+e.message);}
   finally{hideOverlayLoad();}
@@ -780,6 +779,7 @@ async function onCellDrop(ev,toKey){
     try{await api('DELETE','/api/records/'+drag.rowIndex);}
     catch(e){console.error('이동 후 기존 행 삭제 실패:',e);alert('이동됨. 단, 기존 행 삭제 실패로 중복이 생겼을 수 있어.');}
     await loadData();
+    closePanel();
     showToast('이동되었습니다');
   }catch(e){alert('이동 실패: '+e.message);}
   finally{hideOverlayLoad();}
