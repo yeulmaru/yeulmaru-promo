@@ -76,6 +76,21 @@ button{font-family:inherit;cursor:pointer}
 .chip-dot{width:8px;height:8px;border-radius:50%}
 .chip-label{color:#666;font-weight:500}
 .chip-count{font-weight:700;color:var(--text)}
+.prog-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--glass-border);background:var(--glass);backdrop-filter:blur(8px);cursor:pointer;transition:all .2s;color:#666;margin-left:6px;flex-shrink:0}
+.prog-btn:hover{background:var(--accent-light);color:var(--accent)}
+.prog-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(74,77,231,0.25)}
+.prog-btn .prog-count-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#E24B4A;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+.prog-list{max-height:50vh;overflow-y:auto;margin:8px 0 12px;padding-right:4px}
+.prog-section{font-size:11px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.prog-section:first-child{margin-top:0}
+.prog-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;transition:background .15s;font-size:13px}
+.prog-item:hover{background:rgba(74,77,231,0.04)}
+.prog-item input{margin:0;width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--accent)}
+.prog-icon{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:700;flex-shrink:0}
+.prog-icon.c{background:var(--accent);color:#fff}
+.prog-icon.e{background:var(--peach);color:#333}
+.prog-name{flex:1;color:var(--text);font-weight:500}
+.prog-date{font-size:11px;color:var(--dim);font-weight:500}
 
 /* ═══ CALENDAR ═══ */
 .cal{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid var(--glass-border)}
@@ -282,6 +297,19 @@ button{font-family:inherit;cursor:pointer}
 <div class="toast" id="toast"></div>
 <div class="overlay-load" id="overlay-load"><span id="ol-text"></span></div>
 
+<div class="modal-bg" id="prog-modal">
+  <div class="modal" style="width:380px">
+    <h3>프로그램 필터</h3>
+    <div class="meta">진행 중인 공연·전시 중 선택 (콘텐츠 제목에 풀네임 포함 매칭)</div>
+    <div id="prog-list" class="prog-list"></div>
+    <div class="modal-acts">
+      <button class="m-btn del" onclick="clearProgramsModal()" style="margin-right:auto">전체 해제</button>
+      <button class="m-btn cancel" onclick="closeProgFilter()">취소</button>
+      <button class="m-btn save" onclick="applyPrograms()">적용</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API='https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
 const PLAT_COLORS={
@@ -371,7 +399,7 @@ else out+='<span style="display:inline-flex;align-items:center;margin-left:6px">
 }return out;
 }
 let password='',records=[],currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth()+1;
-let selected=null,editing=null,panelOpen=false,activeFilters=[];
+let selected=null,editing=null,panelOpen=false,activeFilters=[],activePrograms=[];
 
 // PIN
 const pins=document.querySelectorAll('.pin');
@@ -463,6 +491,40 @@ function toggleFilter(label){
   render();
 }
 function clearFilters(){activeFilters=[];render();}
+
+function openProgFilter(){
+  var perfs=PERFS.filter(function(p){return p.o===1;});
+  var concerts=perfs.filter(function(p){return p.t==='c';});
+  var exhibits=perfs.filter(function(p){return p.t==='e';});
+  var html='';
+  if(concerts.length>0){
+    html+='<div class="prog-section">공연</div>';
+    concerts.forEach(function(p){
+      var checked=activePrograms.indexOf(p.f)>-1?'checked':'';
+      var date=p.s===p.e?p.s.substr(5).replace('-','.'):p.s.substr(5).replace('-','.')+'~'+p.e.substr(5).replace('-','.');
+      html+='<label class="prog-item"><input type="checkbox" value="'+p.f.replace(/"/g,'&quot;')+'" '+checked+'><span class="prog-icon c">공</span><span class="prog-name">'+p.f+'</span><span class="prog-date">'+date+'</span></label>';
+    });
+  }
+  if(exhibits.length>0){
+    html+='<div class="prog-section">전시</div>';
+    exhibits.forEach(function(p){
+      var checked=activePrograms.indexOf(p.f)>-1?'checked':'';
+      var date=p.s.substr(5).replace('-','.')+'~'+p.e.substr(5).replace('-','.');
+      html+='<label class="prog-item"><input type="checkbox" value="'+p.f.replace(/"/g,'&quot;')+'" '+checked+'><span class="prog-icon e">전</span><span class="prog-name">'+p.f+'</span><span class="prog-date">'+date+'</span></label>';
+    });
+  }
+  if(!html)html='<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px">진행 중인 프로그램이 없습니다</div>';
+  document.getElementById('prog-list').innerHTML=html;
+  document.getElementById('prog-modal').classList.add('show');
+}
+function closeProgFilter(){document.getElementById('prog-modal').classList.remove('show');}
+function clearProgramsModal(){document.querySelectorAll('#prog-list input').forEach(function(c){c.checked=false;});}
+function applyPrograms(){
+  var sel=document.querySelectorAll('#prog-list input:checked');
+  activePrograms=Array.from(sel).map(function(c){return c.value;});
+  closeProgFilter();
+  render();
+}
 function renderChips(){
   const c=document.getElementById('chips');
   const groups=[
@@ -473,7 +535,11 @@ function renderChips(){
     {label:'문자',color:'#8B5CF6',match:['문자']},
   ];
   var resetBtn=activeFilters.length>0?'<div class="chip" onclick="clearFilters()" style="cursor:pointer;padding:7px 12px"><span class="chip-label" style="color:#999;font-size:11px">초기화</span></div>':'';
-  c.innerHTML=resetBtn+groups.map((g,gi)=>{const cnt=records.filter(r=>{const p=r['플랫폼 1']||'';return g.match.some(m=>p.includes(m));}).length;const isActive=activeFilters.indexOf(g.label)>-1;return`<div class="chip${isActive?' chip-active':''}" onclick="toggleFilter('${g.label}')" style="cursor:pointer;${isActive?'background:'+g.color+';':''}"><span class="chip-dot" style="background:${isActive?'#fff':g.color}"></span><span class="chip-label" style="${isActive?'color:#fff':''}">${g.label}</span><span class="chip-count" style="${isActive?'color:#fff':''}">${cnt}</span></div>`;}).join('');
+  var chipsHtml=groups.map((g,gi)=>{const cnt=records.filter(r=>{const p=r['플랫폼 1']||'';return g.match.some(m=>p.includes(m));}).length;const isActive=activeFilters.indexOf(g.label)>-1;return`<div class="chip${isActive?' chip-active':''}" onclick="toggleFilter('${g.label}')" style="cursor:pointer;${isActive?'background:'+g.color+';':''}"><span class="chip-dot" style="background:${isActive?'#fff':g.color}"></span><span class="chip-label" style="${isActive?'color:#fff':''}">${g.label}</span><span class="chip-count" style="${isActive?'color:#fff':''}">${cnt}</span></div>`;}).join('');
+  var progActive=activePrograms.length>0;
+  var progBadge=progActive?'<span class="prog-count-badge">'+activePrograms.length+'</span>':'';
+  var progBtn='<button class="prog-btn'+(progActive?' active':'')+'" onclick="openProgFilter()" title="프로그램별 필터"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>'+progBadge+'</button>';
+  c.innerHTML=resetBtn+chipsHtml+progBtn;
 }
 
 function renderCal(){
@@ -493,7 +559,7 @@ function renderCal(){
       if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
       h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}" data-cell data-key="${key}" onclick="clickDate('${key}')"${nm?'':` ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
-      var perfs=nm?[]:getPerfs(d);var filteredRecs=recs;if(activeFilters.length>0){var allGroups=[{label:'카카오',match:['카카오']},{label:'인스타',match:['인스타']},{label:'블로그·맘카페',match:['블로그','맘카페']},{label:'B2B',match:['B2B']},{label:'문자',match:['문자']}];var activeMatches=[];activeFilters.forEach(function(af){allGroups.forEach(function(g){if(g.label===af)activeMatches=activeMatches.concat(g.match);});});filteredRecs=recs.filter(function(r){var p=r['플랫폼 1']||'';return activeMatches.some(function(m){return p.indexOf(m)>-1;});});}else{filteredRecs=recs;}
+      var perfs=nm?[]:getPerfs(d);var filteredRecs=recs;if(activeFilters.length>0){var allGroups=[{label:'카카오',match:['카카오']},{label:'인스타',match:['인스타']},{label:'블로그·맘카페',match:['블로그','맘카페']},{label:'B2B',match:['B2B']},{label:'문자',match:['문자']}];var activeMatches=[];activeFilters.forEach(function(af){allGroups.forEach(function(g){if(g.label===af)activeMatches=activeMatches.concat(g.match);});});filteredRecs=filteredRecs.filter(function(r){var p=r['플랫폼 1']||'';return activeMatches.some(function(m){return p.indexOf(m)>-1;});});}if(activePrograms.length>0){filteredRecs=filteredRecs.filter(function(r){var t=r['콘텐츠 제목']||'';return activePrograms.some(function(f){return t.indexOf(f)>-1;});});}
       h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past)+'</div>';
       filteredRecs.forEach(r=>{
         var p=r['플랫폼 1']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
@@ -786,8 +852,9 @@ async function onCellDrop(ev,toKey){
   finally{hideOverlayLoad();}
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(_confirmResolve)confirmResolve(false);else{closeModal();closePanel();}}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(_confirmResolve)confirmResolve(false);else{closeModal();closeProgFilter();closePanel();}}});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+document.getElementById('prog-modal').addEventListener('click',e=>{if(e.target.id==='prog-modal')closeProgFilter();});
 document.getElementById('confirm-modal').addEventListener('click',e=>{if(e.target.id==='confirm-modal')confirmResolve(false);});
 </script>
 </body>
