@@ -219,7 +219,8 @@ button{font-family:inherit;cursor:pointer}
 .modal label .req{color:var(--peach);margin-left:3px;font-weight:700}
 .modal input:not([type="checkbox"]):not([type="radio"]),.modal select,.modal textarea{width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;color:var(--text);font-size:13px;outline:none;transition:all .2s;font-family:inherit;box-sizing:border-box}
 .modal textarea{resize:vertical;min-height:60px;line-height:1.5}
-.modal input[readonly]{background:#EEE;cursor:not-allowed;color:#666}
+.modal input[readonly],.modal textarea[readonly],.modal select:disabled{background:#EEE;cursor:not-allowed;color:#666;border-color:rgba(0,0,0,0.04)}
+.modal input[readonly]:focus,.modal textarea[readonly]:focus,.modal select:disabled:focus{border-color:rgba(0,0,0,0.04);box-shadow:none;background:#EEE}
 .modal input:not([type="checkbox"]):not([type="radio"]):focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);background:#fff}
 .modal input.field-attention:not([type="checkbox"]):not([type="radio"]),.modal select.field-attention,.modal textarea.field-attention{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)!important;background:#fff!important;animation:fa-pulse 1.4s ease-out 2}
 @keyframes fa-pulse{0%{box-shadow:0 0 0 6px rgba(74,77,231,0.3),0 0 18px rgba(74,77,231,0.25)}100%{box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)}}
@@ -1900,7 +1901,8 @@ function fillModalFields(rec){
 function openModal(dateKey,rec){
   const[y,m,d]=dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
   editing={dateKey,existing:rec||null};
-  document.getElementById('m-title').textContent=rec?'콘텐츠 수정':'새 콘텐츠 등록';
+  const isReadOnly=userRole!=='admin';
+  document.getElementById('m-title').textContent=isReadOnly?'콘텐츠 조회':(rec?'콘텐츠 수정':'새 콘텐츠 등록');
   document.getElementById('m-meta').textContent=`${m}월 ${d}일 (${dn}요일)`;
   document.getElementById('f-date').value=dateKey;
   document.getElementById('f-time').value='10:00';
@@ -1915,10 +1917,18 @@ function openModal(dateKey,rec){
   document.getElementById('f-status').value=STATUSES[0]||'';
   document.getElementById('f-memo').value='';
   onPlatChange();
-  if(rec){fillModalFields(rec);document.getElementById('btn-del').style.display='inline-block';}
+  if(rec){fillModalFields(rec);document.getElementById('btn-del').style.display=isReadOnly?'none':'inline-block';}
   else{document.getElementById('btn-del').style.display='none';}
+  applyModalPermission(isReadOnly);
   document.getElementById('modal').classList.add('show');
-  setTimeout(()=>document.getElementById('f-title').focus(),100);
+  if(!isReadOnly)setTimeout(()=>document.getElementById('f-title').focus(),100);
+}
+function applyModalPermission(isReadOnly){
+  const modal=document.getElementById('modal');
+  modal.querySelectorAll('input, textarea').forEach(function(el){el.readOnly=isReadOnly;});
+  modal.querySelectorAll('select').forEach(function(el){el.disabled=isReadOnly;});
+  const saveBtn=modal.querySelector('.m-btn.save');
+  if(saveBtn)saveBtn.style.display=isReadOnly?'none':'';
 }
 
 // f-date 변경 시 m-meta 텍스트 자동 업데이트
@@ -1937,7 +1947,6 @@ function closeModal(){
 }
 
 function editRec(rowIndex,dateKey,ev){
-  if(userRole!=='admin'){showToast('관리자만 수정 가능','error');return;}
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
   var rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec)return;
