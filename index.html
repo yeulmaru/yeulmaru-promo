@@ -377,6 +377,7 @@ const DAYS=['화','수','목','금','토','일'];
 const DAY_NAMES=['일','월','화','수','목','금','토'];
 const MENUS=[
   {label:'캘린더',id:'cal'},
+  {label:'일정',id:'schedule'},
   {label:'플랫폼 현황',id:'platform'},
   {label:'홍보 해줘',id:'promo'},
   {label:'연간 일정',id:'annual'},
@@ -674,6 +675,7 @@ function buildNav(){
     b.onclick=()=>{
       if(m.id==='annual'){window.open('https://yeulmaru.github.io/yeulmaru-calandar-2026/','_blank');return;}
       if(m.id==='admin'){openAdminPanel();return;}
+      if(m.id==='schedule'){openScheduleAdmin();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
     b.onmouseenter=()=>movePill(b,pill);
@@ -717,7 +719,9 @@ function adminRoute(id){
 }
 
 // === 일정 관리 리스트뷰 (Phase 3D) ===
-let _schedFilter={month:'all',cat:'all',status:'all'};
+let _schedFilter={month:'all',cat:'all',status:'all',q:''};
+let _schedReturnFlag=false;
+let _schedQTimer=null;
 
 async function openScheduleAdmin(){
   const html='<div class="modal-bg show" onclick="if(event.target===this)closeAdminPanel()"><div class="modal" style="width:96vw;max-width:1200px;max-height:88vh;overflow:auto;padding:24px"><div id="sched-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
@@ -737,6 +741,16 @@ function renderScheduleList(){
   if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
   if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
   if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
+  if(_schedFilter.q){
+    const q=_schedFilter.q.toLowerCase();
+    rows=rows.filter(r=>
+      (r['콘텐츠 제목']||'').toLowerCase().includes(q)||
+      (r['게시 담당자']||'').toLowerCase().includes(q)||
+      (r['프로그램']||'').toLowerCase().includes(q)||
+      (r['콘텐츠 내용']||'').toLowerCase().includes(q)||
+      (r['비고']||'').toLowerCase().includes(q)
+    );
+  }
   // 정렬: 날짜 + 시간 오름차순
   rows.sort((a,b)=>{
     const ad=Number(a['날짜'])||0,bd=Number(b['날짜'])||0;
@@ -745,6 +759,9 @@ function renderScheduleList(){
     return at-bt;
   });
   body.innerHTML=buildScheduleListHtml(rows);
+  // 검색 input focus 유지
+  const q=document.getElementById('sched-q');
+  if(q&&_schedFilter.q){q.focus();q.setSelectionRange(q.value.length,q.value.length);}
 }
 
 function buildScheduleListHtml(rows){
@@ -757,13 +774,13 @@ function buildScheduleListHtml(rows){
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   // 필터 영역
   html+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">';
-  html+='<span style="font-size:11px;color:#888">필터:</span>';
+  html+='<input id="sched-q" type="text" placeholder="🔍 제목/담당자/프로그램/내용 검색" value="'+escapeHtml(_schedFilter.q)+'" oninput="setSchedQuery(this.value)" style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff;min-width:240px;flex:0 1 280px">';
   html+='<select class="sched-filter" onchange="setSchedFilter(\'month\',this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff"><option value="all"'+(_schedFilter.month==='all'?' selected':'')+'>전체 월</option>'+allMonths.map(m=>'<option value="'+m+'"'+(_schedFilter.month===m?' selected':'')+'>'+m+'월</option>').join('')+'</select>';
   html+='<select class="sched-filter" onchange="setSchedFilter(\'cat\',this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff"><option value="all"'+(_schedFilter.cat==='all'?' selected':'')+'>전체 구분</option>'+allCats.map(c=>'<option value="'+escapeHtml(c)+'"'+(_schedFilter.cat===c?' selected':'')+'>'+escapeHtml(c)+'</option>').join('')+'</select>';
   html+='<select class="sched-filter" onchange="setSchedFilter(\'status\',this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff"><option value="all"'+(_schedFilter.status==='all'?' selected':'')+'>전체 상태</option>'+allStatuses.map(s=>'<option value="'+escapeHtml(s)+'"'+(_schedFilter.status===s?' selected':'')+'>'+escapeHtml(s)+'</option>').join('')+'</select>';
-  if(_schedFilter.month!=='all'||_schedFilter.cat!=='all'||_schedFilter.status!=='all')
+  if(_schedFilter.month!=='all'||_schedFilter.cat!=='all'||_schedFilter.status!=='all'||_schedFilter.q)
     html+='<button onclick="resetSchedFilter()" style="padding:5px 12px;background:#fafafa;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:11px;color:#666">초기화</button>';
-  html+='<span style="font-size:11px;color:#888;margin-left:auto">💡 row 클릭 = 수정 모달</span>';
+  html+='<span style="font-size:11px;color:#888;margin-left:auto">💡 row 클릭 = 수정</span>';
   html+='</div>';
   
   if(rows.length===0){
@@ -798,10 +815,16 @@ function buildScheduleListHtml(rows){
 }
 
 function setSchedFilter(key,val){_schedFilter[key]=val;renderScheduleList();}
-function resetSchedFilter(){_schedFilter={month:'all',cat:'all',status:'all'};renderScheduleList();}
+function setSchedQuery(val){
+  _schedFilter.q=val;
+  if(_schedQTimer)clearTimeout(_schedQTimer);
+  _schedQTimer=setTimeout(()=>renderScheduleList(),250);
+}
+function resetSchedFilter(){_schedFilter={month:'all',cat:'all',status:'all',q:''};renderScheduleList();}
 function openScheduleRow(dateKey,rowIndex){
   const rec=records.find(r=>r._rowIndex===rowIndex);
   if(!rec){alert('row를 찾을 수 없음');return;}
+  _schedReturnFlag=true;
   closeAdminPanel();
   openModal(dateKey,rec);
 }
@@ -1432,7 +1455,11 @@ function openModal(dateKey,rec){
   document.getElementById('modal').classList.add('show');
   setTimeout(()=>document.getElementById('f-title').focus(),100);
 }
-function closeModal(){document.getElementById('modal').classList.remove('show');editing=null;}
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+  editing=null;
+  if(_schedReturnFlag){_schedReturnFlag=false;setTimeout(()=>openScheduleAdmin(),50);}
+}
 
 function editRec(rowIndex,dateKey,ev){
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
