@@ -2084,7 +2084,8 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
   
   html+='<div class="mv-section">📍 홍보 현황</div>';
   html+='<div class="mv-row"><span class="lbl">일시</span><span class="val">'+escapeHtml(dateTimeFull)+'</span></div>';
-  html+='<div class="mv-row"><span class="lbl">진행 상태</span><span class="val" style="font-weight:700">'+escapeHtml(status)+'</span></div>';
+  const statusColor=status==='예정'?'var(--peach)':status==='완료'?'var(--accent)':'#333';
+  html+='<div class="mv-row"><span class="lbl">진행 상태</span><span class="val" style="font-weight:700;color:'+statusColor+'">'+escapeHtml(status)+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">비고</span><span class="val'+(memo?'':' muted')+'">'+(memo?escapeHtml(memo):'내용 없음')+'</span></div>';
   
   html+='<div class="mv-section">📍 홍보 주제 및 내용</div>';
