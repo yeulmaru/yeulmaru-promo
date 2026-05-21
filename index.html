@@ -235,7 +235,7 @@ button{font-family:inherit;cursor:pointer}
 .mv-row .val{flex:1;font-weight:500;word-break:break-all}
 .mv-row .val.muted{color:#aaa;font-weight:400;font-style:italic}
 .mv-platrow{font-size:13px;color:#555;font-weight:500;margin:6px 0}
-.mv-title{font-size:15px;color:#222;font-weight:700;margin:6px 0 4px;line-height:1.4}
+.mv-title{font-size:15px;color:#222;font-weight:500;margin:6px 0 4px;line-height:1.4}
 .mv-title .fmt{color:#888;font-size:12px;font-weight:500;margin-left:6px}
 .mv-content{font-size:13px;color:#444;line-height:1.55;background:#fafafa;border-radius:8px;padding:10px 12px;max-height:54px;overflow-y:auto;white-space:pre-wrap;margin-top:6px}
 .mv-content.empty{color:#aaa;font-style:italic}
@@ -2041,8 +2041,8 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
     const h12=hh%12||12;
     timeStr=`${ampm} ${String(h12).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
   }
-  const dateFull=`${rec['연도']}-${String(rec['월']||'').padStart(2,'0')}-${String(rec['일']||'').padStart(2,'0')} (${dn}요일)`;
-  const dateTimeFull=`${rec['연도']}-${String(rec['월']||'').padStart(2,'0')}-${String(rec['일']||'').padStart(2,'0')} ${timeStr}`;
+  const dnShort=dn;
+  const dateTimeFull=`${rec['연도']}-${String(rec['월']||'').padStart(2,'0')}-${String(rec['일']||'').padStart(2,'0')} ${timeStr} (${dnShort})`;
   const status=rec['진행 상태']||'-';
   const memo=rec['비고']||'';
   const p1=rec['플랫폼 1']||'';
@@ -2056,17 +2056,17 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
   const author=rec['게시 담당자']||'';
   
   document.getElementById('m-title').textContent='콘텐츠 조회';
-  document.getElementById('m-meta').innerHTML='<div class="mv-date1">'+dateFull+'</div>';
+  document.getElementById('m-meta').innerHTML='';
   
   let html='';
   html+='<div class="mv-section">📍 게시 현황</div>';
   html+='<div class="mv-row"><span class="lbl">일시</span><span class="val">'+escapeHtml(dateTimeFull)+'</span></div>';
-  html+='<div class="mv-row"><span class="lbl">진행 상태</span><span class="val">'+escapeHtml(status)+'</span></div>';
+  html+='<div class="mv-row"><span class="lbl">진행 상태</span><span class="val" style="font-weight:700">'+escapeHtml(status)+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">비고</span><span class="val'+(memo?'':' muted')+'">'+(memo?escapeHtml(memo):'내용 없음')+'</span></div>';
   
   html+='<div class="mv-section">📍 게시 내용</div>';
-  html+='<div class="mv-platrow">'+escapeHtml(p1)+(p2&&p2!=='-'?'  ·  '+escapeHtml(p2):'')+'</div>';
-  if(prog)html+='<div class="mv-platrow" style="color:#888">'+escapeHtml(prog)+'</div>';
+  html+='<div class="mv-platrow" style="font-weight:700;color:#222">'+escapeHtml(p1)+(p2&&p2!=='-'?'  ·  '+escapeHtml(p2):'')+'</div>';
+  if(prog)html+='<div class="mv-platrow" style="color:var(--accent);font-weight:600">'+escapeHtml(prog)+'</div>';
   if(cat)html+='<div><span class="mv-cat">'+escapeHtml(cat)+'</span></div>';
   html+='<div class="mv-title">'+escapeHtml(title)+(fmt?'<span class="fmt">('+escapeHtml(fmt)+')</span>':'')+'</div>';
   html+='<div class="mv-content'+(content?'':' empty')+'">'+(content?escapeHtml(content):'내용 없음')+'</div>';
