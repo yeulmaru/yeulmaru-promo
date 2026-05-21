@@ -697,7 +697,7 @@ function updatePerfOpen(){
     p.o=(now>=ss&&now<=se)?1:0;
   });
 }
-async function initApp(){buildNav();startClock();updateRoleTag();await loadPrograms();await loadAllMasters();updatePerfOpen();loadData();}
+async function initApp(){buildNav();startClock();updateRoleTag();await loadPrograms();await loadAllMasters();updatePerfOpen();if(activePrograms.length===0)activePrograms=PERFS.filter(function(p){return p.o===1;}).map(function(p){return p.f;});loadData();}
 
 function updateRoleTag(){
   const el=document.getElementById('role-tag');
@@ -1592,6 +1592,7 @@ function toggleFilter(label){
 function clearFilters(){activeFilters=[];render();}
 
 let _progScope='active';
+let _modalSelected=[];
 function setProgScope(scope){
   _progScope=scope;
   document.querySelectorAll('.prog-tab').forEach(function(b){b.classList.toggle('active',b.dataset.scope===scope);});
@@ -1605,35 +1606,50 @@ function renderProgList(){
   if(concerts.length>0){
     html+='<div class="pf-section" style="color:var(--accent)">공연</div>';
     concerts.forEach(function(p){
-      var checked=activePrograms.indexOf(p.f)>-1?'checked':'';
+      var checked=_modalSelected.indexOf(p.f)>-1?'checked':'';
       var onCls=checked?' on':'';
       var date=p.s===p.e?p.s.substr(5).replace('-','.'):p.s.substr(5).replace('-','.')+'~'+p.e.substr(5).replace('-','.');
-      html+='<label class="pf-row pf-c'+onCls+'"><input type="checkbox" onchange="this.closest(\'.pf-row\').classList.toggle(\'on\',this.checked);syncMasterCheckbox()" value="'+p.f.replace(/"/g,'&quot;')+'" '+checked+'><span class="pf-name">'+p.f+'</span><span class="pf-date">'+date+'</span></label>';
+      html+='<label class="pf-row pf-c'+onCls+'"><input type="checkbox" onchange="onProgRowChange(this)" value="'+p.f.replace(/"/g,'&quot;')+'" '+checked+'><span class="pf-name">'+p.f+'</span><span class="pf-date">'+date+'</span></label>';
     });
   }
   if(exhibits.length>0){
     html+='<div class="pf-section" style="color:var(--peach)">전시</div>';
     exhibits.forEach(function(p){
-      var checked=activePrograms.indexOf(p.f)>-1?'checked':'';
+      var checked=_modalSelected.indexOf(p.f)>-1?'checked':'';
       var onCls=checked?' on':'';
       var date=p.s.substr(5).replace('-','.')+'~'+p.e.substr(5).replace('-','.');
-      html+='<label class="pf-row pf-e'+onCls+'"><input type="checkbox" onchange="this.closest(\'.pf-row\').classList.toggle(\'on\',this.checked);syncMasterCheckbox()" value="'+p.f.replace(/"/g,'&quot;')+'" '+checked+'><span class="pf-name">'+p.f+'</span><span class="pf-date">'+date+'</span></label>';
+      html+='<label class="pf-row pf-e'+onCls+'"><input type="checkbox" onchange="onProgRowChange(this)" value="'+p.f.replace(/"/g,'&quot;')+'" '+checked+'><span class="pf-name">'+p.f+'</span><span class="pf-date">'+date+'</span></label>';
     });
   }
   if(!html)html='<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px">표시할 프로그램이 없습니다</div>';
   document.getElementById('prog-list').innerHTML=html;
   syncMasterCheckbox();
 }
+function onProgRowChange(input){
+  input.closest('.pf-row').classList.toggle('on',input.checked);
+  var v=input.value;
+  if(input.checked){if(_modalSelected.indexOf(v)===-1)_modalSelected.push(v);}
+  else{_modalSelected=_modalSelected.filter(function(x){return x!==v;});}
+  syncMasterCheckbox();
+}
 function openProgFilter(){
+  // 모달 열 때 마지막 적용 상태(activePrograms) → _modalSelected 복사
+  _modalSelected=activePrograms.slice();
   document.querySelectorAll('.prog-tab').forEach(function(b){b.classList.toggle('active',b.dataset.scope===_progScope);});
   renderProgList();
   document.getElementById('prog-modal').classList.add('show');
 }
 function closeProgFilter(){document.getElementById('prog-modal').classList.remove('show');}
 function toggleAllPrograms(checked){
+  // 현재 표시 중인 row만 토글 (탭에 따라 다름)
   document.querySelectorAll('#prog-list .pf-row').forEach(function(row){
     var inp=row.querySelector('input');
-    if(inp){inp.checked=checked;row.classList.toggle('on',checked);}
+    if(!inp)return;
+    inp.checked=checked;
+    row.classList.toggle('on',checked);
+    var v=inp.value;
+    if(checked){if(_modalSelected.indexOf(v)===-1)_modalSelected.push(v);}
+    else{_modalSelected=_modalSelected.filter(function(x){return x!==v;});}
   });
 }
 function syncMasterCheckbox(){
@@ -1646,8 +1662,8 @@ function syncMasterCheckbox(){
   else{master.checked=false;master.indeterminate=true;}
 }
 function applyPrograms(){
-  var sel=document.querySelectorAll('#prog-list input:checked');
-  activePrograms=Array.from(sel).map(function(c){return c.value;});
+  // _modalSelected = 모달 안에서 누적된 모든 선택 (탭 무관)
+  activePrograms=_modalSelected.slice();
   closeProgFilter();
   render();
 }
