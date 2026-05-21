@@ -763,6 +763,8 @@ function adminRoute(id){
 let _schedFilter={month:'all',cat:'all',status:'all',q:'',hidePast:true};
 let _schedReturnFlag=false;
 let _schedQTimer=null;
+let _schedPage=1;
+const SCHED_PAGE_SIZE=20;
 
 function getRecDateKey(r){
   const y=r['연도']||'',m=String(r['월']||'').padStart(2,'0'),d=String(r['일']||'').padStart(2,'0');
@@ -825,35 +827,43 @@ function buildScheduleListHtml(rows){
   const allMonths=[...new Set(records.map(r=>String(r['월']||'')))].filter(Boolean).sort((a,b)=>Number(a)-Number(b));
   const allCats=[...new Set(records.map(r=>r['콘텐츠 구분']||''))].filter(Boolean);
   const allStatuses=[...new Set(records.map(r=>r['진행 상태']||''))].filter(Boolean);
-  // 카운트 (오늘 / 미래 / 과거)
-  const todayCount=rows.filter(r=>getRecDateKey(r)===todayKey).length;
-  const futureCount=rows.filter(r=>getRecDateKey(r)>todayKey).length;
-  const pastCount=rows.filter(r=>getRecDateKey(r)<todayKey).length;
+  
+  // 오늘 / 비-오늘 분리 (오늘은 항상 상단 고정)
+  const todayRows=rows.filter(r=>getRecDateKey(r)===todayKey);
+  const nonTodayRows=rows.filter(r=>getRecDateKey(r)!==todayKey);
+  
+  // 카운트
+  const todayCount=todayRows.length;
+  const todayDoneCount=todayRows.filter(r=>(r['진행 상태']||'')==='완료').length;
+  const futureRows=nonTodayRows.filter(r=>getRecDateKey(r)>todayKey);
+  const futurePlannedCount=futureRows.filter(r=>(r['진행 상태']||'')==='예정').length;
+  const pastCount=nonTodayRows.filter(r=>getRecDateKey(r)<todayKey).length;
+  
+  // 페이징 계산: 오늘 row가 매 페이지마다 표시되므로 페이지당 비-오늘 = 20 - 오늘
+  const remainPerPage=Math.max(1,SCHED_PAGE_SIZE-todayCount);
+  const totalPages=Math.max(1,Math.ceil(nonTodayRows.length/remainPerPage));
+  if(_schedPage>totalPages)_schedPage=1;
+  const pageStart=(_schedPage-1)*remainPerPage;
+  const pageNonToday=nonTodayRows.slice(pageStart,pageStart+remainPerPage);
+  const displayRows=[...todayRows,...pageNonToday];
   
   let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px"><h3 style="margin:0;flex:1">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
   if(isAdmin)html+='<button onclick="addScheduleFromList()" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
   html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px">📥 CSV</button>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   
-  // 요약 배지
-  html+='<div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px;flex-wrap:wrap">';
-  if(todayCount>0)html+='<span style="padding:4px 12px;background:#FFF4DC;color:#C97A11;border-radius:8px;font-weight:600">📍 오늘 '+todayCount+'개</span>';
-  if(futureCount>0)html+='<span style="padding:4px 12px;background:#fafafa;color:#666;border-radius:8px">미래 '+futureCount+'개</span>';
-  if(pastCount>0&&!_schedFilter.hidePast)html+='<span style="padding:4px 12px;background:#f5f5f5;color:#999;border-radius:8px">지난 일정 '+pastCount+'개</span>';
-  // 진행 상태별 카운트 (필터된 rows 기반)
-  const statusCounts={};
-  rows.forEach(r=>{const s=r['진행 상태']||'미지정';statusCounts[s]=(statusCounts[s]||0)+1;});
-  const statusOrder=['예정','완료','취소','보류','미지정'];
-  const ordered=Object.keys(statusCounts).sort((a,b)=>{
-    const ia=statusOrder.indexOf(a),ib=statusOrder.indexOf(b);
-    return (ia===-1?99:ia)-(ib===-1?99:ib);
-  });
-  ordered.forEach(s=>{
-    const n=statusCounts[s];
-    const c=s==='완료'?'#0F8B4C':s==='예정'?'#C97A11':s==='취소'?'#888':s==='미지정'?'#aaa':'#666';
-    const bg=s==='완료'?'#E8F5EC':s==='예정'?'#FFF4DC':s==='취소'?'#f0f0f0':s==='미지정'?'#fafafa':'#f5f5f5';
-    html+='<span style="padding:4px 12px;background:'+bg+';color:'+c+';border-radius:8px;font-weight:500">'+escapeHtml(s)+' '+n+'</span>';
-  });
+  // 요약 배지 (오늘 N개 | 중 | 완료 N | 앞으로 | 예정 N)
+  html+='<div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px;flex-wrap:wrap;align-items:center">';
+  if(todayCount>0){
+    html+='<span style="padding:4px 12px;background:#FFF4DC;color:#C97A11;border-radius:8px;font-weight:600">📍 오늘 '+todayCount+'개</span>';
+    html+='<span style="color:#888;font-size:11px">중</span>';
+    html+='<span style="padding:4px 12px;background:#E8F5EC;color:#0F8B4C;border-radius:8px;font-weight:600">완료 '+todayDoneCount+'</span>';
+  }
+  if(futureRows.length>0){
+    html+='<span style="color:#888;font-size:11px;margin-left:'+(todayCount>0?'6px':'0')+'">앞으로</span>';
+    html+='<span style="padding:4px 12px;background:#FFF4DC;color:#C97A11;border-radius:8px;font-weight:500">예정 '+futurePlannedCount+'</span>';
+  }
+  if(pastCount>0&&!_schedFilter.hidePast)html+='<span style="padding:4px 12px;background:#f5f5f5;color:#999;border-radius:8px;margin-left:6px">지난 일정 '+pastCount+'개</span>';
   html+='</div>';
   
   // 필터 영역
@@ -868,13 +878,13 @@ function buildScheduleListHtml(rows){
   html+='<span style="font-size:11px;color:#888;margin-left:auto">'+(isAdmin?'💡 row 클릭 = 수정':'🔒 관리자만 수정 가능')+'</span>';
   html+='</div>';
   
-  if(rows.length===0){
+  if(displayRows.length===0){
     html+='<div style="padding:40px;text-align:center;color:#888">조건에 맞는 일정이 없음</div>';
     return html;
   }
   
   html+='<table class="adm-tbl sched-tbl'+(isAdmin?'':' readonly')+'"><thead><tr><th>날짜</th><th>요일</th><th>시간</th><th>플랫폼</th><th>콘텐츠 제목</th><th>구분</th><th>담당자</th><th>상태</th></tr></thead><tbody>';
-  rows.forEach(r=>{
+  displayRows.forEach(r=>{
     const ts=r['입력시간(KST)'];
     let hhmm='';
     if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1].substr(0,5);
@@ -905,25 +915,40 @@ function buildScheduleListHtml(rows){
     html+='</tr>';
   });
   html+='</tbody></table>';
+  
+  // 페이지 컨트롤
+  if(totalPages>1){
+    html+='<div style="display:flex;justify-content:center;align-items:center;gap:4px;margin-top:16px;flex-wrap:wrap">';
+    html+='<button onclick="setSchedPage('+Math.max(1,_schedPage-1)+')" '+(_schedPage===1?'disabled':'')+' style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:'+(_schedPage===1?'not-allowed':'pointer')+';font-size:12px;color:'+(_schedPage===1?'#ccc':'#555')+'">← 이전</button>';
+    for(let p=1;p<=totalPages;p++){
+      const active=p===_schedPage;
+      html+='<button onclick="setSchedPage('+p+')" style="padding:6px 12px;border:1px solid '+(active?'var(--accent)':'#ddd')+';border-radius:8px;background:'+(active?'var(--accent)':'#fff')+';color:'+(active?'#fff':'#555')+';cursor:pointer;font-size:12px;font-weight:'+(active?'700':'500')+';min-width:36px">'+p+'</button>';
+    }
+    html+='<button onclick="setSchedPage('+Math.min(totalPages,_schedPage+1)+')" '+(_schedPage===totalPages?'disabled':'')+' style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:'+(_schedPage===totalPages?'not-allowed':'pointer')+';font-size:12px;color:'+(_schedPage===totalPages?'#ccc':'#555')+'">다음 →</button>';
+    html+='<span style="margin-left:8px;font-size:11px;color:#888">페이지 '+_schedPage+'/'+totalPages+' · 오늘 '+todayCount+'개 고정</span>';
+    html+='</div>';
+  }
+  
   return html;
 }
 
-function toggleHidePast(on){_schedFilter.hidePast=on;renderScheduleList();}
-
-function setSchedFilter(key,val){_schedFilter[key]=val;renderScheduleList();}
+function setSchedFilter(key,val){_schedFilter[key]=val;_schedPage=1;renderScheduleList();}
 function setSchedQuery(val){
   _schedFilter.q=val;
   if(_schedQTimer)clearTimeout(_schedQTimer);
-  _schedQTimer=setTimeout(()=>renderScheduleList(),1000);
+  _schedQTimer=setTimeout(()=>{_schedPage=1;renderScheduleList();},1000);
 }
 function handleSchedQueryKey(e){
   if(e.key==='Enter'){
     if(_schedQTimer)clearTimeout(_schedQTimer);
     _schedFilter.q=e.target.value;
+    _schedPage=1;
     renderScheduleList();
   }
 }
-function resetSchedFilter(){_schedFilter={month:'all',cat:'all',status:'all',q:''};renderScheduleList();}
+function resetSchedFilter(){_schedFilter={month:'all',cat:'all',status:'all',q:'',hidePast:true};_schedPage=1;renderScheduleList();}
+function toggleHidePast(on){_schedFilter.hidePast=on;_schedPage=1;renderScheduleList();}
+function setSchedPage(p){_schedPage=p;renderScheduleList();window.scrollTo(0,0);}
 function openScheduleRow(dateKey,rowIndex){
   if(userRole!=='admin'){showToast('관리자만 수정 가능','error');return;}
   const rec=records.find(r=>r._rowIndex===rowIndex);
