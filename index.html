@@ -654,6 +654,37 @@ function excelDateInputValue(v){
 }
 function escapeHtml(s){return String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
 
+// === CSV 다운로드 헬퍼 ===
+function rowsToCsv(rows,columns){
+  const esc=v=>{
+    if(v===null||v===undefined)return '';
+    const s=String(v).replace(/"/g,'""');
+    return /[",\n\r]/.test(s)?'"'+s+'"':s;
+  };
+  const header=columns.map(esc).join(',');
+  const lines=rows.map(r=>columns.map(c=>esc(r[c])).join(','));
+  return '\uFEFF'+[header,...lines].join('\r\n');
+}
+function downloadCsv(filename,content){
+  const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function tsFilename(label,ext='csv'){
+  const now=new Date();
+  const kst=new Date(now.getTime()+9*3600*1000);
+  const yy=String(kst.getUTCFullYear()).slice(2);
+  const MM=String(kst.getUTCMonth()+1).padStart(2,'0');
+  const DD=String(kst.getUTCDate()).padStart(2,'0');
+  const hh=String(kst.getUTCHours()).padStart(2,'0');
+  const mm=String(kst.getUTCMinutes()).padStart(2,'0');
+  const ss=String(kst.getUTCSeconds()).padStart(2,'0');
+  return `${yy}${MM}${DD}_${label}_${hh}${mm}${ss}.${ext}`;
+}
+
 function updatePerfOpen(){
 var now=new Date();now.setHours(0,0,0,0);
 PERFS.forEach(function(p){if(p.o===1){var ed=new Date(p.e);ed.setHours(0,0,0,0);ed.setDate(ed.getDate()+1);if(now>=ed)p.o=0;}});
@@ -798,6 +829,7 @@ function buildScheduleListHtml(rows){
   const pastCount=rows.filter(r=>getRecDateKey(r)<todayKey).length;
   
   let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px"><h3 style="margin:0;flex:1">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
+  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px">📥 CSV</button>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   
   // 요약 배지
@@ -884,6 +916,61 @@ function openScheduleRow(dateKey,rowIndex){
   openModal(dateKey,rec);
 }
 
+function exportScheduleCsv(){
+  // 현재 필터된 일정 rows를 CSV로 다운로드
+  let rows=records.slice();
+  if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
+  if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
+  if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
+  if(_schedFilter.hidePast){
+    const todayKey=getTodayKey();
+    rows=rows.filter(r=>getRecDateKey(r)>=todayKey);
+  }
+  if(_schedFilter.q){
+    const q=_schedFilter.q.toLowerCase();
+    rows=rows.filter(r=>
+      (r['콘텐츠 제목']||'').toLowerCase().includes(q)||
+      (r['게시 담당자']||'').toLowerCase().includes(q)||
+      (r['프로그램']||'').toLowerCase().includes(q)||
+      (r['콘텐츠 내용']||'').toLowerCase().includes(q)||
+      (r['비고']||'').toLowerCase().includes(q)
+    );
+  }
+  rows.sort((a,b)=>{
+    const ad=Number(a['날짜'])||0,bd=Number(b['날짜'])||0;
+    if(ad!==bd)return ad-bd;
+    const at=Number(a['입력시간(KST)'])||0,bt=Number(b['입력시간(KST)'])||0;
+    return at-bt;
+  });
+  if(!rows.length){showToast('다운로드할 일정이 없음','error');return;}
+  // 시간 변환 처리한 새 행 만들기
+  const exported=rows.map(r=>{
+    const ts=r['입력시간(KST)'];let hhmm='';
+    if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1].substr(0,5);
+    else if(typeof ts==='number'){const tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+    const y=r['연도'],m=String(r['월']||'').padStart(2,'0'),d=String(r['일']||'').padStart(2,'0');
+    return {
+      '날짜':y+'-'+m+'-'+d,
+      '요일':r['요일']||'',
+      '시간':hhmm,
+      '플랫폼 1':r['플랫폼 1']||'',
+      '플랫폼 2':r['플랫폼 2']||'',
+      '프로그램':r['프로그램']||'',
+      '콘텐츠 제목':r['콘텐츠 제목']||'',
+      '콘텐츠 구분':r['콘텐츠 구분']||'',
+      '콘텐츠 형식':r['콘텐츠 형식']||'',
+      '콘텐츠 내용':r['콘텐츠 내용']||'',
+      '담당 부서':r['담당 부서']||'',
+      '게시 담당자':r['게시 담당자']||'',
+      '진행 상태':r['진행 상태']||'',
+      '비고':r['비고']||''
+    };
+  });
+  const cols=['날짜','요일','시간','플랫폼 1','플랫폼 2','프로그램','콘텐츠 제목','콘텐츠 구분','콘텐츠 형식','콘텐츠 내용','담당 부서','게시 담당자','진행 상태','비고'];
+  downloadCsv(tsFilename('일정'),rowsToCsv(exported,cols));
+  showToast(rows.length+'개 일정 다운로드','success');
+}
+
 // === 로그 조회 (Phase 3E-3) ===
 let _logsCache=[];
 let _logsFilter={action:'all',sheet:'all',role:'all',q:''};
@@ -931,6 +1018,7 @@ function buildLogsListHtml(){
   const allRoles=[...new Set(_logsCache.map(r=>r['권한']||''))].filter(Boolean);
   
   let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px"><h3 style="margin:0;flex:1">로그 조회 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개 / 전체 '+_logsCache.length+')</span></h3>';
+  html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px">📥 CSV</button>';
   html+='<button onclick="renderLogsList()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻ 새로고침</button>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   
@@ -1006,6 +1094,48 @@ function handleLogsQueryKey(e){
 function resetLogsFilter(){
   _logsFilter={action:'all',sheet:'all',role:'all',q:''};
   document.getElementById('logs-admin-body').innerHTML=buildLogsListHtml();
+}
+
+function exportLogsCsv(){
+  // 현재 필터된 로그 rows를 CSV로 다운로드 (시간은 KST 텍스트로 변환)
+  let rows=_logsCache.slice();
+  if(_logsFilter.action!=='all')rows=rows.filter(r=>r['액션']===_logsFilter.action);
+  if(_logsFilter.sheet!=='all')rows=rows.filter(r=>r['대상 시트']===_logsFilter.sheet);
+  if(_logsFilter.role!=='all')rows=rows.filter(r=>r['권한']===_logsFilter.role);
+  if(_logsFilter.q){
+    const q=_logsFilter.q.toLowerCase();
+    rows=rows.filter(r=>
+      (String(r['변경 내용']||'')).toLowerCase().includes(q)||
+      (String(r['비고']||'')).toLowerCase().includes(q)||
+      (String(r['대상 시트']||'')).toLowerCase().includes(q)
+    );
+  }
+  if(!rows.length){showToast('다운로드할 로그가 없음','error');return;}
+  // 시간 시리얼 → KST 텍스트
+  const exported=rows.map(r=>{
+    let timeStr='';
+    const t=r['시간'];
+    if(typeof t==='number'&&!isNaN(t)){
+      const ms=(t-25569)*86400000;
+      const d=new Date(ms);
+      const Y=d.getUTCFullYear(),M=String(d.getUTCMonth()+1).padStart(2,'0'),D=String(d.getUTCDate()).padStart(2,'0');
+      const h=String(d.getUTCHours()).padStart(2,'0'),m=String(d.getUTCMinutes()).padStart(2,'0'),s=String(d.getUTCSeconds()).padStart(2,'0');
+      timeStr=`${Y}-${M}-${D} ${h}:${m}:${s}`;
+    }else timeStr=String(t||'');
+    return {
+      'NO':r['NO']||'',
+      '시간':timeStr,
+      '권한':r['권한']||'',
+      '액션':r['액션']||'',
+      '대상 시트':r['대상 시트']||'',
+      '대상 row':r['대상 row']||'',
+      '변경 내용':r['변경 내용']||'',
+      '비고':r['비고']||''
+    };
+  });
+  const cols=['NO','시간','권한','액션','대상 시트','대상 row','변경 내용','비고'];
+  downloadCsv(tsFilename('로그'),rowsToCsv(exported,cols));
+  showToast(rows.length+'개 로그 다운로드','success');
 }
 
 // === 일반화 시트 관리 (platform / content / manager 공용) ===
