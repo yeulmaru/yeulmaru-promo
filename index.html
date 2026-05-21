@@ -57,8 +57,8 @@ button{font-family:inherit;cursor:pointer}
 .role-tag.admin{background:var(--accent);color:#fff}
 .role-tag.user{background:rgba(0,0,0,0.06);color:#666}
 .adm-tbl{width:100%;border-collapse:collapse;font-size:12px}
-.adm-tbl thead th{background:#f5f5f7;padding:10px 8px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
-.adm-tbl tbody td{padding:8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.adm-tbl thead th{background:#f5f5f7;padding:10px 8px;text-align:center;font-weight:700;border-bottom:1px solid #ddd;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
+.adm-tbl tbody td{padding:8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:left}
 .adm-tbl tbody tr:hover{background:#fafafa}
 .adm-btn{padding:5px 10px;background:none;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:11px;margin-left:4px;font-family:inherit}
 .adm-btn:hover{background:#f5f5f5}
@@ -120,9 +120,9 @@ button{font-family:inherit;cursor:pointer}
 .prog-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;transition:background .15s;font-size:13px}
 .prog-item:hover{background:rgba(74,77,231,0.04)}
 .prog-item input{margin:0;width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--accent)}
-.prog-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;max-width:22px;border-radius:50%;font-size:10px;font-weight:700;flex:0 0 22px;align-self:center;box-sizing:border-box}
-.prog-icon.c{background:var(--accent);color:#fff}
-.prog-icon.e{background:var(--peach);color:#333}
+.prog-icon{display:inline-block;min-width:24px;padding:2px 6px;text-align:center;border-radius:6px;font-size:10px;font-weight:700;line-height:1.4;flex:0 0 auto;box-sizing:border-box}
+.prog-icon.c{background:rgba(74,77,231,0.15);color:var(--accent)}
+.prog-icon.e{background:rgba(255,180,140,0.35);color:#C97A11}
 .prog-name{flex:1;color:var(--text);font-weight:500}
 .prog-date{font-size:11px;color:var(--dim);font-weight:500}
 
@@ -1218,11 +1218,13 @@ async function renderSheetList(slug){
 
 function buildSheetListHtml(slug,rows){
   const cfg=SHEET_CONFIG[slug];
-  let html='<div style="display:flex;align-items:center;margin-bottom:16px;gap:8px"><h3 style="margin:0;flex:1">'+escapeHtml(cfg.title)+' <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개)</span></h3>';
+  let html='<div style="display:flex;align-items:flex-start;margin-bottom:16px;gap:8px">';
+  html+='<div style="flex:1"><h3 style="margin:0">'+escapeHtml(cfg.title)+' <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개)</span></h3>';
+  if(cfg.inlineEdit)html+='<div style="font-size:11px;color:#888;margin-top:4px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
+  html+='</div>';
   html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   if(cfg.note)html+='<div style="font-size:11px;color:#888;margin-bottom:10px;padding:8px 12px;background:#fafafa;border-radius:8px">'+escapeHtml(cfg.note)+'</div>';
-  if(cfg.inlineEdit)html+='<div style="font-size:11px;color:#888;margin-bottom:10px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
   html+='<table class="adm-tbl"><thead><tr>';
   cfg.columns.forEach(c=>{html+='<th>'+escapeHtml(c.label)+'</th>';});
   html+='<th></th></tr></thead><tbody>';
