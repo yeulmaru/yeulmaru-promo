@@ -251,6 +251,29 @@ button{font-family:inherit;cursor:pointer}
 .mv-content{font-size:13px;color:#444;line-height:1.55;background:#fafafa;border-radius:8px;padding:10px 12px;max-height:54px;overflow-y:auto;white-space:pre-wrap;margin-top:6px}
 .mv-content.empty{color:#aaa;font-style:italic}
 .mv-cat{display:inline-block;padding:3px 10px;border-radius:8px;background:rgba(74,77,231,0.1);color:var(--accent);font-size:11px;font-weight:600;margin:4px 0}
+/* === 홍보 신청 위저드 === */
+.pw-progress{height:4px;background:#eee;border-radius:2px;margin:14px 0 6px;overflow:hidden}
+.pw-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.pw-steplabel{font-size:11px;color:#888;margin-bottom:18px;letter-spacing:0.3px}
+.pw-question{font-size:18px;font-weight:700;color:#222;margin:18px 0 8px;line-height:1.4}
+.pw-hint{font-size:12px;color:#888;margin-bottom:14px}
+.pw-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid #eee}
+.pw-acts .m-btn{padding:9px 22px}
+.pw-prog-list{max-height:340px;overflow-y:auto;margin-bottom:8px}
+.pw-prog-row{display:flex;align-items:center;gap:10px;padding:0 12px;height:42px;border-radius:8px;border:1.5px solid #eee;background:#fff;cursor:pointer;margin-bottom:6px;transition:all .15s}
+.pw-prog-row:hover{border-color:var(--accent);background:rgba(74,77,231,0.03)}
+.pw-prog-row.on{border-color:var(--accent);background:rgba(74,77,231,0.08)}
+.pw-prog-row input[type=radio]{margin:0;flex-shrink:0;accent-color:var(--accent);cursor:pointer}
+.pw-prog-row .pw-pname{flex:1;font-size:13px;color:#333;font-weight:500;line-height:1}
+.pw-prog-row .pw-pdate{font-size:11px;color:#999}
+.pw-empty{padding:30px;text-align:center;color:#aaa;font-size:13px}
+.pw-summary{background:#fafafa;border-radius:10px;padding:14px 16px;margin-top:8px;font-size:13px;line-height:1.7}
+.pw-summary .lbl{color:#888;font-size:11px;display:inline-block;min-width:70px}
+.pw-summary .val{color:#333;font-weight:500}
+.pw-done{text-align:center;padding:20px 0}
+.pw-done .emo{font-size:48px;margin-bottom:10px}
+.pw-done .msg{font-size:16px;font-weight:600;color:#333;margin-bottom:6px}
+.pw-done .sub{font-size:12px;color:#888;line-height:1.5}
 .modal input:not([type="checkbox"]):not([type="radio"]):focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);background:#fff}
 .modal input.field-attention:not([type="checkbox"]):not([type="radio"]),.modal select.field-attention,.modal textarea.field-attention{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)!important;background:#fff!important;animation:fa-pulse 1.4s ease-out 2}
 @keyframes fa-pulse{0%{box-shadow:0 0 0 6px rgba(74,77,231,0.3),0 0 18px rgba(74,77,231,0.25)}100%{box-shadow:0 0 0 3px rgba(74,77,231,0.18),0 0 14px rgba(74,77,231,0.15)}}
@@ -353,11 +376,30 @@ button{font-family:inherit;cursor:pointer}
     <input type="text" id="f-memo">
     <div class="modal-acts">
       <button class="m-btn del" id="btn-del" onclick="delEntry()" style="display:none">삭제</button>
+      <button class="m-btn cancel" id="btn-reject" onclick="rejectPromo()" style="display:none;background:#fee;color:#c00;border:1px solid #fcc">거절</button>
+      <button class="m-btn save" id="btn-approve" onclick="approvePromo()" style="display:none;background:#0F8B4C">승인</button>
       <button class="m-btn cancel" onclick="closeModal()">취소</button>
-      <button class="m-btn save" onclick="saveEntry()">저장</button>
+      <button class="m-btn save" id="btn-save" onclick="saveEntry()">저장</button>
     </div>
     </div>
     <div id="modal-view" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ 홍보 신청 위저드 ═══ -->
+<div class="modal-bg" id="promo-wizard">
+  <div class="modal pw-modal" style="position:relative;max-width:520px">
+    <button class="modal-x" onclick="closePromoWizard()" title="닫기" aria-label="닫기">✕</button>
+    <h3 id="pw-title">홍보 신청</h3>
+    <div class="pw-progress">
+      <div class="pw-progress-bar" id="pw-progress-bar"></div>
+    </div>
+    <div class="pw-steplabel" id="pw-steplabel"></div>
+    <div id="pw-body"></div>
+    <div class="pw-acts" id="pw-acts">
+      <button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button>
+      <button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>
+    </div>
   </div>
 </div>
 
@@ -632,6 +674,8 @@ async function loadContentMeta(){
     CONTENT_TYPES=rows.map(r=>r['콘텐츠구분']).filter(Boolean);
     CONTENT_FORMATS=rows.map(r=>r['콘텐츠형식']).filter(Boolean);
     STATUSES=rows.map(r=>r['진행상태']).filter(Boolean);
+    // 홍보 신청 워크플로우용 — 시트에 없어도 "대기 중" 보장
+    if(!STATUSES.includes('대기 중'))STATUSES.unshift('대기 중');
   }catch(e){console.error('[loadContentMeta]',e);}
 }
 
@@ -831,7 +875,7 @@ function buildNav(){
       if(m.id==='admin'){openAdminPanel();return;}
       if(m.id==='schedule'){openScheduleAdmin();return;}
       if(m.id==='platform'){showComingSoon('플랫폼 현황');return;}
-      if(m.id==='promo'){showComingSoon('홍보 신청');return;}
+      if(m.id==='promo'){openPromoWizard();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
     b.onmouseenter=()=>movePill(b,pill);
@@ -873,6 +917,219 @@ function showComingSoon(label){
   el.innerHTML=html;
 }
 function closeComingSoon(){const el=document.getElementById('coming-soon');if(el)el.innerHTML='';}
+
+// === 홍보 신청 위저드 ===
+let _pwStep=1;
+const PW_TOTAL=5;
+let _pwData={};
+function openPromoWizard(){
+  _pwStep=1;
+  _pwData={
+    program:'',programType:'',
+    title:'',content:'',
+    plat1:'',plat2:'',
+    format:'',
+    date:'',time:'10:00',
+    memo:'',applicant:''
+  };
+  // acts 영역 복원
+  document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
+  document.getElementById('promo-wizard').classList.add('show');
+  renderPwStep();
+}
+function closePromoWizard(){document.getElementById('promo-wizard').classList.remove('show');}
+function renderPwStep(){
+  const bar=document.getElementById('pw-progress-bar');
+  bar.style.width=(_pwStep/PW_TOTAL*100)+'%';
+  document.getElementById('pw-steplabel').textContent='Step '+_pwStep+' / '+PW_TOTAL;
+  const body=document.getElementById('pw-body');
+  const back=document.getElementById('pw-back');
+  const next=document.getElementById('pw-next');
+  back.style.display=_pwStep===1?'none':'';
+  if(_pwStep===1){
+    // 어떤 프로그램?
+    const activePerfs=PERFS.filter(function(p){return p.o===1;});
+    let html='<div class="pw-question">어떤 프로그램의 홍보를 신청하시겠어요?</div>';
+    html+='<div class="pw-hint">현재 판매 중인 프로그램에서 선택해주세요</div>';
+    if(activePerfs.length===0){
+      html+='<div class="pw-empty">현재 판매 중인 프로그램이 없습니다</div>';
+    }else{
+      html+='<div class="pw-prog-list">';
+      activePerfs.forEach(function(p){
+        const checked=_pwData.program===p.f?' checked':'';
+        const onCls=_pwData.program===p.f?' on':'';
+        const date=p.s===p.e?p.s.substr(5).replace('-','.'):p.s.substr(5).replace('-','.')+'~'+p.e.substr(5).replace('-','.');
+        html+='<label class="pw-prog-row'+onCls+'"><input type="radio" name="pw-prog" value="'+escapeHtml(p.f)+'" data-type="'+p.t+'"'+checked+' onchange="onPwProgChange(this)"><span class="pw-pname">'+escapeHtml(p.f)+'</span><span class="pw-pdate">'+date+'</span></label>';
+      });
+      html+='</div>';
+    }
+    body.innerHTML=html;
+    next.textContent='다음';
+  }else if(_pwStep===2){
+    // 어떤 콘텐츠?
+    let html='<div class="pw-question">어떤 콘텐츠인가요?</div>';
+    html+='<div class="pw-hint">홍보할 콘텐츠의 제목과 내용을 입력해주세요</div>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">콘텐츠 제목<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+='<input id="pw-title" type="text" value="'+escapeHtml(_pwData.title)+'" placeholder="예: 6월 공연 홍보" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box">';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">콘텐츠 내용</label>';
+    html+='<textarea id="pw-content" rows="4" placeholder="홍보 내용을 자세히 적어주세요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.content)+'</textarea>';
+    body.innerHTML=html;
+    next.textContent='다음';
+  }else if(_pwStep===3){
+    // 어디에? (채널)
+    let html='<div class="pw-question">어디에 홍보하시겠어요?</div>';
+    html+='<div class="pw-hint">플랫폼을 선택해주세요</div>';
+    const plat1s=[...new Set(PLATFORMS.map(function(p){return p['플랫폼1'];}))];
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">플랫폼 1<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+='<select id="pw-plat1" onchange="onPwPlat1Change()" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit"><option value="">선택</option>';
+    plat1s.forEach(function(p){html+='<option value="'+escapeHtml(p)+'"'+(_pwData.plat1===p?' selected':'')+'>'+escapeHtml(p)+'</option>';});
+    html+='</select>';
+    // 플랫폼 2 (조건부)
+    html+='<div id="pw-plat2-wrap" style="margin-top:14px">'+buildPwPlat2Html()+'</div>';
+    body.innerHTML=html;
+    next.textContent='다음';
+  }else if(_pwStep===4){
+    // 어떻게? (형식) + 언제 (날짜/시간)
+    let html='<div class="pw-question">어떻게, 언제 홍보하시겠어요?</div>';
+    html+='<div class="pw-hint">콘텐츠 형식과 게시 희망 일시를 선택해주세요</div>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">콘텐츠 형식</label>';
+    html+='<select id="pw-format" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit"><option value="">선택</option>';
+    CONTENT_FORMATS.forEach(function(f){html+='<option value="'+escapeHtml(f)+'"'+(_pwData.format===f?' selected':'')+'>'+escapeHtml(f)+'</option>';});
+    html+='</select>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">날짜<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+='<input id="pw-date" type="date" value="'+escapeHtml(_pwData.date)+'" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">시간</label>';
+    html+='<input id="pw-time" type="time" value="'+escapeHtml(_pwData.time)+'" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    body.innerHTML=html;
+    next.textContent='다음';
+  }else if(_pwStep===5){
+    // 추가 요청 + 신청자 + 확인
+    let html='<div class="pw-question">추가로 요청할 사항이 있나요?</div>';
+    html+='<div class="pw-hint">신청자 정보를 확인하고 마무리해주세요</div>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">신청자<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+='<select id="pw-applicant" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit"><option value="">선택</option>';
+    PR_MANAGERS.forEach(function(m){html+='<option value="'+escapeHtml(m)+'"'+(_pwData.applicant===m?' selected':'')+'>'+escapeHtml(m)+'</option>';});
+    html+='</select>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">추가 요청 (비고)</label>';
+    html+='<textarea id="pw-memo" rows="3" placeholder="관리자에게 전달할 추가 요청사항" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.memo)+'</textarea>';
+    // 요약
+    html+='<div class="pw-summary" style="margin-top:18px"><div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:8px">📋 신청 요약</div>';
+    html+='<div><span class="lbl">프로그램</span><span class="val">'+escapeHtml(_pwData.program||'-')+'</span></div>';
+    html+='<div><span class="lbl">콘텐츠</span><span class="val">'+escapeHtml(_pwData.title||'-')+'</span></div>';
+    html+='<div><span class="lbl">플랫폼</span><span class="val">'+escapeHtml(_pwData.plat1||'-')+(_pwData.plat2&&_pwData.plat2!=='-'?' · '+escapeHtml(_pwData.plat2):'')+'</span></div>';
+    html+='<div><span class="lbl">형식</span><span class="val">'+escapeHtml(_pwData.format||'-')+'</span></div>';
+    html+='<div><span class="lbl">일시</span><span class="val">'+escapeHtml(_pwData.date||'-')+' '+escapeHtml(_pwData.time||'')+'</span></div>';
+    html+='</div>';
+    body.innerHTML=html;
+    next.textContent='신청 완료';
+  }else if(_pwStep===99){
+    // 완료
+    document.getElementById('pw-steplabel').textContent='';
+    bar.style.width='100%';
+    body.innerHTML='<div class="pw-done"><div class="emo">📮</div><div class="msg">신청이 완료되었어요!</div><div class="sub">홍보가 예정되면 일정에서 확인하실 수 있어요</div></div>';
+    document.getElementById('pw-acts').innerHTML='<button class="m-btn save" onclick="closePromoWizard()" style="margin-left:auto">확인</button>';
+  }
+}
+function onPwProgChange(input){
+  document.querySelectorAll('.pw-prog-row').forEach(function(r){r.classList.remove('on');});
+  input.closest('.pw-prog-row').classList.add('on');
+  _pwData.program=input.value;
+  _pwData.programType=input.dataset.type;
+}
+function onPwPlat1Change(){
+  const v=document.getElementById('pw-plat1').value;
+  _pwData.plat1=v;
+  document.getElementById('pw-plat2-wrap').innerHTML=buildPwPlat2Html();
+}
+function buildPwPlat2Html(){
+  if(!_pwData.plat1)return'';
+  const plat2s=PLATFORMS.filter(function(p){return p['플랫폼1']===_pwData.plat1&&p['플랫폼2']&&p['플랫폼2']!=='-';}).map(function(p){return p['플랫폼2'];});
+  if(plat2s.length===0){_pwData.plat2='-';return'';}
+  let h='<label style="display:block;font-size:11px;color:#888;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">플랫폼 2<span style="color:var(--peach);margin-left:3px">*</span></label>';
+  h+='<select id="pw-plat2" onchange="_pwData.plat2=this.value" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit"><option value="">선택</option>';
+  plat2s.forEach(function(p){h+='<option value="'+escapeHtml(p)+'"'+(_pwData.plat2===p?' selected':'')+'>'+escapeHtml(p)+'</option>';});
+  h+='</select>';
+  return h;
+}
+function collectPwStep(){
+  if(_pwStep===2){
+    _pwData.title=document.getElementById('pw-title').value.trim();
+    _pwData.content=document.getElementById('pw-content').value;
+  }else if(_pwStep===3){
+    // plat1/plat2 already synced via onchange
+  }else if(_pwStep===4){
+    _pwData.format=document.getElementById('pw-format').value;
+    _pwData.date=document.getElementById('pw-date').value;
+    _pwData.time=document.getElementById('pw-time').value;
+  }else if(_pwStep===5){
+    _pwData.applicant=document.getElementById('pw-applicant').value;
+    _pwData.memo=document.getElementById('pw-memo').value;
+  }
+}
+function validatePwStep(){
+  if(_pwStep===1){
+    if(!_pwData.program){showToast('프로그램을 선택해주세요','error');return false;}
+  }else if(_pwStep===2){
+    if(!_pwData.title){showToast('콘텐츠 제목을 입력해주세요','error');return false;}
+  }else if(_pwStep===3){
+    if(!_pwData.plat1){showToast('플랫폼을 선택해주세요','error');return false;}
+    // 플랫폼 2 필수 체크 (있을 때만)
+    const plat2s=PLATFORMS.filter(function(p){return p['플랫폼1']===_pwData.plat1&&p['플랫폼2']&&p['플랫폼2']!=='-';});
+    if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showToast('플랫폼 2를 선택해주세요','error');return false;}
+  }else if(_pwStep===4){
+    if(!_pwData.date){showToast('날짜를 선택해주세요','error');return false;}
+  }else if(_pwStep===5){
+    if(!_pwData.applicant){showToast('신청자를 선택해주세요','error');return false;}
+  }
+  return true;
+}
+function promoBack(){
+  if(_pwStep>1){_pwStep--;renderPwStep();}
+}
+async function promoNext(){
+  collectPwStep();
+  if(!validatePwStep())return;
+  if(_pwStep<PW_TOTAL){_pwStep++;renderPwStep();return;}
+  // Step 5 → 제출
+  await submitPromoRequest();
+}
+async function submitPromoRequest(){
+  showOverlayLoad();
+  try{
+    // 콘텐츠 구분 (선택된 프로그램의 타입 → 한글)
+    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
+    const cat=typeMap[_pwData.programType]||'기타';
+    const[y,m,d]=_pwData.date.split('-').map(Number);
+    const DAYS=['일','월','화','수','목','금','토'];
+    const dn=DAYS[new Date(y,m-1,d).getDay()];
+    const nowKst=new Date();
+    const ts=nowKst.getFullYear()+'-'+String(nowKst.getMonth()+1).padStart(2,'0')+'-'+String(nowKst.getDate()).padStart(2,'0')+' '+_pwData.time+':00';
+    const body={
+      '날짜':_pwData.date,
+      '연도':y,'월':m,'일':d,'요일':dn,
+      '입력시간(KST)':ts,
+      '플랫폼 1':_pwData.plat1,
+      '플랫폼 2':_pwData.plat2||'-',
+      '콘텐츠 구분':cat,
+      '프로그램':_pwData.program,
+      '담당 부서':'예술사업팀',
+      '콘텐츠 제목':_pwData.title,
+      '콘텐츠 형식':_pwData.format||'',
+      '콘텐츠 내용':_pwData.content||'',
+      '게시 담당자':_pwData.applicant,
+      '진행 상태':'대기 중',
+      '비고':_pwData.memo||''
+    };
+    await api('POST','/api/records',body);
+    await syncReload();
+    _pwStep=99;
+    renderPwStep();
+  }catch(e){
+    showToast('신청 실패: '+e.message,'error');
+  }finally{
+    hideOverlayLoad();
+  }
+}
 
 // 관리자 서브메뉴 라우터
 function adminRoute(id){
@@ -1024,8 +1281,8 @@ function buildScheduleListHtml(rows){
     const isToday=recKey===todayKey;
     const trClass=isPast?'past':(isToday?'today':'');
     const status=r['진행 상태']||'';
-    const sColor=status==='완료'?'#0F8B4C':status==='취소'?'#888':status==='예정'?'#C97A11':'#888';
-    const sBg=status==='완료'?'#E8F5EC':status==='취소'?'#f0f0f0':status==='예정'?'#FFF4DC':'#f5f5f5';
+    const sColor=status==='완료'?'#0F8B4C':status==='취소'?'#888':status==='예정'?'#C97A11':status==='대기 중'?'var(--accent)':'#888';
+    const sBg=status==='완료'?'#E8F5EC':status==='취소'?'#f0f0f0':status==='예정'?'#FFF4DC':status==='대기 중'?'rgba(74,77,231,0.1)':'#f5f5f5';
     const todayBadge=isToday?' <span style="display:inline-block;padding:2px 6px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px">오늘</span>':'';
     if(isAdmin){
       html+='<tr class="'+trClass+'" onclick="openScheduleRow(\''+dateKey+'\','+r._rowIndex+')" style="cursor:pointer">';
@@ -2033,6 +2290,12 @@ function openModal(dateKey,rec){
   onPlatChange();
   if(rec){fillModalFields(rec);document.getElementById('btn-del').style.display='inline-block';}
   else{document.getElementById('btn-del').style.display='none';}
+  // 대기 중 상태면 승인/거절 표시, 저장 숨김
+  const isPending=rec&&rec['진행 상태']==='대기 중';
+  document.getElementById('btn-approve').style.display=isPending?'inline-block':'none';
+  document.getElementById('btn-reject').style.display=isPending?'inline-block':'none';
+  document.getElementById('btn-save').style.display=isPending?'none':'inline-block';
+  document.getElementById('m-title').textContent=isPending?'홍보 신청 검토':(rec?'콘텐츠 수정':'새 콘텐츠 등록');
   document.getElementById('modal').classList.add('show');
   setTimeout(()=>document.getElementById('f-title').focus(),100);
 }
@@ -2324,6 +2587,38 @@ async function delEntry(){
   const ok=await showConfirm('정말로 삭제하시겠습니까?');if(!ok)return;
   showOverlayLoad();
   try{await api('DELETE','/api/records/'+ri);closeModal();await syncReload(-1);closePanel();showToast('삭제되었습니다');}catch(e){alert('삭제 실패: '+e.message);}
+  finally{hideOverlayLoad();}
+}
+
+async function approvePromo(){
+  if(!editing?.existing)return;
+  if(userRole!=='admin'){showToast('관리자만 가능','error');return;}
+  const ok=await showConfirm('이 홍보 신청을 승인하시겠습니까?');if(!ok)return;
+  showOverlayLoad();
+  try{
+    // 진행 상태 = "예정"으로 변경 + 시간/날짜 등은 modal 폼에서 현재 값으로
+    const ri=editing.existing._rowIndex;
+    // 현재 모달 폼의 값으로 갱신 (관리자가 시간/날짜 조정 가능)
+    document.getElementById('f-status').value='예정';
+    await saveEntry();  // saveEntry가 새 row 만들고 기존 row 삭제 (수정 패턴)
+    showToast('승인되었습니다');
+  }catch(e){showToast('승인 실패: '+e.message,'error');}
+  finally{hideOverlayLoad();}
+}
+
+async function rejectPromo(){
+  if(!editing?.existing)return;
+  if(userRole!=='admin'){showToast('관리자만 가능','error');return;}
+  const ok=await showConfirm('이 홍보 신청을 거절하시겠습니까? 삭제됩니다.');if(!ok)return;
+  showOverlayLoad();
+  try{
+    const ri=editing.existing._rowIndex;
+    await api('DELETE','/api/records/'+ri);
+    closeModal();
+    await syncReload(-1);
+    closePanel();
+    showToast('거절되었습니다');
+  }catch(e){showToast('거절 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
 
