@@ -2144,7 +2144,9 @@ function doNavToRec(newRec){
   editing={dateKey:dateKey,existing:newRec};
   renderReadOnlyView(dateKey,newRec,dateObj,dn);
 }
+let _activeMiniMsg=null;
 function showMiniTip(event,text){
+  if(_activeMiniMsg)return;
   if(!event)return;
   const tip=document.createElement('div');
   tip.className='mini-tip';
@@ -2154,20 +2156,23 @@ function showMiniTip(event,text){
   tip.style.left=x+'px';
   tip.style.top=y+'px';
   document.body.appendChild(tip);
-  setTimeout(function(){if(tip.parentNode)tip.remove();},1800);
+  _activeMiniMsg=tip;
+  setTimeout(function(){if(tip.parentNode){_activeMiniMsg=null;tip.remove();}},1800);
 }
 function showMiniConfirm(event,text,onConfirm){
+  if(_activeMiniMsg)return;
   if(!event){onConfirm();return;}
   const tip=document.createElement('div');
   tip.className='mini-tip action';
-  tip.innerHTML=escapeHtml(text)+' <span class="arrow">→</span>';
+  tip.textContent=text;
   const x=Math.min(event.clientX+12,window.innerWidth-260);
   const y=Math.max(event.clientY+12,8);
   tip.style.left=x+'px';
   tip.style.top=y+'px';
-  tip.onclick=function(){tip.remove();onConfirm();};
+  tip.onclick=function(){_activeMiniMsg=null;tip.remove();onConfirm();};
   document.body.appendChild(tip);
-  setTimeout(function(){if(tip.parentNode)tip.remove();},3000);
+  _activeMiniMsg=tip;
+  setTimeout(function(){if(tip.parentNode){_activeMiniMsg=null;tip.remove();}},3000);
 }
 function applyModalPermission(isReadOnly){
   // 더 이상 사용 X — openModal에서 분기 처리
