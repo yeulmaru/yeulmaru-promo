@@ -284,14 +284,7 @@ button{font-family:inherit;cursor:pointer}
     <label>시간</label>
     <input type="time" id="f-time" value="10:00">
     <label>플랫폼 1</label>
-    <select id="f-plat" onchange="onPlatChange()">
-      <option value="카카오톡">카카오톡</option>
-      <option value="인스타그램">인스타그램</option>
-      <option value="블로그·맘카페">블로그·맘카페</option>
-      <option value="B2B">B2B</option>
-      <option value="문자">문자</option>
-      <option value="기타">기타</option>
-    </select>
+    <select id="f-plat" onchange="onPlatChange()"></select>
     <input type="text" id="f-plat-etc" placeholder="플랫폼명 입력" style="display:none;margin-top:6px">
     <label>플랫폼 2<span class="req">*</span></label>
     <select id="f-plat2" style="display:none"></select>
@@ -301,16 +294,16 @@ button{font-family:inherit;cursor:pointer}
     <label>콘텐츠 제목<span class="req">*</span></label>
     <input type="text" id="f-title" placeholder="입력">
     <label>콘텐츠 구분<span class="req">*</span></label>
-    <select id="f-cat"><option value="">선택</option><option>공연</option><option>전시</option><option>교육</option><option>기타</option></select>
+    <select id="f-cat"></select>
     <label>담당 부서</label>
     <input type="text" id="f-dept" readonly value="예술사업팀">
     <label>콘텐츠 형식 및 내용</label>
-    <select id="f-format"><option value="">선택</option><option>이미지</option><option>영상</option><option>기타</option></select>
+    <select id="f-format"></select>
     <textarea id="f-content" rows="3" placeholder="내용을 설명해주세요." style="margin-top:6px"></textarea>
     <label>게시 담당자<span class="req">*</span></label>
-    <select id="f-author"><option value="">선택</option><option>황세웅</option><option>심희은</option></select>
+    <select id="f-author"></select>
     <label>진행 상태</label>
-    <select id="f-status"><option>예정</option><option>완료</option><option>취소</option><option>보류</option></select>
+    <select id="f-status"></select>
     <label>비고</label>
     <input type="text" id="f-memo">
     <div class="modal-acts">
@@ -484,6 +477,8 @@ async function loadPrograms(){
 // === 마스터 데이터 캐시 (관리자 모달용) ===
 let CONTENT_TYPES=[],MANAGERS=[],_programsCache=[];
 let _sheetCache={};
+// === 마스터 데이터 캐시 (작성 화면용 - Phase 3C-2) ===
+let PLATFORMS=[],CONTENT_FORMATS=[],STATUSES=[],PR_MANAGERS=[];
 
 // 마스터 시트 관리 메타 (3B-3에서 사용)
 const SHEET_CONFIG={
@@ -570,6 +565,69 @@ function refreshManagerOptions(contentType){
   sel.innerHTML=buildManagerOptions(contentType,stillValid?current:'');
 }
 
+// === 작성 화면 마스터 데이터 로드 (Phase 3C-2) ===
+async function loadAllMasters(){
+  // 병렬 fetch
+  await Promise.all([loadPlatforms(),loadContentMeta(),loadManagers()]);
+  PR_MANAGERS=MANAGERS.filter(m=>isFlagOn(m['홍보여부']));
+  populateMasterDropdowns();
+}
+async function loadPlatforms(){
+  try{
+    const d=await api('GET','/api/sheet/platform');
+    PLATFORMS=(d.rows||[]).filter(r=>r['플랫폼1']);
+  }catch(e){console.error('[loadPlatforms]',e);}
+}
+async function loadContentMeta(){
+  try{
+    const d=await api('GET','/api/sheet/content');
+    const rows=d.rows||[];
+    CONTENT_TYPES=rows.map(r=>r['콘텐츠구분']).filter(Boolean);
+    CONTENT_FORMATS=rows.map(r=>r['콘텐츠형식']).filter(Boolean);
+    STATUSES=rows.map(r=>r['진행상태']).filter(Boolean);
+  }catch(e){console.error('[loadContentMeta]',e);}
+}
+
+// 작성 모달의 드롭다운들을 시트 데이터로 채움
+function populateMasterDropdowns(){
+  // 플랫폼 1 — 시트의 플랫폼1 유니크 값
+  const platSel=document.getElementById('f-plat');
+  if(platSel){
+    const plat1s=[...new Set(PLATFORMS.map(r=>r['플랫폼1']))];
+    const cur=platSel.value;
+    platSel.innerHTML=plat1s.map(p=>'<option value="'+escapeHtml(p)+'">'+escapeHtml(p)+'</option>').join('');
+    if(cur&&plat1s.includes(cur))platSel.value=cur;
+  }
+  // 콘텐츠 구분
+  const catSel=document.getElementById('f-cat');
+  if(catSel){
+    const cur=catSel.value;
+    catSel.innerHTML='<option value="">선택</option>'+CONTENT_TYPES.map(t=>'<option value="'+escapeHtml(t)+'">'+escapeHtml(t)+'</option>').join('');
+    if(cur)catSel.value=cur;
+  }
+  // 콘텐츠 형식
+  const fmtSel=document.getElementById('f-format');
+  if(fmtSel){
+    const cur=fmtSel.value;
+    fmtSel.innerHTML='<option value="">선택</option>'+CONTENT_FORMATS.map(t=>'<option value="'+escapeHtml(t)+'">'+escapeHtml(t)+'</option>').join('');
+    if(cur)fmtSel.value=cur;
+  }
+  // 게시 담당자 — 홍보여부=1
+  const authSel=document.getElementById('f-author');
+  if(authSel){
+    const cur=authSel.value;
+    authSel.innerHTML='<option value="">선택</option>'+PR_MANAGERS.map(m=>'<option value="'+escapeHtml(m['담당자'])+'">'+escapeHtml(m['담당자'])+'</option>').join('');
+    if(cur)authSel.value=cur;
+  }
+  // 진행 상태
+  const statSel=document.getElementById('f-status');
+  if(statSel){
+    const cur=statSel.value;
+    statSel.innerHTML=STATUSES.map(t=>'<option value="'+escapeHtml(t)+'">'+escapeHtml(t)+'</option>').join('');
+    if(cur&&STATUSES.includes(cur))statSel.value=cur;
+  }
+}
+
 // ISO("YYYY-MM-DD") → Excel 시리얼
 function isoToExcelSerial(iso){
   if(!iso)return '';
@@ -590,7 +648,7 @@ function updatePerfOpen(){
 var now=new Date();now.setHours(0,0,0,0);
 PERFS.forEach(function(p){if(p.o===1){var ed=new Date(p.e);ed.setHours(0,0,0,0);ed.setDate(ed.getDate()+1);if(now>=ed)p.o=0;}});
 }
-async function initApp(){buildNav();startClock();updateRoleTag();await loadPrograms();updatePerfOpen();loadData();}
+async function initApp(){buildNav();startClock();updateRoleTag();await loadPrograms();await loadAllMasters();updatePerfOpen();loadData();}
 
 function updateRoleTag(){
   const el=document.getElementById('role-tag');
@@ -742,8 +800,9 @@ async function saveInlineRow(slug,rowIndex){
   showOverlayLoad('\uC800\uC7A5 \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('PATCH','/api/sheet/'+slug+'/'+rowIndex,{values});
-    if(slug==='content')CONTENT_TYPES=[];
-    if(slug==='manager')MANAGERS=[];
+    if(slug==='content'){CONTENT_TYPES=[];await loadContentMeta();populateMasterDropdowns();}
+    if(slug==='manager'){MANAGERS=[];await loadManagers();PR_MANAGERS=MANAGERS.filter(m=>isFlagOn(m['홍보여부']));populateMasterDropdowns();}
+    if(slug==='platform'){await loadPlatforms();populateMasterDropdowns();}
     showToast('\uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4','success');
     const btn=document.getElementById('save-'+slug+'-'+rowIndex);
     if(btn){btn.disabled=true;btn.classList.remove('dirty');}
@@ -788,9 +847,10 @@ async function saveSheetRow(slug,rowIndex){
   try{
     if(rowIndex)await api('PATCH','/api/sheet/'+slug+'/'+rowIndex,{values});
     else await api('POST','/api/sheet/'+slug,{values});
-    // 콘텐츠/담당자 변경 시 프로그램 모달 캐시 무효화
-    if(slug==='content')CONTENT_TYPES=[];
-    if(slug==='manager')MANAGERS=[];
+    // 콘텐츠/담당자/플랫폼 변경 시 작성 모달 마스터 캐시 무효화 & 재로드
+    if(slug==='content'){CONTENT_TYPES=[];await loadContentMeta();populateMasterDropdowns();}
+    if(slug==='manager'){MANAGERS=[];await loadManagers();PR_MANAGERS=MANAGERS.filter(m=>isFlagOn(m['홍보여부']));populateMasterDropdowns();}
+    if(slug==='platform'){await loadPlatforms();populateMasterDropdowns();}
     await renderSheetList(slug);
     showToast('\uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4','success');
   }catch(e){
@@ -805,8 +865,9 @@ async function deleteSheetRow(slug,rowIndex){
   showOverlayLoad('\uC0AD\uC81C \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('DELETE','/api/sheet/'+slug+'/'+rowIndex);
-    if(slug==='content')CONTENT_TYPES=[];
-    if(slug==='manager')MANAGERS=[];
+    if(slug==='content'){CONTENT_TYPES=[];await loadContentMeta();populateMasterDropdowns();}
+    if(slug==='manager'){MANAGERS=[];await loadManagers();PR_MANAGERS=MANAGERS.filter(m=>isFlagOn(m['홍보여부']));populateMasterDropdowns();}
+    if(slug==='platform'){await loadPlatforms();populateMasterDropdowns();}
     await renderSheetList(slug);
     showToast('\uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4','success');
   }catch(e){
@@ -1198,17 +1259,15 @@ function onPlatChange(){
   const petc=document.getElementById('f-plat-etc');
   petc.style.display=(p==='기타')?'block':'none';
   if(p!=='기타')petc.value='';
-  if(p==='카카오톡'||p==='인스타그램'||p==='기타'){
+  // 시트에서 플랫폼1 == p && 플랫폼2 != '-' 인 row들의 플랫폼2 값 추출
+  const subOpts=PLATFORMS.filter(r=>r['플랫폼1']===p&&r['플랫폼2']&&r['플랫폼2']!=='-').map(r=>r['플랫폼2']);
+  if(subOpts.length===0){
     p2sel.style.display='none';p2sel.innerHTML='';
     p2fix.style.display='block';p2fix.value='-';
   }else{
     p2fix.style.display='none';
     p2sel.style.display='block';
-    let opts=[];
-    if(p==='블로그·맘카페')opts=['블로그','맘카페'];
-    else if(p==='B2B')opts=['여수시청 홈페이지','GS칼텍스 여수공장 식당','GS칼텍스 여수공장 인트라넷'];
-    else if(p==='문자')opts=['마케팅 수신 회원','프로그램 대상 타겟 회원'];
-    p2sel.innerHTML='<option value="">선택</option>'+opts.map(o=>'<option>'+o+'</option>').join('');
+    p2sel.innerHTML='<option value="">선택</option>'+subOpts.map(o=>'<option>'+escapeHtml(o)+'</option>').join('');
   }
 }
 function populateProgramSelect(currentValue){
@@ -1241,10 +1300,11 @@ function fillModalFields(rec){
   else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
   document.getElementById('f-time').value=hhmm;
   var plat1=rec['플랫폼 1']||'';
-  var knownP1=['카카오톡','인스타그램','블로그·맘카페','B2B','문자'];
+  var knownP1=[...new Set(PLATFORMS.map(r=>r['플랫폼1']))];
+  var defaultP1=PLATFORMS.length?PLATFORMS[0]['플랫폼1']:'';
   if(knownP1.indexOf(plat1)>-1){document.getElementById('f-plat').value=plat1;document.getElementById('f-plat-etc').value='';}
   else if(plat1){document.getElementById('f-plat').value='기타';document.getElementById('f-plat-etc').value=plat1;}
-  else{document.getElementById('f-plat').value='카카오톡';document.getElementById('f-plat-etc').value='';}
+  else{document.getElementById('f-plat').value=defaultP1;document.getElementById('f-plat-etc').value='';}
   onPlatChange();
   var plat2=rec['플랫폼 2']||'';
   if(plat2&&plat2!=='-'){var p2sel=document.getElementById('f-plat2');if(p2sel.style.display!=='none')p2sel.value=plat2;}
@@ -1263,7 +1323,7 @@ function openModal(dateKey,rec){
   document.getElementById('m-title').textContent=rec?'콘텐츠 수정':'새 콘텐츠 등록';
   document.getElementById('m-meta').textContent=`${m}월 ${d}일 (${dn}요일)`;
   document.getElementById('f-time').value='10:00';
-  document.getElementById('f-plat').value='카카오톡';
+  document.getElementById('f-plat').value=PLATFORMS.length?PLATFORMS[0]['플랫폼1']:'';
   document.getElementById('f-plat-etc').value='';
   populateProgramSelect('');
   document.getElementById('f-title').value='';
@@ -1271,7 +1331,7 @@ function openModal(dateKey,rec){
   document.getElementById('f-format').value='';
   document.getElementById('f-content').value='';
   document.getElementById('f-author').value='';
-  document.getElementById('f-status').value='예정';
+  document.getElementById('f-status').value=STATUSES[0]||'';
   document.getElementById('f-memo').value='';
   onPlatChange();
   if(rec){fillModalFields(rec);document.getElementById('btn-del').style.display='inline-block';}
