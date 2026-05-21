@@ -74,6 +74,10 @@ button{font-family:inherit;cursor:pointer}
 .sched-tbl tbody tr:hover{background:var(--peach-light)!important}
 .sched-tbl.readonly tbody tr:hover{background:transparent!important}
 .sched-tbl tbody td{font-size:12px}
+.sched-tbl tbody tr.past td{opacity:0.5;background:#fafafa}
+.sched-tbl tbody tr.today td{background:#FFF4DC!important;font-weight:600}
+.sched-tbl tbody tr.today:hover td{background:#FFE9B0!important}
+.sched-tbl tbody tr.today td:first-child{border-left:3px solid var(--accent)}
 .nav-center{display:flex;gap:4px;position:relative;padding:4px}
 .nav-pill{position:absolute;background:var(--accent);border-radius:20px;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:0;pointer-events:none;box-shadow:0 4px 12px rgba(74,77,231,0.25);top:0;bottom:0}
 .nav-btn{padding:9px 18px;border:none;border-radius:20px;font-size:13px;font-weight:500;background:transparent;color:#777;transition:color .2s;position:relative;z-index:1;white-space:nowrap;line-height:1}
@@ -720,9 +724,18 @@ function adminRoute(id){
 }
 
 // === 일정 관리 리스트뷰 (Phase 3D) ===
-let _schedFilter={month:'all',cat:'all',status:'all',q:''};
+let _schedFilter={month:'all',cat:'all',status:'all',q:'',hidePast:true};
 let _schedReturnFlag=false;
 let _schedQTimer=null;
+
+function getRecDateKey(r){
+  const y=r['연도']||'',m=String(r['월']||'').padStart(2,'0'),d=String(r['일']||'').padStart(2,'0');
+  return y+'-'+m+'-'+d;
+}
+function getTodayKey(){
+  const t=new Date();
+  return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+}
 
 async function openScheduleAdmin(){
   const html='<div class="modal-bg show" onclick="if(event.target===this)closeAdminPanel()"><div class="modal" style="width:96vw;max-width:1200px;max-height:88vh;overflow:auto;padding:24px"><div id="sched-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
@@ -742,6 +755,10 @@ function renderScheduleList(){
   if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
   if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
   if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
+  if(_schedFilter.hidePast){
+    const todayKey=getTodayKey();
+    rows=rows.filter(r=>getRecDateKey(r)>=todayKey);
+  }
   if(_schedFilter.q){
     const q=_schedFilter.q.toLowerCase();
     rows=rows.filter(r=>
@@ -767,21 +784,35 @@ function renderScheduleList(){
 
 function buildScheduleListHtml(rows){
   const isAdmin=userRole==='admin';
+  const todayKey=getTodayKey();
   // 필터 옵션 추출 (전체 records 기반, 필터 무관)
   const allMonths=[...new Set(records.map(r=>String(r['월']||'')))].filter(Boolean).sort((a,b)=>Number(a)-Number(b));
   const allCats=[...new Set(records.map(r=>r['콘텐츠 구분']||''))].filter(Boolean);
   const allStatuses=[...new Set(records.map(r=>r['진행 상태']||''))].filter(Boolean);
+  // 카운트 (오늘 / 미래 / 과거)
+  const todayCount=rows.filter(r=>getRecDateKey(r)===todayKey).length;
+  const futureCount=rows.filter(r=>getRecDateKey(r)>todayKey).length;
+  const pastCount=rows.filter(r=>getRecDateKey(r)<todayKey).length;
   
   let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px"><h3 style="margin:0;flex:1">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
+  
+  // 요약 배지
+  html+='<div style="display:flex;gap:8px;margin-bottom:10px;font-size:11px">';
+  if(todayCount>0)html+='<span style="padding:4px 12px;background:#FFF4DC;color:#C97A11;border-radius:8px;font-weight:600">📍 오늘 '+todayCount+'개</span>';
+  if(futureCount>0)html+='<span style="padding:4px 12px;background:#fafafa;color:#666;border-radius:8px">미래 '+futureCount+'개</span>';
+  if(pastCount>0&&!_schedFilter.hidePast)html+='<span style="padding:4px 12px;background:#f5f5f5;color:#999;border-radius:8px">지난 일정 '+pastCount+'개</span>';
+  html+='</div>';
+  
   // 필터 영역
   html+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">';
   html+='<input id="sched-q" type="text" placeholder="🔍 제목/담당자/프로그램/내용 검색 (엔터 즉시)" value="'+escapeHtml(_schedFilter.q)+'" oninput="setSchedQuery(this.value)" onkeydown="handleSchedQueryKey(event)" style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff;min-width:240px;flex:0 1 300px">';
   html+='<select class="sched-filter" onchange="setSchedFilter(\'month\',this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff"><option value="all"'+(_schedFilter.month==='all'?' selected':'')+'>전체 월</option>'+allMonths.map(m=>'<option value="'+m+'"'+(_schedFilter.month===m?' selected':'')+'>'+m+'월</option>').join('')+'</select>';
   html+='<select class="sched-filter" onchange="setSchedFilter(\'cat\',this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff"><option value="all"'+(_schedFilter.cat==='all'?' selected':'')+'>전체 구분</option>'+allCats.map(c=>'<option value="'+escapeHtml(c)+'"'+(_schedFilter.cat===c?' selected':'')+'>'+escapeHtml(c)+'</option>').join('')+'</select>';
   html+='<select class="sched-filter" onchange="setSchedFilter(\'status\',this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff"><option value="all"'+(_schedFilter.status==='all'?' selected':'')+'>전체 상태</option>'+allStatuses.map(s=>'<option value="'+escapeHtml(s)+'"'+(_schedFilter.status===s?' selected':'')+'>'+escapeHtml(s)+'</option>').join('')+'</select>';
+  html+='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#555;background:#fafafa;padding:6px 12px;border:1px solid #ddd;border-radius:8px;user-select:none"><input type="checkbox" onchange="toggleHidePast(this.checked)"'+(_schedFilter.hidePast?' checked':'')+' style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)"> 지난 일정 감추기</label>';
   if(_schedFilter.month!=='all'||_schedFilter.cat!=='all'||_schedFilter.status!=='all'||_schedFilter.q)
-    html+='<button onclick="resetSchedFilter()" style="padding:5px 12px;background:#fafafa;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:11px;color:#666">초기화</button>';
+    html+='<button onclick="resetSchedFilter()" style="padding:5px 12px;background:#fafafa;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:11px;color:#666">필터 초기화</button>';
   html+='<span style="font-size:11px;color:#888;margin-left:auto">'+(isAdmin?'💡 row 클릭 = 수정':'🔒 관리자만 수정 가능')+'</span>';
   html+='</div>';
   
@@ -798,15 +829,20 @@ function buildScheduleListHtml(rows){
     else if(typeof ts==='number'){const tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
     const y=r['연도'],m=String(r['월']||'').padStart(2,'0'),d=String(r['일']||'').padStart(2,'0');
     const dateKey=y+'-'+m+'-'+d;
+    const recKey=getRecDateKey(r);
+    const isPast=recKey<todayKey;
+    const isToday=recKey===todayKey;
+    const trClass=isPast?'past':(isToday?'today':'');
     const status=r['진행 상태']||'';
     const sColor=status==='완료'?'#0F8B4C':status==='취소'?'#888':status==='예정'?'#C97A11':'#888';
     const sBg=status==='완료'?'#E8F5EC':status==='취소'?'#f0f0f0':status==='예정'?'#FFF4DC':'#f5f5f5';
+    const todayBadge=isToday?' <span style="display:inline-block;padding:2px 6px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px">오늘</span>':'';
     if(isAdmin){
-      html+='<tr onclick="openScheduleRow(\''+dateKey+'\','+r._rowIndex+')" style="cursor:pointer">';
+      html+='<tr class="'+trClass+'" onclick="openScheduleRow(\''+dateKey+'\','+r._rowIndex+')" style="cursor:pointer">';
     }else{
-      html+='<tr style="cursor:default">';
+      html+='<tr class="'+trClass+'" style="cursor:default">';
     }
-    html+='<td style="white-space:nowrap">'+m+'/'+d+'</td>';
+    html+='<td style="white-space:nowrap">'+m+'/'+d+todayBadge+'</td>';
     html+='<td>'+escapeHtml(r['요일']||'')+'</td>';
     html+='<td style="white-space:nowrap;color:#666">'+hhmm+'</td>';
     html+='<td style="font-size:11px">'+escapeHtml(r['플랫폼 1']||'')+(r['플랫폼 2']&&r['플랫폼 2']!=='-'?'<span style="color:#bbb">  ›  </span>'+escapeHtml(r['플랫폼 2']):'')+'</td>';
@@ -819,6 +855,8 @@ function buildScheduleListHtml(rows){
   html+='</tbody></table>';
   return html;
 }
+
+function toggleHidePast(on){_schedFilter.hidePast=on;renderScheduleList();}
 
 function setSchedFilter(key,val){_schedFilter[key]=val;renderScheduleList();}
 function setSchedQuery(val){
