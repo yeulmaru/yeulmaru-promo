@@ -847,9 +847,9 @@ function buildScheduleListHtml(rows){
   const pageNonToday=nonTodayRows.slice(pageStart,pageStart+remainPerPage);
   const displayRows=[...todayRows,...pageNonToday];
   
-  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px"><h3 style="margin:0;flex:1">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
   if(isAdmin)html+='<button onclick="addScheduleFromList()" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
-  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px">📥 CSV</button>';
+  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px;white-space:nowrap">📥 모두 내역받기</button>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   
   // 요약 문장 (숫자만 컬러 볼드)
