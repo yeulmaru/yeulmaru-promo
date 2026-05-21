@@ -64,6 +64,13 @@ button{font-family:inherit;cursor:pointer}
 .adm-btn:hover{background:#f5f5f5}
 .adm-btn-del{color:#c00;border-color:#fcc;background:#fff8f8}
 .adm-btn-del:hover{background:#fee}
+.inl-input{width:100%;padding:6px 8px;border:1px solid transparent;border-radius:6px;font-size:12px;background:transparent;font-family:inherit;color:inherit;box-sizing:border-box}
+.inl-input:hover{background:#fafafa;border-color:#eee}
+.inl-input:focus{border-color:var(--accent);background:#fff;outline:0;box-shadow:0 0 0 2px rgba(255,107,107,0.1)}
+.inl-cb{width:18px;height:18px;cursor:pointer;accent-color:var(--accent)}
+.save-row.dirty{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;animation:savePulse 1.2s ease-in-out infinite}
+.save-row.dirty:hover{background:var(--accent);opacity:0.9}
+@keyframes savePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,107,107,0.4)}50%{transform:scale(1.05);box-shadow:0 0 0 6px rgba(255,107,107,0)}}
 .nav-center{display:flex;gap:4px;position:relative;padding:4px}
 .nav-pill{position:absolute;background:var(--accent);border-radius:20px;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:0;pointer-events:none;box-shadow:0 4px 12px rgba(74,77,231,0.25);top:0;bottom:0}
 .nav-btn{padding:9px 18px;border:none;border-radius:20px;font-size:13px;font-weight:500;background:transparent;color:#777;transition:color .2s;position:relative;z-index:1;white-space:nowrap;line-height:1}
@@ -499,6 +506,7 @@ const SHEET_CONFIG={
   },
   manager:{
     title:'사용자 관리',
+    inlineEdit:true,
     columns:[
       {key:'담당부서',label:'담당부서',type:'text'},
       {key:'담당자',label:'이름',type:'text',required:true},
@@ -639,26 +647,74 @@ function buildSheetListHtml(slug,rows){
   html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
   html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div>';
   if(cfg.note)html+='<div style="font-size:11px;color:#888;margin-bottom:10px;padding:8px 12px;background:#fafafa;border-radius:8px">'+escapeHtml(cfg.note)+'</div>';
+  if(cfg.inlineEdit)html+='<div style="font-size:11px;color:#888;margin-bottom:10px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
   html+='<table class="adm-tbl"><thead><tr>';
   cfg.columns.forEach(c=>{html+='<th>'+escapeHtml(c.label)+'</th>';});
   html+='<th></th></tr></thead><tbody>';
   rows.forEach(r=>{
-    html+='<tr>';
+    html+='<tr data-row="'+r._rowIndex+'">';
     cfg.columns.forEach(c=>{
-      let val=r[c.key];
-      if(c.type==='checkbox'){
-        const on=(val==='1'||val===1||val===true||String(val||'').toLowerCase()==='true');
-        val=on?'<span style="color:var(--accent);font-weight:700;font-size:14px">●</span>':'<span style="color:#ddd;font-size:14px">○</span>';
-      }else val=escapeHtml(val||'');
-      html+='<td>'+val+'</td>';
+      const raw=r[c.key];
+      if(cfg.inlineEdit){
+        if(c.type==='checkbox'){
+          const on=(raw==='1'||raw===1||raw===true||String(raw||'').toLowerCase()==='true');
+          html+='<td style="text-align:center"><input type="checkbox" class="inl-cb" data-key="'+escapeHtml(c.key)+'"'+(on?' checked':'')+' onchange="markRowDirty(\''+slug+'\','+r._rowIndex+')"></td>';
+        }else{
+          html+='<td><input type="text" class="inl-input" data-key="'+escapeHtml(c.key)+'" value="'+escapeHtml(raw||'')+'" oninput="markRowDirty(\''+slug+'\','+r._rowIndex+')"></td>';
+        }
+      }else{
+        let val=raw;
+        if(c.type==='checkbox'){
+          const on=(val==='1'||val===1||val===true||String(val||'').toLowerCase()==='true');
+          val=on?'<span style="color:var(--accent);font-weight:700;font-size:14px">●</span>':'<span style="color:#ddd;font-size:14px">○</span>';
+        }else val=escapeHtml(val||'');
+        html+='<td>'+val+'</td>';
+      }
     });
     html+='<td style="text-align:right;white-space:nowrap">';
-    html+='<button class="adm-btn" onclick="openSheetForm(\''+slug+'\','+r._rowIndex+')">수정</button>';
+    if(cfg.inlineEdit){
+      html+='<button id="save-'+slug+'-'+r._rowIndex+'" class="adm-btn save-row" onclick="saveInlineRow(\''+slug+'\','+r._rowIndex+')" disabled>저장</button>';
+    }else{
+      html+='<button class="adm-btn" onclick="openSheetForm(\''+slug+'\','+r._rowIndex+')">수정</button>';
+    }
     html+='<button class="adm-btn adm-btn-del" onclick="deleteSheetRow(\''+slug+'\','+r._rowIndex+')">삭제</button>';
     html+='</td></tr>';
   });
   html+='</tbody></table>';
   return html;
+}
+
+function markRowDirty(slug,rowIndex){
+  const btn=document.getElementById('save-'+slug+'-'+rowIndex);
+  if(btn&&btn.disabled){
+    btn.disabled=false;
+    btn.classList.add('dirty');
+  }
+}
+
+async function saveInlineRow(slug,rowIndex){
+  const tr=document.querySelector('tr[data-row="'+rowIndex+'"]');
+  if(!tr)return;
+  const cfg=SHEET_CONFIG[slug];
+  const values=cfg.columns.map(c=>{
+    const el=tr.querySelector('[data-key="'+c.key+'"]');
+    if(!el)return '';
+    if(c.type==='checkbox')return el.checked?'1':'';
+    return el.value||'';
+  });
+  showOverlayLoad('\uC800\uC7A5 \uC911\uC785\uB2C8\uB2E4...');
+  try{
+    await api('PATCH','/api/sheet/'+slug+'/'+rowIndex,{values});
+    if(slug==='content')CONTENT_TYPES=[];
+    if(slug==='manager')MANAGERS=[];
+    showToast('\uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4','success');
+    const btn=document.getElementById('save-'+slug+'-'+rowIndex);
+    if(btn){btn.disabled=true;btn.classList.remove('dirty');}
+  }catch(e){
+    showToast('\uC800\uC7A5 \uC2E4\uD328: '+e.message,'error');
+  }finally{
+    hideOverlayLoad();
+  }
 }
 
 function openSheetForm(slug,rowIndex){
