@@ -2034,15 +2034,17 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
     const[hh,mm]=hhmm.split(':').map(Number);
     const ampm=hh<12?'오전':'오후';
     const h12=hh%12||12;
-    timeStr=`${ampm} ${String(h12).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    timeStr=`${ampm} ${h12}:${String(mm).padStart(2,'0')}`;
   }else if(typeof ts==='number'){
     const tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;
     const ampm=hh<12?'오전':'오후';
     const h12=hh%12||12;
-    timeStr=`${ampm} ${String(h12).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    timeStr=`${ampm} ${h12}:${String(mm).padStart(2,'0')}`;
   }
-  const dnShort=dn;
-  const dateTimeFull=`${rec['연도']}-${String(rec['월']||'').padStart(2,'0')}-${String(rec['일']||'').padStart(2,'0')} ${timeStr} (${dnShort})`;
+  const mm2=String(rec['월']||'').padStart(2,'0');
+  const dd2=String(rec['일']||'').padStart(2,'0');
+  // "05-22 (금) 오후 2:00"
+  const dateTimeFull=`${mm2}-${dd2} (${dn}) ${timeStr}`;
   const status=rec['진행 상태']||'-';
   const memo=rec['비고']||'';
   const p1=rec['플랫폼 1']||'';
@@ -2059,16 +2061,17 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
   document.getElementById('m-meta').innerHTML='';
   
   let html='';
-  html+='<div class="mv-section">📍 게시 현황</div>';
+  html+='<div class="mv-section">📍 홍보 현황</div>';
   html+='<div class="mv-row"><span class="lbl">일시</span><span class="val">'+escapeHtml(dateTimeFull)+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">진행 상태</span><span class="val" style="font-weight:700">'+escapeHtml(status)+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">비고</span><span class="val'+(memo?'':' muted')+'">'+(memo?escapeHtml(memo):'내용 없음')+'</span></div>';
   
-  html+='<div class="mv-section">📍 게시 내용</div>';
-  html+='<div class="mv-platrow" style="font-weight:700;color:#222">'+escapeHtml(p1)+(p2&&p2!=='-'?'  ·  '+escapeHtml(p2):'')+'</div>';
-  if(prog)html+='<div class="mv-platrow" style="color:var(--accent);font-weight:600">'+escapeHtml(prog)+'</div>';
-  if(cat)html+='<div><span class="mv-cat">'+escapeHtml(cat)+'</span></div>';
-  html+='<div class="mv-title">'+escapeHtml(title)+(fmt?'<span class="fmt">('+escapeHtml(fmt)+')</span>':'')+'</div>';
+  html+='<div class="mv-section">📍 홍보 주제 및 내용</div>';
+  const platStr=escapeHtml(p1)+(p2&&p2!=='-'?'  ·  '+escapeHtml(p2):'');
+  html+='<div class="mv-row"><span class="lbl">플랫폼</span><span class="val" style="font-weight:700;color:#222">'+platStr+'</span></div>';
+  html+='<div class="mv-row"><span class="lbl">프로그램</span><span class="val'+(prog?'':' muted')+'" style="color:'+(prog?'var(--accent)':'#aaa')+';font-weight:'+(prog?'600':'400')+'">'+(prog?escapeHtml(prog):'-')+'</span></div>';
+  html+='<div class="mv-row"><span class="lbl">구분</span><span class="val">'+(cat?'<span class="mv-cat">'+escapeHtml(cat)+'</span>':'-')+'</span></div>';
+  html+='<div class="mv-row"><span class="lbl">홍보 내용</span><span class="val">'+escapeHtml(title)+(fmt?' <span style="color:#888;font-size:12px">('+escapeHtml(fmt)+')</span>':'')+'</span></div>';
   html+='<div class="mv-content'+(content?'':' empty')+'">'+(content?escapeHtml(content):'내용 없음')+'</div>';
   
   html+='<div class="mv-section">📍 게시자</div>';
