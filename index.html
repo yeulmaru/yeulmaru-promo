@@ -53,9 +53,12 @@ button{font-family:inherit;cursor:pointer}
 .nav-logo{font-size:14px;font-weight:800;color:var(--accent);letter-spacing:2px}
 .nav-sub{font-size:13px;color:var(--dim)}
 .nav-beta{display:inline-block;background:#1a1a1a;color:#fff;font-style:italic;font-weight:700;font-size:10px;letter-spacing:0.5px;padding:2px 9px;border-radius:10px;margin-left:6px;vertical-align:middle;line-height:1.4}
-.role-tag{font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:8px;margin-right:4px}
+.role-tag{font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:8px;margin-right:4px;cursor:pointer;transition:opacity .15s}
+.role-tag:hover{opacity:0.85}
 .role-tag.admin{background:var(--accent);color:#fff}
 .role-tag.user{background:rgba(0,0,0,0.06);color:#666}
+@keyframes role-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.role-shake{animation:role-shake .42s ease-in-out}
 .adm-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .adm-tbl thead th{background:#f5f5f7;padding:10px 8px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
 .adm-tbl tbody td{padding:8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:left}
@@ -705,6 +708,79 @@ function updateRoleTag(){
   if(!el)return;
   el.className='role-tag '+(userRole==='admin'?'admin':'user');
   el.textContent=userRole==='admin'?'관리자':'일반';
+  el.title=userRole==='admin'?'일반으로 전환':'관리자로 전환';
+  el.onclick=switchRole;
+}
+function switchRole(){
+  if(userRole==='admin'){
+    if(confirm('일반 모드로 전환하시겠습니까?')){
+      userRole='user';
+      password='0510';
+      sessionStorage.setItem('pw','0510');
+      sessionStorage.setItem('role','user');
+      updateRoleTag();
+      buildNav();
+      render();
+      showToast('일반 모드로 전환됨');
+    }
+  }else{
+    showRolePrompt();
+  }
+}
+function showRolePrompt(){
+  var html='<div class="modal-bg show" onclick="if(event.target===this)closeRolePrompt()">'+
+    '<div class="modal" id="role-prompt-card" style="width:auto;min-width:300px;max-width:90vw;padding:32px 36px;text-align:center">'+
+      '<h3 style="margin:0 0 6px;font-size:16px">관리자 모드 전환</h3>'+
+      '<div style="color:#888;font-size:12px;margin-bottom:20px">PIN 4자리 입력</div>'+
+      '<input type="password" id="role-prompt-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" onkeydown="if(event.key===\'Enter\')submitRolePrompt()" oninput="if(this.value.length===4)submitRolePrompt()" style="width:100px;padding:12px;text-align:center;font-size:22px;letter-spacing:8px;border:1.5px solid rgba(0,0,0,0.1);border-radius:10px;outline:none;font-weight:700;-webkit-text-security:disc">'+
+      '<div id="role-prompt-error" style="font-size:11px;color:#c00;margin-top:8px;min-height:14px"></div>'+
+      '<div style="display:flex;gap:8px;justify-content:center;margin-top:16px">'+
+        '<button onclick="closeRolePrompt()" style="padding:9px 22px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:13px">취소</button>'+
+        '<button onclick="submitRolePrompt()" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">전환</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+  var el=document.getElementById('role-prompt');
+  if(!el){el=document.createElement('div');el.id='role-prompt';document.body.appendChild(el);}
+  el.innerHTML=html;
+  setTimeout(function(){var inp=document.getElementById('role-prompt-input');if(inp)inp.focus();},50);
+}
+function closeRolePrompt(){var el=document.getElementById('role-prompt');if(el)el.innerHTML='';}
+async function submitRolePrompt(){
+  const inp=document.getElementById('role-prompt-input');
+  if(!inp)return;
+  const pin=inp.value.trim();
+  const err=document.getElementById('role-prompt-error');
+  const card=document.getElementById('role-prompt-card');
+  if(pin.length!==4){err.textContent='4자리 입력';return;}
+  try{
+    const d=await fetch(API+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pin})}).then(r=>r.json());
+    if(d.ok&&d.role==='admin'){
+      // 성공: 전환
+      userRole='admin';
+      password=pin;
+      sessionStorage.setItem('pw',pin);
+      sessionStorage.setItem('role','admin');
+      closeRolePrompt();
+      updateRoleTag();
+      buildNav();
+      render();
+      showToast('관리자 모드로 전환됨');
+    }else{
+      // 실패: 흔들기
+      err.textContent=d.ok?'관리자 PIN이 아님':'잘못된 PIN';
+      card.classList.remove('role-shake');
+      void card.offsetWidth;
+      card.classList.add('role-shake');
+      inp.value='';
+      inp.focus();
+    }
+  }catch(e){
+    err.textContent='네트워크 오류';
+    card.classList.remove('role-shake');
+    void card.offsetWidth;
+    card.classList.add('role-shake');
+  }
 }
 function logout(){
   if(!confirm('로그아웃하시겠습니까?'))return;
