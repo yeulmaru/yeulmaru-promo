@@ -556,7 +556,7 @@ const DAYS=['화','수','목','금','토','일'];
 const DAY_NAMES=['일','월','화','수','목','금','토'];
 const MENUS=[
   {label:'캘린더',id:'cal'},
-  {label:'홍보 일정',id:'schedule'},
+  {label:'일정 확인 및 관리',id:'schedule'},
   {label:'홍보 신청',id:'promo'},
   {label:'플랫폼 현황',id:'platform'},
   {label:'연간 일정',id:'annual'},
@@ -966,9 +966,9 @@ function buildNav(){
     b.onclick=()=>{
       if(m.id==='annual'){window.open('https://yeulmaru.github.io/yeulmaru-calandar-2026/','_blank');return;}
       if(m.id==='admin'){openAdminPanel();return;}
-      if(m.id==='schedule'){openScheduleAdmin();return;}
+      if(m.id==='schedule'){openPromoBoard();return;}
       if(m.id==='platform'){showComingSoon('플랫폼 현황');return;}
-      if(m.id==='promo'){openPromoBoard();return;}
+      if(m.id==='promo'){openPromoWizard();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
     b.onmouseenter=()=>movePill(b,pill);
@@ -1038,12 +1038,12 @@ function renderPromoBoard(){
   }else if(isAdmin&&_promoFilter.applicant){
     rows=rows.filter(function(r){return(r['게시 담당자']||'')===_promoFilter.applicant;});
   }
-  // 지난 일정 감추기 (홍보 일정과 동일)
+  // 지난 일정 감추기
   if(_promoFilter.hidePast){
     const todayKey=getTodayKey();
     rows=rows.filter(function(r){return getRecDateKey(r)>=todayKey;});
   }
-  // 필터
+  // 상태 필터
   if(_promoFilter.status!=='all'){
     if(_promoFilter.status==='pending')rows=rows.filter(function(r){return r['진행 상태']==='대기 중';});
     else if(_promoFilter.status==='approved')rows=rows.filter(function(r){return r['진행 상태']==='예정';});
@@ -1053,24 +1053,65 @@ function renderPromoBoard(){
     const q=_promoFilter.q.toLowerCase();
     rows=rows.filter(function(r){return(r['콘텐츠 제목']||'').toLowerCase().includes(q)||(r['게시 담당자']||'').toLowerCase().includes(q)||(r['프로그램']||'').toLowerCase().includes(q);});
   }
-  // 정렬: 대기 중 우선 → 날짜 오름차순
+  // === 정렬: 1순위 본인 신청 → 2순위 오늘 → 3순위 미래(가까운 순) → 4순위 과거(최근 순) ===
+  const todayKey=getTodayKey();
+  function rowBucket(r){
+    const dk=getRecDateKey(r);
+    const isMine=myApplicant&&(r['게시 담당자']||'')===myApplicant;
+    const isToday=dk===todayKey;
+    const isFuture=dk>todayKey;
+    // 본인 + 오늘 = 0, 본인 + 미래 = 1, 본인 + 과거 = 2, 타인 + 오늘 = 3, 타인 + 미래 = 4, 타인 + 과거 = 5
+    if(isMine&&isToday)return 0;
+    if(isMine&&isFuture)return 1;
+    if(isMine)return 2;
+    if(isToday)return 3;
+    if(isFuture)return 4;
+    return 5;
+  }
   rows.sort(function(a,b){
+    // 대기 중은 항상 맨 위로
     const ap=a['진행 상태']==='대기 중'?0:1;
     const bp=b['진행 상태']==='대기 중'?0:1;
     if(ap!==bp)return ap-bp;
-    const ad=Number(a['날짜'])||0,bd=Number(b['날짜'])||0;
-    if(ad!==bd)return ad-bd;
+    // 우선순위 버킷
+    const ab=rowBucket(a),bb=rowBucket(b);
+    if(ab!==bb)return ab-bb;
+    // 같은 버킷 내에서: 미래·오늘은 가까운 순(오름차순), 과거는 최근 순(내림차순)
+    const ad=getRecDateKey(a),bd=getRecDateKey(b);
+    if(ab===2||ab===5){
+      // 과거 → 최근(내림차순)
+      if(ad!==bd)return bd.localeCompare(ad);
+    }else{
+      // 오늘/미래 → 가까운(오름차순)
+      if(ad!==bd)return ad.localeCompare(bd);
+    }
+    // 같은 날짜는 입력시간 오름차순
     const at=Number(a['입력시간(KST)'])||0,bt=Number(b['입력시간(KST)'])||0;
     return at-bt;
   });
-  // 대기 중 카운트 (전체 기준)
+  // === 요약 카운트 (myApplicant 기준 또는 admin은 전체) ===
+  function recIsMine(r){return myApplicant&&(r['게시 담당자']||'')===myApplicant;}
+  const myRows=isAdmin?records.filter(recIsMine):records.filter(recIsMine);
+  const summaryBase=isAdmin?records:myRows;
+  const myPending=summaryBase.filter(function(r){return r['진행 상태']==='대기 중';}).length;
+  const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
+  const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
   const pendingCnt=records.filter(function(r){return r['진행 상태']==='대기 중';}).length;
+  // === 헤더 ===
   let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;border-bottom:1px solid #eee">';
-  html+='<h3 style="margin:0;flex:1;text-align:left">홍보 신청 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(pendingCnt>0?' · 대기 '+pendingCnt+'건':'')+')</span>'+(!isAdmin&&myApplicant?' <span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:4px">· '+escapeHtml(myApplicant)+' 님</span>':'')+'</h3>';
+  html+='<h3 style="margin:0;flex:1;text-align:left">일정 확인 및 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개)</span>'+(!isAdmin&&myApplicant?' <span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:4px">· '+escapeHtml(myApplicant)+' 님</span>':'')+'</h3>';
   html+='<button class="m-btn save" onclick="openPromoWizardFromBoard()" style="padding:7px 14px">+ 새 신청</button>';
   html+='<button class="m-btn cancel" onclick="renderPromoBoard()" style="padding:7px 12px" title="새로고침">↻</button>';
   html+='</div>';
-  // 필터 탭 + 지난 일정 토글 + (admin) 신청자 필터
+  // === 요약 박스 (내 신청 한눈에) ===
+  if((!isAdmin&&myApplicant)||(isAdmin&&pendingCnt+myToday+myUpcoming>0)){
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">';
+    html+=summaryCard('⏳','대기 중',myPending,'var(--accent)','rgba(74,77,231,0.08)',isAdmin?'전체':'내 신청');
+    html+=summaryCard('🔥','오늘',myToday,'#C97A11','#FFF4DC',isAdmin?'전체':'내 일정');
+    html+=summaryCard('📅','다가오는 7일',myUpcoming,'#0F8B4C','#E8F5EC',isAdmin?'전체':'내 일정');
+    html+='</div>';
+  }
+  // === 필터 탭 ===
   html+='<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center">';
   const tabs=[{k:'all',l:'전체'},{k:'pending',l:'대기 중'},{k:'approved',l:'예정'},{k:'done',l:'완료'}];
   tabs.forEach(function(t){
@@ -1089,14 +1130,14 @@ function renderPromoBoard(){
   if(!isAdmin&&!myApplicant){
     html+='<div style="background:#FFF4DC;color:#C97A11;padding:10px 14px;border-radius:10px;font-size:12px;margin-bottom:10px;text-align:left">아직 본인 신청 내역이 없어요. 새 신청을 작성하면 이후 본인 신청만 표시됩니다.</div>';
   }
-  // 리스트
+  // === 리스트 ===
   if(rows.length===0){
     html+='<div style="text-align:left;padding:60px 20px;color:#aaa;font-size:13px">신청 내역이 없습니다</div>';
   }else{
     html+='<table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left"><thead><tr style="background:#fafafa;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
     html+='<th style="padding:10px 12px;text-align:left;width:40px">#</th>';
     html+='<th style="padding:10px 12px;text-align:left;width:90px">상태</th>';
-    html+='<th style="padding:10px 12px;text-align:left;width:130px">일시</th>';
+    html+='<th style="padding:10px 12px;text-align:left;width:155px">일시</th>';
     html+='<th style="padding:10px 12px;text-align:left">콘텐츠</th>';
     html+='<th style="padding:10px 12px;text-align:left;width:140px">플랫폼</th>';
     html+='<th style="padding:10px 12px;text-align:left;width:100px">신청자</th>';
@@ -1112,19 +1153,58 @@ function renderPromoBoard(){
       else if(typeof ts==='number'){const tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;timeStr=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
       const plat=(r['플랫폼 1']||'')+(r['플랫폼 2']&&r['플랫폼 2']!=='-'?'·'+r['플랫폼 2']:'');
       const y=r['연도'],dateKey=y+'-'+m2+'-'+d2;
-      const trBg=status==='대기 중'?'background:rgba(74,77,231,0.04)':'';
-      html+='<tr onclick="openPromoBoardRow(\''+dateKey+'\','+r._rowIndex+')" style="border-bottom:1px solid #f0f0f0;cursor:pointer;'+trBg+'" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\''+(status==='대기 중'?'rgba(74,77,231,0.04)':'')+'\'">';
+      // 본인 신청 + 오늘 강조
+      const isMine=myApplicant&&(r['게시 담당자']||'')===myApplicant;
+      const isToday=dateKey===todayKey;
+      const isFuture=dateKey>todayKey;
+      const isPast=dateKey<todayKey;
+      // D-day 텍스트
+      let ddTxt='',ddCol='#aaa';
+      if(isToday){ddTxt='D-Day';ddCol='#C97A11';}
+      else if(isFuture){
+        const diff=daysBetween(todayKey,dateKey);
+        if(diff<=7){ddTxt='D-'+diff;ddCol='var(--accent)';}
+        else{ddTxt='D-'+diff;ddCol='#aaa';}
+      }else{
+        const diff=daysBetween(dateKey,todayKey);
+        ddTxt='D+'+diff;ddCol='#bbb';
+      }
+      // 행 배경 (대기 중 / 본인 신청)
+      let trBg='';
+      let trBorder='border-left:3px solid transparent';
+      if(status==='대기 중')trBg='background:rgba(74,77,231,0.04)';
+      if(isMine&&isToday){trBg='background:rgba(201,122,17,0.08)';trBorder='border-left:3px solid #C97A11';}
+      else if(isMine&&isFuture){trBg='background:rgba(74,77,231,0.05)';trBorder='border-left:3px solid var(--accent)';}
+      else if(isMine){trBorder='border-left:3px solid rgba(74,77,231,0.3)';}
+      const hoverBg=isMine&&isToday?'rgba(201,122,17,0.12)':isMine?'rgba(74,77,231,0.09)':'#f5f5f5';
+      const baseBg=trBg.replace('background:','')||'transparent';
+      html+='<tr onclick="openPromoBoardRow(\''+dateKey+'\','+r._rowIndex+')" style="border-bottom:1px solid #f0f0f0;cursor:pointer;'+trBg+';'+trBorder+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
       html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums">'+(idx+1)+'</td>';
       html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:'+sBg+';color:'+sColor+';font-size:11px;font-weight:600">'+escapeHtml(status)+'</span></td>';
-      html+='<td style="padding:10px 12px;text-align:left;color:#333">'+m2+'-'+d2+' '+timeStr+'</td>';
+      // 일시 + D-day 같이
+      html+='<td style="padding:10px 12px;text-align:left;color:#333"><div style="display:flex;align-items:center;gap:8px"><span>'+m2+'-'+d2+' '+timeStr+'</span><span style="font-size:10px;font-weight:700;color:'+ddCol+';padding:1px 6px;border-radius:8px;background:'+(isToday?'#FFF4DC':isFuture&&daysBetween(todayKey,dateKey)<=7?'rgba(74,77,231,0.08)':'#f5f5f5')+'">'+ddTxt+'</span></div></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:#222;font-weight:500">'+escapeHtml(r['콘텐츠 제목']||'')+'<div style="font-size:11px;color:#888;font-weight:400;margin-top:2px">'+escapeHtml(r['프로그램']||'-')+'</div></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:#555;font-size:12px">'+escapeHtml(plat||'-')+'</td>';
-      html+='<td style="padding:10px 12px;text-align:left;color:#555">'+escapeHtml(r['게시 담당자']||'-')+'</td>';
+      html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+'">'+escapeHtml(r['게시 담당자']||'-')+(isMine?' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:6px;margin-left:2px">나</span>':'')+'</td>';
       html+='</tr>';
     });
     html+='</tbody></table>';
   }
   body.innerHTML=html;
+}
+// 요약 카드 헬퍼
+function summaryCard(emo,label,count,color,bg,scope){
+  return '<div style="padding:14px 16px;background:'+bg+';border-radius:12px;border:1px solid '+color+'22"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;color:'+color+';font-weight:600">'+emo+' '+label+(scope?' <span style="color:#aaa;font-weight:500">· '+scope+'</span>':'')+'</div><div style="font-size:24px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+count+'<span style="font-size:11px;font-weight:500;color:#888;margin-left:3px">건</span></div></div>';
+}
+// 날짜 문자열(YYYY-MM-DD) 비교 / 차이 / 더하기
+function daysBetween(k1,k2){
+  const d1=new Date(k1),d2=new Date(k2);
+  return Math.round((d2-d1)/86400000);
+}
+function addDaysKey(k,n){
+  const d=new Date(k);
+  d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 let _promoSearchTimer=null;
 function onPromoSearch(v){
