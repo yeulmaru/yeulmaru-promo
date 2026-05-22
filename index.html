@@ -32,7 +32,7 @@ button{font-family:inherit;cursor:pointer}
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .cell:hover{transform:scale(1.01);transition:transform .15s}
-.c:hover{background:rgba(255,255,255,0.6) !important;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.c:hover{box-shadow:0 2px 8px rgba(0,0,0,0.05)}
 .c:not(.past):not(.nm):hover{background:rgba(240,196,184,0.5) !important}
 
 /* ═══ LOGIN ═══ */
@@ -154,7 +154,7 @@ button{font-family:inherit;cursor:pointer}
 .c.today .c-inner::-webkit-scrollbar-track{background:transparent;margin-top:24px;margin-bottom:8px}
 .c{height:110px;padding:7px 8px 20px 8px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,0.3)}
 .c::after{content:'';position:absolute;top:0;right:0;width:7px;height:32px;background:#FFFFFF;z-index:3;pointer-events:none}
-.c::before{content:'';position:absolute;bottom:0;right:0;width:7px;height:14px;background:#FFFFFF;z-index:3;pointer-events:none}
+.c::before{content:'';position:absolute;bottom:14px;right:0;width:7px;height:6px;background:#FFFFFF;z-index:3;pointer-events:none}
 .c.today::after,.c.today::before{background:#E6F0FF}
 .c.past::after,.c.past::before{background:#F2F2F2}
 .c.nm::after,.c.nm::before{background:#F5F5F5}
