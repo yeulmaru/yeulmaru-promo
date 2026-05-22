@@ -1432,8 +1432,8 @@ function renderAwStep(body,next,bar){
     html+='<div class="pw-hint">게시할 날짜와 시간을 선택해주세요</div>';
     html+='<label style="'+labelStyle+'">날짜'+reqStar+'</label>';
     html+='<input id="aw-date" type="date" value="'+escapeHtml(_pwData.date)+'" style="'+inputStyle+'">';
-    html+='<label style="'+labelStyle+'">시간</label>';
-    html+='<input id="aw-time" type="time" value="'+escapeHtml(_pwData.time)+'" style="'+inputStyle+'">';
+    html+='<label style="'+labelStyle+'">시간 <span style="font-size:10px;color:#999;font-weight:400;text-transform:none;margin-left:6px;letter-spacing:0">🖱 스크롤로 조정 가능해요</span></label>';
+    html+='<input id="aw-time" type="time" value="'+escapeHtml(_pwData.time)+'" onwheel="awTimeWheel(event)" style="'+inputStyle+'">';
     body.innerHTML=html;
     next.textContent='다음';
   }else if(_pwStep===3){
@@ -1457,9 +1457,20 @@ function renderAwStep(body,next,bar){
     CONTENT_TYPES.forEach(function(t){html+='<option value="'+escapeHtml(t)+'"'+(_pwData.cat===t?' selected':'')+'>'+escapeHtml(t)+'</option>';});
     html+='</select>';
     html+='<label style="'+labelStyle+'">프로그램</label>';
-    const allPerfs=PERFS.slice();
+    const activePerfsAw=PERFS.filter(function(p){return p.o===1;});
+    const awGroups=[
+      {label:'공연',items:activePerfsAw.filter(function(p){return p.t==='c';})},
+      {label:'전시',items:activePerfsAw.filter(function(p){return p.t==='e';})},
+      {label:'예술교육',items:activePerfsAw.filter(function(p){return p.t==='a';})},
+      {label:'대관',items:activePerfsAw.filter(function(p){return p.t==='r';})}
+    ];
     html+='<select id="aw-program" style="'+inputStyle+'"><option value="">해당 없음</option>';
-    allPerfs.forEach(function(p){html+='<option value="'+escapeHtml(p.f)+'"'+(_pwData.program===p.f?' selected':'')+'>'+escapeHtml(p.f)+'</option>';});
+    awGroups.forEach(function(g){
+      if(g.items.length===0)return;
+      html+='<optgroup label="'+g.label+'">';
+      g.items.forEach(function(p){html+='<option value="'+escapeHtml(p.f)+'"'+(_pwData.program===p.f?' selected':'')+'>'+escapeHtml(p.f)+'</option>';});
+      html+='</optgroup>';
+    });
     html+='</select>';
     html+='<label style="'+labelStyle+'">콘텐츠 형식</label>';
     html+='<select id="aw-format" style="'+inputStyle+'"><option value="">선택</option>';
@@ -1524,6 +1535,19 @@ function awToggleMemo(val){
   if(ta)_pwData.memo=ta.value;
   _pwData.hasMemo=val;
   renderPwStep();
+}
+function awTimeWheel(e){
+  e.preventDefault();
+  const ft=e.target;
+  const cur=ft.value||'10:00';
+  const parts=cur.split(':');
+  let h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;
+  let total=h*60+m;
+  total+=(e.deltaY<0?10:-10);
+  if(total<0)total+=24*60;
+  if(total>=24*60)total-=24*60;
+  const nh=Math.floor(total/60),nm=total%60;
+  ft.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
 }
 function collectAwStep(){
   if(_pwStep===1){_pwData.author=document.getElementById('aw-author').value;}
