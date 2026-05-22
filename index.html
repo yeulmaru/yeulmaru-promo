@@ -3123,10 +3123,12 @@ async function saveEntry(){
   const row=[records.length+1,kstStr,serial,y,m,d,dn+'요일',plat1,plat2,document.getElementById('f-cat').value,document.getElementById('f-program').value,'예술사업팀',title,document.getElementById('f-format').value,document.getElementById('f-content').value,document.getElementById('f-author').value,document.getElementById('f-status').value,document.getElementById('f-memo').value];
   showOverlayLoad();
   try{
-    await api('POST','/api/records',{values:row});
     if(isEdit&&existingRowIndex){
-      try{await api('DELETE','/api/records/'+existingRowIndex);}
-      catch(e){console.error('수정 후 기존 행 삭제 실패:',e);alert('저장됨. 단, 기존 행 삭제 실패로 중복이 생겼을 수 있어. 패널에서 확인해줘.');}
+      // PATCH: 단일 row in-place 업데이트 (race condition 없음)
+      await api('PATCH','/api/records/'+existingRowIndex,{values:row});
+    }else{
+      // 새 등록
+      await api('POST','/api/records',{values:row});
     }
     closeModal();
     await syncReload(isEdit?0:1);
