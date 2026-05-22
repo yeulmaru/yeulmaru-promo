@@ -2000,21 +2000,23 @@ function renderPwSubSmsBody(body,next){
   const userContent=_pwData.smsBody||'';
   const header=getSmsHeader();
   const footer=getSmsFooter();
+  // 푸터 한 줄 표시용 (개행 제거 + 구분자)
+  const footerInline=footer.split('\n').map(function(s){return s.trim();}).filter(Boolean).join(' · ');
+  const autoLen=header.length+footer.length;
   let html='<div class="pw-question">문자 본문을 작성해주세요</div>';
-  html+='<div class="pw-hint">'+(_pwData.plat2==='마케팅 수신 회원'?'홈페이지 회원 중 문자 수신에 동의한 회원에게 보내는 문자입니다':'특정 대상에게 보내는 문자입니다')+' · 가운데 셀에 본문을 작성해주세요 (최대 2,000자)</div>';
-  html+='<div style="margin:14px 0 4px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span> <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(광고 표시·수신거부 정보 자동 포함 · 가운데만 편집 가능)</span></div>';
+  html+='<div class="pw-hint">가운데 셀에 본문을 작성해주세요. (최대 2,000자)</div>';
+  html+='<div style="margin:10px 0 4px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span> <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(광고 표시·수신거부 자동 포함 · 가운데만 편집 가능)</span></div>';
   // 3-cell 컨테이너
   html+='<div class="pw-sms-stack" style="border:1.5px solid rgba(0,0,0,0.08);border-radius:12px;overflow:hidden">';
-  // 헤더 (read-only)
-  const headerRows=Math.max(1,header.split("\n").length);
-  html+='<textarea readonly tabindex="-1" rows="'+headerRows+'" title="자동 포함 — 편집 불가" style="border-bottom:1px dashed rgba(74,77,231,0.18)">'+escapeHtml(header)+'</textarea>';
-  // 내용 (편집 가능, 강조 배경)
-  html+='<textarea id="pw-sms-body" class="pw-sms-content" maxlength="2000" rows="8" oninput="pwCharCount(\'pw-sms-body\',\'pw-sms-count\',2000)" placeholder="여기에 본문을 작성해주세요…">'+escapeHtml(userContent)+'</textarea>';
-  // 푸터 (read-only)
-  const footerRows=Math.max(1,footer.split("\n").length);
-  html+='<textarea readonly tabindex="-1" rows="'+footerRows+'" title="자동 포함 — 편집 불가" style="border-top:1px dashed rgba(74,77,231,0.18)">'+escapeHtml(footer)+'</textarea>';
+  // 헤더 (read-only div, 한 줄)
+  html+='<div class="pw-sms-fixline" title="자동 포함 — 편집 불가" style="padding:7px 14px;background:#F0EEFA;border-bottom:1px dashed rgba(74,77,231,0.18);font-size:12px;color:#555;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none">'+escapeHtml(header)+'</div>';
+  // 내용 (편집 가능)
+  html+='<textarea id="pw-sms-body" class="pw-sms-content" maxlength="2000" rows="10" oninput="pwCharCount(\'pw-sms-body\',\'pw-sms-count\',2000)" placeholder="여기에 본문을 작성해주세요…">'+escapeHtml(userContent)+'</textarea>';
+  // 푸터 (read-only div, 한 줄에 합쳐 표시)
+  html+='<div class="pw-sms-fixline" title="실제 발송 시 자동 포함 — 카카오채널 구독 / 문의 / 무료거부" style="padding:7px 14px;background:#F0EEFA;border-top:1px dashed rgba(74,77,231,0.18);font-size:12px;color:#555;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none">'+escapeHtml(footerInline)+'</div>';
   html+='</div>';
-  html+='<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#888"><span>※ 헤더·푸터는 자동 포함</span><span id="pw-sms-count">'+userContent.length+' / 2000</span></div>';
+  // 카운터 + 자동 양식 글자수 안내
+  html+='<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#888"><span>※ 자동 포함 헤더·푸터 +'+autoLen+'자</span><span id="pw-sms-count">'+userContent.length+' / 2000</span></div>';
   body.innerHTML=html;
   next.textContent='다음';
   setTimeout(function(){const el=document.getElementById('pw-sms-body');if(el)el.focus();},80);
