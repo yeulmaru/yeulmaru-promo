@@ -139,7 +139,7 @@ button{font-family:inherit;cursor:pointer}
 .week{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border)}
 .week:last-child{border-bottom:none}
 .week.tw{position:relative}
-.c-inner{overflow-y:auto;height:calc(100% - 14px);scrollbar-width:none;-ms-overflow-style:none}
+.c-inner{overflow-x:hidden;overflow-y:auto;height:calc(100% - 14px);scrollbar-width:none;-ms-overflow-style:none}
 .c-count{position:absolute;top:5px;right:8px;font-size:9px;color:rgba(0,0,0,0.4);font-weight:600;letter-spacing:0.3px;z-index:2;pointer-events:none;font-variant-numeric:tabular-nums}
 .c.today .c-count{color:rgba(0,0,0,0.6)}
 .c.past .c-count{color:rgba(0,0,0,0.25)}
@@ -163,7 +163,7 @@ button{font-family:inherit;cursor:pointer}
 .dn.sat{color:#3B7DD8}
 .dn.sun{color:#D64545}
 .today-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(74,77,231,0.25)}
-.c.today .c-inner > .dn{position:sticky;top:0;z-index:5;background:rgba(230,240,255,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:0 4px 3px 0;margin:0 -4px 0 0}
+.c.today .c-inner > .dn{position:sticky;top:0;z-index:5;background:#DDE9FA;padding:1px 0 3px 0;margin:0 0 2px 0}
 .ev{display:grid;grid-template-columns:34px auto 1fr;gap:4px;padding:2px 0;font-size:10.5px;line-height:1.4;align-items:center}
 .ev:hover{background:rgba(74,77,231,0.06);border-radius:4px}
 .ev-dragging{opacity:0.4 !important}
@@ -2669,37 +2669,29 @@ function startTodayMarquee(){
     // ev 한 줄 높이
     const evH=evs[0].getBoundingClientRect().height+2;
     if(evH<=0)return;
-    // 보이는 ev 개수만큼 복제해서 끝에 append (자연스러운 wraparound용)
-    const visibleCount=Math.max(1,Math.floor(inner.clientHeight/evH));
-    const cloneCount=Math.min(visibleCount,evs.length);
-    for(let i=0;i<cloneCount;i++){
-      const clone=evs[i].cloneNode(true);
-      clone.removeAttribute('onclick');
-      clone.removeAttribute('oncontextmenu');
-      clone.removeAttribute('ondragstart');
-      clone.removeAttribute('ondragend');
-      clone.removeAttribute('draggable');
-      clone.dataset.clone='1';
-      inner.appendChild(clone);
-    }
-    // 원본 끝 위치 = 원본 overflow + cloneCount*evH (복제 끝까지)
-    const jumpAt=overflow+cloneCount*evH;
     let cur=0;
+    inner.style.transition='opacity 0.4s ease';
     _todayMarqueeInterval=setInterval(function(){
       // 호버·드래그 중이면 일시정지
       if(todayCell.matches(':hover'))return;
       cur+=evH;
-      if(cur>=jumpAt-evH*0.3){
-        // 복제 끝까지 갔으면 부드럽게 처음거가 보이도록 슬라이드 끝낸 후 즉시 점프
-        _smoothScrollTo(inner,cur,1500);
+      if(cur>overflow+evH*0.3){
+        // fade out → 즉시 처음으로 → fade in
+        inner.style.opacity='0';
         setTimeout(function(){
           cur=0;
           inner.scrollTop=0;
-        },1550);
+          inner.style.opacity='1';
+        },400);
       }else{
         _smoothScrollTo(inner,cur,1500);
       }
     },2800);
+    // hover 시작 시 처음으로 리셋
+    todayCell.addEventListener('mouseenter',function(){
+      cur=0;
+      inner.scrollTop=0;
+    });
   },650);
 }
 
@@ -3128,6 +3120,8 @@ function editRec(rowIndex,dateKey,ev,forceReadOnly){
 async function copyRec(rowIndex,dateKey){
   const rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec)return;
+  const ok=await showConfirm('정말 일정을 복사하시겠습니까?');
+  if(!ok)return;
   showOverlayLoad();
   try{
     // 현재 KST 시각
