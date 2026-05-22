@@ -2620,7 +2620,7 @@ function renderCal(){
         var platCol=done?'#bbb':past?'var(--past-text)':td?col:col;
         var titleCol=done?'#bbb':past?'var(--past-text)':'var(--text)';
         var deco=done?'text-decoration:line-through;':'';
-        h+='<div class="ev'+(td&&evPast?' ev-past':'')+'" '+(userRole==='admin'?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event)" style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+'opacity:'+(done?'0.6':evPast?'0.5':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600" title="'+(p2&&p2!=='-'?p2:p)+'">'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
+        h+='<div class="ev'+(td&&evPast?' ev-past':'')+'" '+(userRole==='admin'?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+(userRole==='admin'?' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"':'')+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+'opacity:'+(done?'0.6':evPast?'0.5':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600" title="'+(p2&&p2!=='-'?p2:p)+'">'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
@@ -2661,6 +2661,28 @@ function onCellContextMenu(event,key){
 function closeCellContextMenu(){
   const m=document.getElementById('cell-context-menu');
   if(m)m.remove();
+}
+// 캘린더 이벤트 row 우클릭 → 수정/삭제
+function onEvContextMenu(event,rowIndex,dateKey){
+  if(userRole!=='admin')return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeCellContextMenu();
+  const menu=document.createElement('div');
+  menu.id='cell-context-menu';
+  menu.innerHTML='<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>수정</div><div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
+  const mx=event.clientX,my=event.clientY;
+  document.body.appendChild(menu);
+  const rect=menu.getBoundingClientRect();
+  const x=Math.min(mx,window.innerWidth-rect.width-8);
+  const y=Math.min(my,window.innerHeight-rect.height-8);
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+  setTimeout(function(){
+    document.addEventListener('click',closeCellContextMenu,{once:true});
+    document.addEventListener('contextmenu',function(e){if(!e.target.closest('#cell-context-menu'))closeCellContextMenu();},{once:true});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeCellContextMenu();},{once:true});
+  },0);
 }
 
 function openPanel(dateObj,recs){
@@ -2821,12 +2843,14 @@ function fillModalFields(rec){
   document.getElementById('f-status').value=rec['진행 상태']||'예정';
   document.getElementById('f-memo').value=rec['비고']||'';
 }
-function openModal(dateKey,rec){
+function openModal(dateKey,rec,opts){
+  opts=opts||{};
   const[y,m,d]=dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
   editing={dateKey,existing:rec||null};
   // user는 기본 read-only, 단 대기 중 row(자기 신청)는 수정 가능
+  // opts.readOnly = true면 강제 read-only (admin이 캘린더 ev 클릭 시)
   const isPending=rec&&rec['진행 상태']==='대기 중';
-  const isReadOnly=userRole!=='admin'&&!isPending;
+  const isReadOnly=opts.readOnly||(userRole!=='admin'&&!isPending);
   if(isReadOnly&&rec){
     renderReadOnlyView(dateKey,rec,dateObj,dn);
     document.getElementById('modal').classList.add('show');
@@ -3026,11 +3050,11 @@ function closeModal(){
   if(_schedReturnFlag){_schedReturnFlag=false;setTimeout(()=>openScheduleAdmin(),50);}
 }
 
-function editRec(rowIndex,dateKey,ev){
+function editRec(rowIndex,dateKey,ev,forceReadOnly){
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
   var rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec)return;
-  openModal(dateKey,rec);
+  openModal(dateKey,rec,{readOnly:!!forceReadOnly});
 }
 
 let _confirmResolve=null;
