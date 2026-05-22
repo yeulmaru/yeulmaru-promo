@@ -2671,17 +2671,24 @@ function startTodayMarquee(){
     if(evs.length<2)return;
     // dn을 c-inner 밖처럼 absolute로 띄움 — 스크롤 영향 X, 색 매치 신경 X
     if(dn){
+      // dn을 c-inner 밖(c 셀 직접 자식)으로 이동 — mask 영향 안 받음
+      todayCell.appendChild(dn);
       dn.style.position='absolute';
-      dn.style.top='0';
-      dn.style.left='0';
-      dn.style.right='0';
+      dn.style.top='7px';
+      dn.style.left='8px';
+      dn.style.right='14px';
       dn.style.zIndex='4';
       dn.style.pointerEvents='none';
-      dn.style.background='rgba(232,240,255,0.96)';
-      dn.style.padding='0 0 2px 0';
-      dn.style.marginBottom='0';
-      const dnH=dn.getBoundingClientRect().height||18;
-      inner.style.paddingTop=dnH+'px';
+      dn.style.background='transparent';
+      dn.style.padding='0';
+      dn.style.margin='0';
+      const dnH=dn.getBoundingClientRect().height||16;
+      // c-inner 상단에 dn 자리만큼 여백 + mask로 fade
+      const fadeStart=dnH+2;
+      const fadeEnd=fadeStart+10;
+      inner.style.paddingTop=fadeStart+'px';
+      inner.style.webkitMaskImage='linear-gradient(to bottom, transparent 0, transparent '+fadeStart+'px, black '+fadeEnd+'px, black 100%)';
+      inner.style.maskImage='linear-gradient(to bottom, transparent 0, transparent '+fadeStart+'px, black '+fadeEnd+'px, black 100%)';
     }
     // overflow 재측정 (dn 떼낸 후)
     const overflow=inner.scrollHeight-inner.clientHeight;
