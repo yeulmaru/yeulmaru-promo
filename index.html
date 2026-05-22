@@ -288,8 +288,9 @@ button{font-family:inherit;cursor:pointer}
 .mv-content.empty{color:#aaa;font-style:italic}
 .mv-cat{display:inline-block;padding:3px 10px;border-radius:8px;background:rgba(74,77,231,0.1);color:var(--accent);font-size:11px;font-weight:600;margin:4px 0}
 /* === 홍보 신청 위저드 === */
-.pw-progress{height:4px;background:#eee;border-radius:2px;margin:14px 0 6px;overflow:hidden}
-.pw-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.pw-modal .modal-x{position:absolute;top:18px;right:18px;float:none;margin:0;z-index:11}
+.pw-progress{height:3px;background:rgba(0,0,0,0.04);border-radius:2px;margin:14px 0 6px;overflow:hidden}
+.pw-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .35s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 6px rgba(74,77,231,0.25)}
 .pw-steplabel{font-size:11px;color:#888;margin-bottom:18px;letter-spacing:0.3px}
 .pw-question{font-size:18px;font-weight:700;color:#222;margin:18px 0 8px;line-height:1.4}
 .pw-hint{font-size:12px;color:#888;margin-bottom:14px}
@@ -1453,7 +1454,7 @@ function renderAwStep(body,next,bar){
     let html='<div class="pw-question">어떤 것을 홍보하나요?</div>';
     html+='<div class="pw-hint">콘텐츠 정보를 입력해주세요</div>';
     html+='<label style="'+labelStyle+'">콘텐츠 구분</label>';
-    html+='<select id="aw-cat" style="'+inputStyle+'"><option value="">선택</option>';
+    html+='<select id="aw-cat" onchange="awFocusNext(\'aw-program\')" style="'+inputStyle+'"><option value="">선택</option>';
     CONTENT_TYPES.forEach(function(t){html+='<option value="'+escapeHtml(t)+'"'+(_pwData.cat===t?' selected':'')+'>'+escapeHtml(t)+'</option>';});
     html+='</select>';
     html+='<label style="'+labelStyle+'">프로그램</label>';
@@ -1464,7 +1465,7 @@ function renderAwStep(body,next,bar){
       {label:'예술교육',items:activePerfsAw.filter(function(p){return p.t==='a';})},
       {label:'대관',items:activePerfsAw.filter(function(p){return p.t==='r';})}
     ];
-    html+='<select id="aw-program" style="'+inputStyle+'"><option value="">해당 없음</option>';
+    html+='<select id="aw-program" onchange="awFocusNext(\'aw-format\')" style="'+inputStyle+'"><option value="">해당 없음</option>';
     awGroups.forEach(function(g){
       if(g.items.length===0)return;
       html+='<optgroup label="'+g.label+'">';
@@ -1473,7 +1474,7 @@ function renderAwStep(body,next,bar){
     });
     html+='</select>';
     html+='<label style="'+labelStyle+'">콘텐츠 형식</label>';
-    html+='<select id="aw-format" style="'+inputStyle+'"><option value="">선택</option>';
+    html+='<select id="aw-format" onchange="awFocusNext(\'aw-title\')" style="'+inputStyle+'"><option value="">선택</option>';
     CONTENT_FORMATS.forEach(function(f){html+='<option value="'+escapeHtml(f)+'"'+(_pwData.format===f?' selected':'')+'>'+escapeHtml(f)+'</option>';});
     html+='</select>';
     html+='<label style="'+labelStyle+'">콘텐츠 제목'+reqStar+'</label>';
@@ -1482,6 +1483,8 @@ function renderAwStep(body,next,bar){
     html+='<textarea id="aw-content" rows="3" placeholder="홍보 내용" style="'+inputStyle+';resize:vertical;line-height:1.5">'+escapeHtml(_pwData.content)+'</textarea>';
     body.innerHTML=html;
     next.textContent='다음';
+    // step 4 진입 시 자동 focus
+    setTimeout(function(){const el=document.getElementById('aw-cat');if(el)el.focus();},50);
   }else if(_pwStep===5){
     // 추가 기록
     let html='<div class="pw-question">추가로 기록할 내용이 있나요?</div>';
@@ -1548,6 +1551,9 @@ function awTimeWheel(e){
   if(total>=24*60)total-=24*60;
   const nh=Math.floor(total/60),nm=total%60;
   ft.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
+}
+function awFocusNext(nextId){
+  setTimeout(function(){const el=document.getElementById(nextId);if(el)el.focus();},80);
 }
 function collectAwStep(){
   if(_pwStep===1){_pwData.author=document.getElementById('aw-author').value;}
