@@ -918,8 +918,9 @@ async function submitRolePrompt(){
     card.classList.add('role-shake');
   }
 }
-function logout(){
-  if(!confirm('로그아웃하시겠습니까?'))return;
+async function logout(){
+  const ok=await showConfirm('로그아웃하시겠습니까?');
+  if(!ok)return;
   sessionStorage.removeItem('pw');
   sessionStorage.removeItem('role');
   location.reload();
