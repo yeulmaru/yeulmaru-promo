@@ -58,6 +58,8 @@ button{font-family:inherit;cursor:pointer}
 .role-tag.admin{background:var(--accent);color:#fff}
 .role-tag.user{background:rgba(0,0,0,0.06);color:#666}
 @keyframes role-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+@keyframes pw-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+.pw-shake{animation:pw-shake 0.4s ease}
 .role-shake{animation:role-shake .42s ease-in-out}
 .adm-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .adm-tbl thead th{background:#f5f5f7;padding:10px 8px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
@@ -1130,12 +1132,15 @@ function openPromoWizard(){
   document.querySelector('#promo-wizard h3').textContent='홍보 신청';
   _pwStep=1;
   _pwSubStep=1;
+  // 오늘 날짜 (YYYY-MM-DD)
+  const _now=new Date();
+  const _today=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-'+String(_now.getDate()).padStart(2,'0');
   _pwData={
     program:'',programType:'',programEndDate:'',
     title:'',
     plat1:'',plat2:'',
     format:'',                  // '이미지' | '영상' | '텍스트' (플랫폼별 분기)
-    date:'',time:'10:00',
+    date:_today,time:'10:00',
     folder:'',                  // 이미지/영상 폴더 링크
     kakaoText:'',               // 카카오톡 텍스트 (76자)
     instaText:'',               // 인스타그램 본문 (틀 포함)
@@ -1352,18 +1357,18 @@ function validatePwStep(){
   if(_pwMode==='admin')return validateAwStep();
   if(_pwStep===1){
     if(_pwData.isCustom){
-      if(!_pwData.customName){showToast('프로그램명을 입력해주세요','error');return false;}
-      if(!_pwData.customCat){showToast('콘텐츠 구분을 선택해주세요','error');return false;}
+      if(!_pwData.customName){showFieldError('pw-custom-name','프로그램명을 입력해주세요');return false;}
+      if(!_pwData.customCat){showFieldError('pw-custom-cat','콘텐츠 구분을 선택해주세요');return false;}
       _pwData.program=_pwData.customName;
       _pwData.programType=_pwData.customCat;
     }else{
-      if(!_pwData.program){showToast('프로그램을 선택해주세요','error');return false;}
+      if(!_pwData.program){showFieldError('pw-program','프로그램을 선택해주세요');return false;}
     }
   }else if(_pwStep===2){
-    if(!_pwData.title){showToast('콘텐츠 제목을 입력해주세요','error');return false;}
+    if(!_pwData.title){showFieldError('pw-title','콘텐츠 제목을 입력해주세요');return false;}
   }else if(_pwStep===3){
-    if(!_pwData.date){showToast('날짜를 선택해주세요','error');return false;}
-    if(!_pwData.time){showToast('시간을 선택해주세요','error');return false;}
+    if(!_pwData.date){showFieldError('pw-date','날짜를 선택해주세요');return false;}
+    if(!_pwData.time){showFieldError('pw-time','시간을 선택해주세요');return false;}
     // 판매기간 검증은 경고만, 진행은 허용
   }else if(_pwStep===4){
     return validatePwSubStep();
@@ -1462,6 +1467,44 @@ async function submitPromoRequest(){
 }
 
 // ===== 신청 위저드 신규 보조 함수들 =====
+
+// OneDrive 경로 안내 박스
+function pwFolderHelp(){
+  return '<div style="margin-bottom:8px;padding:9px 11px;background:#F0EEFA;border-left:3px solid var(--accent);border-radius:6px;font-size:11px;color:#555;line-height:1.55">'+
+    '<b>📁 OneDrive 자료 공유 폴더</b><br>'+
+    '<span style="color:#777;font-family:Consolas,Menlo,monospace;font-size:10.5px">OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\...</span><br>'+
+    '<span style="color:#888">위 경로를 직접 입력하거나, 폴더 공유 링크(https://...)를 붙여넣어주세요</span>'+
+    '</div>';
+}
+
+// 인라인 필드 에러 표시 (입력 필드 바로 아래에 빨간 메시지 + 흔들기)
+function showFieldError(targetId,msg){
+  const el=document.getElementById(targetId);
+  if(!el){showToast(msg,'error');return;}
+  el.style.borderColor='#FF5252';
+  el.style.boxShadow='0 0 0 3px rgba(255,82,82,0.12)';
+  let errBox=document.getElementById(targetId+'-err');
+  if(!errBox){
+    errBox=document.createElement('div');
+    errBox.id=targetId+'-err';
+    errBox.style.cssText='margin-top:6px;font-size:12px;color:#C04040;font-weight:500;line-height:1.4';
+    el.parentNode.insertBefore(errBox,el.nextSibling);
+  }
+  errBox.textContent='⚠ '+msg;
+  el.classList.add('pw-shake');
+  setTimeout(function(){el.classList.remove('pw-shake');},500);
+  try{el.focus();}catch(e){}
+  const clear=function(){
+    el.style.borderColor='';
+    el.style.boxShadow='';
+    const eb=document.getElementById(targetId+'-err');
+    if(eb)eb.remove();
+    el.removeEventListener('input',clear);
+    el.removeEventListener('change',clear);
+  };
+  el.addEventListener('input',clear);
+  el.addEventListener('change',clear);
+}
 
 // 시간 30분 단위 휠 조정
 function pwTimeWheel(e){
@@ -1591,9 +1634,10 @@ function renderPwSubDetail(body,next){
     _pwData.format='이미지';
     html='<div class="pw-question">참고 자료를 공유해주세요</div>';
     html+='<div class="pw-hint">콘텐츠 형식: <b>이미지 (1:1 정사각형)</b></div>';
-    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 (폴더 링크)<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<div style="font-size:12px;color:#666;margin-bottom:6px">1:1 정사각형 이미지가 위치한 폴더를 공유해주세요.</div>';
-    html+='<input id="pw-folder" type="url" value="'+escapeHtml(_pwData.folder)+'" placeholder="https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+=pwFolderHelp();
+    html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
     body.innerHTML=html;next.textContent='다음';return;
   }
   // B2B 식당 — 강제 영상 + 16:9 안내
@@ -1601,9 +1645,10 @@ function renderPwSubDetail(body,next){
     _pwData.format='영상';
     html='<div class="pw-question">참고 자료를 공유해주세요</div>';
     html+='<div class="pw-hint">콘텐츠 형식: <b>영상 (16:9)</b></div>';
-    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 (폴더 링크)<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<div style="font-size:12px;color:#666;margin-bottom:6px">16:9 홍보 영상이 위치한 폴더를 공유해주세요.</div>';
-    html+='<input id="pw-folder" type="url" value="'+escapeHtml(_pwData.folder)+'" placeholder="https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+=pwFolderHelp();
+    html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
     body.innerHTML=html;next.textContent='다음';return;
   }
   // 이미지/영상 — 폴더 링크
@@ -1611,8 +1656,9 @@ function renderPwSubDetail(body,next){
     const noun=fmt;
     html='<div class="pw-question">참고 자료를 공유해주세요</div>';
     html+='<div class="pw-hint">'+escapeHtml(noun)+'이 위치한 폴더를 공유해주세요</div>';
-    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">폴더 링크<span style="color:var(--peach);margin-left:3px">*</span></label>';
-    html+='<input id="pw-folder" type="url" value="'+escapeHtml(_pwData.folder)+'" placeholder="https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
+    html+=pwFolderHelp();
+    html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
     body.innerHTML=html;next.textContent='다음';return;
   }
   // 텍스트 — 플랫폼별로 다름
@@ -1670,9 +1716,10 @@ function renderPwSubBlog(body,next){
   const len=(_pwData.blogDirection||'').length;
   const ok=len>=100;
   html+='<div style="display:flex;justify-content:flex-end;margin-top:6px"><span id="pw-blog-count" style="font-size:11px;color:'+(ok?'#3DA068':'#C04040')+'">'+len+' / 최소 100</span></div>';
-  html+='<label style="display:block;font-size:11px;color:#888;margin:18px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 (폴더 링크)<span style="color:var(--peach);margin-left:3px">*</span></label>';
+  html+='<label style="display:block;font-size:11px;color:#888;margin:18px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
   html+='<div style="font-size:12px;color:#666;margin-bottom:6px">이미지·영상 등 참고 자료가 위치한 폴더를 공유해주세요</div>';
-  html+='<input id="pw-folder" type="url" value="'+escapeHtml(_pwData.folder)+'" placeholder="https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+  html+=pwFolderHelp();
+  html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
   body.innerHTML=html;
   next.textContent='다음';
 }
@@ -1780,10 +1827,14 @@ function renderPwSubSmsBody(body,next){
 
 // === Step 4 — 게시자 ===
 function renderPwSubAuthor(body,next){
+  // 기본값: applicant 비어있으면 "상관 없음" 자동 선택
+  if(!_pwData.applicant)_pwData.applicant='상관 없음';
   let html='<div class="pw-question">누가 게시하시나요?</div>';
-  html+='<div class="pw-hint">신청자 정보를 선택해주세요</div>';
+  html+='<div class="pw-hint">게시자를 지정하지 않아도 됩니다. 담당자가 정해지지 않았다면 "상관 없음"을 그대로 두세요.</div>';
   html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">게시자<span style="color:var(--peach);margin-left:3px">*</span></label>';
-  html+='<select id="pw-applicant" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit"><option value="">선택</option>';
+  html+='<select id="pw-applicant" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+  // "상관 없음"이 항상 첫 옵션
+  html+='<option value="상관 없음"'+(_pwData.applicant==='상관 없음'?' selected':'')+'>상관 없음</option>';
   PR_MANAGERS.forEach(function(m){const n=m['담당자'];html+='<option value="'+escapeHtml(n)+'"'+(_pwData.applicant===n?' selected':'')+'>'+escapeHtml(n)+'</option>';});
   html+='</select>';
   body.innerHTML=html;
@@ -1820,38 +1871,39 @@ function collectPwSubStep(){
 function validatePwSubStep(){
   const key=currentPwSubKey();
   if(key==='plat'){
-    if(!_pwData.plat1){showToast('플랫폼을 선택해주세요','error');return false;}
+    if(!_pwData.plat1){showFieldError('pw-plat1','플랫폼을 선택해주세요');return false;}
     const plat2s=PLATFORMS.filter(function(p){return p['플랫폼1']===_pwData.plat1&&p['플랫폼2']&&p['플랫폼2']!=='-';});
-    if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showToast('세부 채널을 선택해주세요','error');return false;}
+    if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showFieldError('pw-plat2','세부 채널을 선택해주세요');return false;}
   }else if(key==='format'){
+    // 라디오 박스는 인라인 에러 부착 어색 → toast 유지
     if(!_pwData.format){showToast('콘텐츠 형식을 선택해주세요','error');return false;}
   }else if(key==='detail'){
     const p1=_pwData.plat1,p2=_pwData.plat2,fmt=_pwData.format;
     if(p1==='B2B'&&p2==='여수시청 홈페이지'){
-      if(!_pwData.folder){showToast('폴더 링크를 입력해주세요','error');return false;}
+      if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
     }else if(p1==='B2B'&&p2==='GS칼텍스 여수공장 식당'){
-      if(!_pwData.folder){showToast('폴더 링크를 입력해주세요','error');return false;}
+      if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
     }else if(fmt==='이미지'||fmt==='영상'){
-      if(!_pwData.folder){showToast('폴더 링크를 입력해주세요','error');return false;}
+      if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
     }else if(fmt==='텍스트'){
-      if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showToast('본문을 입력해주세요','error');return false;}
-      if(p1==='인스타그램'&&!_pwData.instaText.trim()){showToast('본문을 입력해주세요','error');return false;}
-      if(p1==='B2B'&&p2==='GS칼텍스 여수공장 인트라넷'&&!_pwData.b2bIntraText.trim()){showToast('본문을 입력해주세요','error');return false;}
+      if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showFieldError('pw-kakao-text','본문을 입력해주세요');return false;}
+      if(p1==='인스타그램'&&!_pwData.instaText.trim()){showFieldError('pw-insta-text','본문을 입력해주세요');return false;}
+      if(p1==='B2B'&&p2==='GS칼텍스 여수공장 인트라넷'&&!_pwData.b2bIntraText.trim()){showFieldError('pw-b2b-text','본문을 입력해주세요');return false;}
     }
   }else if(key==='blog'){
-    if(!_pwData.blogDirection||_pwData.blogDirection.length<100){showToast('글 작성 방향을 최소 100자 이상 작성해주세요','error');return false;}
-    if(!_pwData.folder){showToast('참고 자료 폴더 링크를 입력해주세요','error');return false;}
+    if(!_pwData.blogDirection||_pwData.blogDirection.length<100){showFieldError('pw-blog-dir','글 작성 방향을 최소 100자 이상 작성해주세요');return false;}
+    if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
   }else if(key==='b2b_link'){
-    if(!_pwData.b2bLink){showToast('B2B 또는 홈페이지 링크를 입력해주세요','error');return false;}
+    if(!_pwData.b2bLink){showFieldError('pw-b2b-link','B2B 또는 홈페이지 링크를 입력해주세요');return false;}
   }else if(key==='sms_target'){
-    if(!_pwData.residence){showToast('거주지를 선택해주세요','error');return false;}
-    if(_pwData.residence==='기타'&&!_pwData.residenceCustom){showToast('기타 거주지를 입력해주세요','error');return false;}
-    if(!_pwData.genre){showToast('관심 장르를 입력해주세요','error');return false;}
+    if(!_pwData.residence){showFieldError('pw-residence','거주지를 선택해주세요');return false;}
+    if(_pwData.residence==='기타'&&!_pwData.residenceCustom){showFieldError('pw-residence-custom','기타 거주지를 입력해주세요');return false;}
+    if(!_pwData.genre){showFieldError('pw-genre','관심 장르를 입력해주세요');return false;}
     if(!_pwData.ageRanges||_pwData.ageRanges.length===0){showToast('연령대를 선택해주세요','error');return false;}
   }else if(key==='sms_body'){
-    if(!_pwData.smsBody.trim()){showToast('문자 본문을 입력해주세요','error');return false;}
+    if(!_pwData.smsBody.trim()){showFieldError('pw-sms-body','문자 본문을 입력해주세요');return false;}
   }else if(key==='author'){
-    if(!_pwData.applicant){showToast('게시자를 선택해주세요','error');return false;}
+    if(!_pwData.applicant){showFieldError('pw-applicant','게시자를 선택해주세요');return false;}
   }
   return true;
 }
