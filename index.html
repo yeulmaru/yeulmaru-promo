@@ -167,7 +167,7 @@ button{font-family:inherit;cursor:pointer}
 .dn.sat{color:#3B7DD8}
 .dn.sun{color:#D64545}
 .today-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(74,77,231,0.25)}
-.c.today .c-inner > .dn{position:sticky;top:0;z-index:5;background:rgba(232,240,255,0.96);padding:0 0 3px 0}
+.c.today .c-inner > .dn{padding:0 0 3px 0}
 .ev{display:grid;grid-template-columns:34px auto 1fr;gap:4px;padding:2px 0;font-size:10.5px;line-height:1.4;align-items:center}
 .ev:hover{background:rgba(74,77,231,0.06);border-radius:4px}
 .ev-dragging{opacity:0.4 !important}
@@ -2666,8 +2666,21 @@ function startTodayMarquee(){
     if(!todayCell)return;
     const inner=todayCell.querySelector('.c-inner');
     if(!inner)return;
+    const dn=inner.querySelector('.dn');
     const evs=inner.querySelectorAll('.ev');
     if(evs.length<2)return;
+    // dn을 c-inner 밖처럼 absolute로 띄움 — 스크롤 영향 X, 색 매치 신경 X
+    if(dn){
+      dn.style.position='absolute';
+      dn.style.top='7px';
+      dn.style.left='8px';
+      dn.style.right='8px';
+      dn.style.zIndex='4';
+      dn.style.pointerEvents='none';
+      const dnH=dn.getBoundingClientRect().height||16;
+      inner.style.paddingTop=(dnH+2)+'px';
+    }
+    // overflow 재측정 (dn 떼낸 후)
     const overflow=inner.scrollHeight-inner.clientHeight;
     if(overflow<=2)return;
     // ev 한 줄 높이
