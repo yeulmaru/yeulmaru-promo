@@ -1225,7 +1225,7 @@ function renderPwStep(){
     const customDisp=_pwData.isCustom?'':'none';
     html+='<div id="pw-custom-wrap" style="display:'+customDisp+';margin-top:14px">';
     html+='<label style="display:block;font-size:11px;color:#888;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">프로그램명<span style="color:var(--peach);margin-left:3px">*</span></label>';
-    html+='<input id="pw-custom-name" type="text" value="'+escapeHtml(_pwData.customName||'')+'" placeholder="예: 직원 채용 공고" style="'+inputStyle+'">';
+    html+='<input id="pw-custom-name" type="text" value="'+escapeHtml(_pwData.customName||'')+'" placeholder="예: N월 홍보 일정" style="'+inputStyle+'">';
     html+='<label style="display:block;font-size:11px;color:#888;margin:12px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">콘텐츠 구분<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<select id="pw-custom-cat" style="'+inputStyle+'"><option value="">선택</option>';
     (CONTENT_TYPES.length>0?CONTENT_TYPES:['공연','전시','예술교육','대관','기타']).forEach(function(t){
