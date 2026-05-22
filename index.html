@@ -1141,7 +1141,7 @@ function openPromoWizard(){
     plat1:'',plat2:'',
     format:'',                  // '이미지' | '영상' | '텍스트' (플랫폼별 분기)
     date:_today,time:'10:00',
-    folder:'',                  // 이미지/영상 폴더 링크
+    folders:[''],               // 이미지/영상 폴더 링크 (멀티)
     kakaoText:'',               // 카카오톡 텍스트 (76자)
     instaText:'',               // 인스타그램 본문 (틀 포함)
     blogDirection:'',           // 블로그·맘카페 글 작성 방향 (최소 100자)
@@ -1310,7 +1310,7 @@ function onPwPlat1Change(){
     // 플랫폼1 바뀌면 하위 선택값 모두 리셋
     _pwData.plat2='';
     _pwData.format='';
-    _pwData.folder='';
+    _pwData.folders=[''];
     _pwData.kakaoText='';
     _pwData.instaText='';
     _pwData.b2bIntraText='';
@@ -1472,9 +1472,60 @@ async function submitPromoRequest(){
 function pwFolderHelp(){
   return '<div style="margin-bottom:8px;padding:9px 11px;background:#F0EEFA;border-left:3px solid var(--accent);border-radius:6px;font-size:11px;color:#555;line-height:1.55">'+
     '<b>📁 OneDrive 자료 공유 폴더</b><br>'+
-    '<span style="color:#777;font-family:Consolas,Menlo,monospace;font-size:10.5px">OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\...</span><br>'+
-    '<span style="color:#888">위 경로를 직접 입력하거나, 폴더 공유 링크(https://...)를 붙여넣어주세요</span>'+
+    '<span style="color:#777;font-family:Consolas,Menlo,monospace;font-size:10.5px">Onedrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\ …</span><br>'+
+    '<span style="color:#888">홍보물이 위치한 폴더를 아래에 붙여 넣어주세요.</span>'+
     '</div>';
+}
+
+// 폴더 input 묶음 (multi-row) — + 버튼으로 추가 / × 버튼으로 삭제
+function pwFolderInputs(){
+  if(!_pwData.folders||_pwData.folders.length===0)_pwData.folders=[''];
+  const ph='Onedrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://...';
+  let html='<div id="pw-folders-wrap">';
+  _pwData.folders.forEach(function(v,i){
+    const isFirst=(i===0);
+    html+='<div class="pw-folder-row" data-idx="'+i+'" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">';
+    html+='<input id="pw-folder-'+i+'" class="pw-folder-input" type="text" data-idx="'+i+'" value="'+escapeHtml(v||'')+'" oninput="pwFolderInputChange('+i+',this.value)" placeholder="'+escapeHtml(ph)+'" style="flex:1;min-width:0;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box">';
+    if(isFirst){
+      html+='<button type="button" onclick="pwAddFolder()" title="폴더 추가" style="flex-shrink:0;width:42px;height:42px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:22px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 6px rgba(74,77,231,0.25);transition:transform 0.1s">+</button>';
+    }else{
+      html+='<button type="button" onclick="pwRemoveFolder('+i+')" title="삭제" style="flex-shrink:0;width:42px;height:42px;background:#F0F0F8;color:#888;border:none;border-radius:12px;font-size:20px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;line-height:1">×</button>';
+    }
+    html+='</div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+function pwFolderInputChange(i,val){
+  if(!_pwData.folders)_pwData.folders=[''];
+  _pwData.folders[i]=val;
+}
+
+function pwCollectFoldersFromDOM(){
+  const inputs=document.querySelectorAll('.pw-folder-input');
+  if(inputs.length===0)return;
+  _pwData.folders=Array.prototype.map.call(inputs,function(el){return el.value;});
+}
+
+function pwAddFolder(){
+  pwCollectFoldersFromDOM();
+  if(!_pwData.folders)_pwData.folders=[''];
+  _pwData.folders.push('');
+  renderPwStep();
+}
+
+function pwRemoveFolder(i){
+  pwCollectFoldersFromDOM();
+  if(!_pwData.folders)return;
+  _pwData.folders.splice(i,1);
+  if(_pwData.folders.length===0)_pwData.folders=[''];
+  renderPwStep();
+}
+
+function pwHasFolder(){
+  if(!_pwData.folders||_pwData.folders.length===0)return false;
+  return _pwData.folders.some(function(v){return v&&v.trim();});
 }
 
 // 인라인 필드 에러 표시 (입력 필드 바로 아래에 빨간 메시지 + 흔들기)
@@ -1637,7 +1688,7 @@ function renderPwSubDetail(body,next){
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<div style="font-size:12px;color:#666;margin-bottom:6px">1:1 정사각형 이미지가 위치한 폴더를 공유해주세요.</div>';
     html+=pwFolderHelp();
-    html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+=pwFolderInputs();
     body.innerHTML=html;next.textContent='다음';return;
   }
   // B2B 식당 — 강제 영상 + 16:9 안내
@@ -1648,7 +1699,7 @@ function renderPwSubDetail(body,next){
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<div style="font-size:12px;color:#666;margin-bottom:6px">16:9 홍보 영상이 위치한 폴더를 공유해주세요.</div>';
     html+=pwFolderHelp();
-    html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+=pwFolderInputs();
     body.innerHTML=html;next.textContent='다음';return;
   }
   // 이미지/영상 — 폴더 링크
@@ -1658,7 +1709,7 @@ function renderPwSubDetail(body,next){
     html+='<div class="pw-hint">'+escapeHtml(noun)+'이 위치한 폴더를 공유해주세요</div>';
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+=pwFolderHelp();
-    html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+=pwFolderInputs();
     body.innerHTML=html;next.textContent='다음';return;
   }
   // 텍스트 — 플랫폼별로 다름
@@ -1719,7 +1770,7 @@ function renderPwSubBlog(body,next){
   html+='<label style="display:block;font-size:11px;color:#888;margin:18px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">참고 자료 경로<span style="color:var(--peach);margin-left:3px">*</span></label>';
   html+='<div style="font-size:12px;color:#666;margin-bottom:6px">이미지·영상 등 참고 자료가 위치한 폴더를 공유해주세요</div>';
   html+=pwFolderHelp();
-  html+='<input id="pw-folder" type="text" value="'+escapeHtml(_pwData.folder)+'" placeholder="OneDrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\... 또는 https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+  html+=pwFolderInputs();
   body.innerHTML=html;
   next.textContent='다음';
 }
@@ -1847,13 +1898,13 @@ function collectPwSubStep(){
   if(key==='plat'){/* onchange 자동 sync */}
   else if(key==='format'){/* onchange 자동 sync */}
   else if(key==='detail'){
-    const f=document.getElementById('pw-folder');if(f)_pwData.folder=f.value.trim();
+    pwCollectFoldersFromDOM();
     const k=document.getElementById('pw-kakao-text');if(k)_pwData.kakaoText=k.value;
     const i=document.getElementById('pw-insta-text');if(i)_pwData.instaText=i.value;
     const b=document.getElementById('pw-b2b-text');if(b)_pwData.b2bIntraText=b.value;
   }else if(key==='blog'){
     const d=document.getElementById('pw-blog-dir');if(d)_pwData.blogDirection=d.value;
-    const f=document.getElementById('pw-folder');if(f)_pwData.folder=f.value.trim();
+    pwCollectFoldersFromDOM();
   }else if(key==='b2b_link'){
     const l=document.getElementById('pw-b2b-link');if(l)_pwData.b2bLink=l.value.trim();
   }else if(key==='sms_target'){
@@ -1880,11 +1931,11 @@ function validatePwSubStep(){
   }else if(key==='detail'){
     const p1=_pwData.plat1,p2=_pwData.plat2,fmt=_pwData.format;
     if(p1==='B2B'&&p2==='여수시청 홈페이지'){
-      if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
+      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
     }else if(p1==='B2B'&&p2==='GS칼텍스 여수공장 식당'){
-      if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
+      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
     }else if(fmt==='이미지'||fmt==='영상'){
-      if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
+      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
     }else if(fmt==='텍스트'){
       if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showFieldError('pw-kakao-text','본문을 입력해주세요');return false;}
       if(p1==='인스타그램'&&!_pwData.instaText.trim()){showFieldError('pw-insta-text','본문을 입력해주세요');return false;}
@@ -1892,7 +1943,7 @@ function validatePwSubStep(){
     }
   }else if(key==='blog'){
     if(!_pwData.blogDirection||_pwData.blogDirection.length<100){showFieldError('pw-blog-dir','글 작성 방향을 최소 100자 이상 작성해주세요');return false;}
-    if(!_pwData.folder){showFieldError('pw-folder','참고 자료 경로를 입력해주세요');return false;}
+    if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
   }else if(key==='b2b_link'){
     if(!_pwData.b2bLink){showFieldError('pw-b2b-link','B2B 또는 홈페이지 링크를 입력해주세요');return false;}
   }else if(key==='sms_target'){
@@ -1979,7 +2030,8 @@ function resolvePwFormat(){
 function buildPwContentText(){
   const p1=_pwData.plat1,p2=_pwData.plat2,fmt=resolvePwFormat();
   const out=[];
-  if(_pwData.folder)out.push('[참고자료 폴더]\n'+_pwData.folder);
+  const _validFolders=(_pwData.folders||[]).map(function(v){return (v||'').trim();}).filter(Boolean);
+  if(_validFolders.length)out.push('[참고자료 폴더]\n'+_validFolders.join('\n'));
   if(p1==='카카오톡'&&_pwData.kakaoText.trim()){
     out.push('[본문 (76자)]\n'+_pwData.kakaoText.trim());
   }
@@ -2019,7 +2071,8 @@ function renderPwSummary(){
   html+='<div><span class="lbl">형식</span><span class="val">'+escapeHtml(fmt)+'</span></div>';
   html+='<div><span class="lbl">게시자</span><span class="val">'+escapeHtml(_pwData.applicant||'-')+'</span></div>';
   // 본문/링크 미리보기 (있는 것만)
-  if(_pwData.folder){html+='<div><span class="lbl">폴더</span><span class="val" style="word-break:break-all">'+escapeHtml(_pwData.folder)+'</span></div>';}
+  const _sf=(_pwData.folders||[]).filter(function(v){return v&&v.trim();});
+  if(_sf.length){html+='<div><span class="lbl">폴더</span><span class="val" style="word-break:break-all">'+_sf.map(escapeHtml).join('<br>')+'</span></div>';}
   if(_pwData.kakaoText){html+='<div><span class="lbl">본문</span><span class="val">'+escapeHtml(_pwData.kakaoText.substr(0,40))+(_pwData.kakaoText.length>40?'…':'')+'</span></div>';}
   if(_pwData.instaText){html+='<div><span class="lbl">본문</span><span class="val">(인스타 틀 작성됨)</span></div>';}
   if(_pwData.b2bIntraText){html+='<div><span class="lbl">본문</span><span class="val">(B2B 틀 작성됨)</span></div>';}
