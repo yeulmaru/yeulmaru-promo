@@ -1283,6 +1283,7 @@ function openPromoWizard(prefillDate){
     format:'',                  // '이미지' | '영상' | '텍스트' (플랫폼별 분기)
     isMonthly:false,            // 월별 문자 일정 (정형 작업) 모드
     date:prefillDate||_today,time:'10:00',
+    fromCalendar:Boolean(prefillDate),  // 캘린더 우클릭 진입 식별 → Step 3에서 시간 input 자동 focus
     folders:[''],               // 이미지/영상 폴더 링크 (멀티)
     kakaoText:'',               // 카카오톡 텍스트 (76자)
     instaText:'',               // 인스타그램 본문 (틀 포함)
@@ -1412,15 +1413,22 @@ function renderPwStep(){
   }else if(_pwStep===3){
     // Step 3: 언제 홍보할까요? (날짜 + 시간 30분 단위 + 판매기간 검증)
     let html='<div class="pw-question">언제 홍보할까요?</div>';
-    html+='<div class="pw-hint">게시 희망 날짜와 시간을 선택해주세요</div>';
-    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">날짜<span style="color:var(--peach);margin-left:3px">*</span></label>';
-    html+='<input id="pw-date" type="date" value="'+escapeHtml(_pwData.date)+'" onchange="onPwDateChange()" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
+    html+='<div class="pw-hint">'+(_pwData.fromCalendar?'캘린더에서 선택한 날짜로 자동 입력됐어요. 시간만 선택해주세요 · 날짜는 클릭해서 변경 가능':'게시 희망 날짜와 시간을 선택해주세요')+'</div>';
+    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">날짜<span style="color:var(--peach);margin-left:3px">*</span>'+(_pwData.fromCalendar?' <span style="color:var(--accent);font-weight:600;text-transform:none;letter-spacing:0;margin-left:4px">📅 캘린더 선택</span>':'')+'</label>';
+    html+='<input id="pw-date" type="date" value="'+escapeHtml(_pwData.date)+'" onchange="onPwDateChange()" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid '+(_pwData.fromCalendar?'rgba(74,77,231,0.3)':'rgba(0,0,0,0.06)')+';border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
     html+='<div id="pw-date-warn" style="margin-top:8px"></div>';
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">시간 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">🖱 스크롤로 30분 단위 조정</span></label>';
     html+='<input id="pw-time" type="time" step="1800" value="'+escapeHtml(_pwData.time)+'" onwheel="pwTimeWheel(event)" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
     body.innerHTML=html;
     next.textContent='다음';
-    setTimeout(function(){checkPwSalesEnd();},50);
+    setTimeout(function(){
+      checkPwSalesEnd();
+      // 캘린더 우클릭으로 진입한 경우 시간 input에 자동 focus (날짜는 이미 prefill됨)
+      if(_pwData.fromCalendar){
+        const t=document.getElementById('pw-time');
+        if(t)t.focus();
+      }
+    },50);
   }else if(_pwStep===4){
     // Step 4: 어떻게 홍보할까요? (sub-step 분기 트리)
     renderPwStep4(body,next);
