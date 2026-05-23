@@ -266,6 +266,57 @@ button{font-family:inherit;cursor:pointer}
   #cell-context-menu{min-width:170px !important;padding:5px !important}
   .ccm-item{padding:12px 14px !important;font-size:14px}
   .ccm-item .emo{font-size:16px}
+  /* ═══ 모바일 메인 — 캘린더 간소화 + 하단 drawer 항상 표시 ═══ */
+  /* 캘린더 셀: 텍스트/카드 다 숨기고 일자 + dot만 */
+  .c.cell{height:54px !important;padding:5px 4px 8px 4px !important}
+  .c.cell .c-inner{display:none !important}
+  .c.cell .sp-area{display:none !important}
+  /* 일자 줄 — 가운데 정렬 + 깔끔한 폰트 */
+  .dn{
+    font-size:14px !important;
+    font-weight:600 !important;
+    justify-content:center !important;
+    margin-bottom:0 !important;
+    padding-top:4px;
+  }
+  .dn > span:first-child, .dn{text-align:center}
+  /* dot 표시 — 일정/프로그램/담당자일정 있는 셀 */
+  .c.cell:has(.ev)::after,
+  .c.cell:has(.sp-area .sp-item)::after{
+    content:"";
+    position:absolute;
+    bottom:6px;
+    left:50%;
+    transform:translateX(-50%);
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:var(--accent);
+    z-index:5;
+  }
+  /* 프로그램 있는 날 — 살구 dot (위쪽에 추가) */
+  .c.cell:has(.dn .pname)::before{
+    content:"";
+    position:absolute;
+    bottom:6px;
+    left:calc(50% - 7px);
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:var(--peach-text);
+    z-index:5;
+  }
+  /* 콘텐츠 일정 + 프로그램 둘 다 있으면 dot 옆으로 */
+  .c.cell:has(.ev):has(.dn .pname)::after{left:calc(50% + 7px)}
+  /* === 하단 drawer — 항상 표시 (오늘/선택일 일정) === */
+  .panel{
+    max-height:50vh !important;
+    height:50vh !important;
+    animation:slideUp .3s cubic-bezier(.2,.8,.2,1) !important;
+  }
+  .panel-close{display:none !important}
+  /* 캘린더 영역에 drawer 공간 padding 확보 */
+  #main-area{padding-bottom:calc(50vh + 20px) !important}
 }
 @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
 
@@ -4772,6 +4823,12 @@ document.addEventListener('DOMContentLoaded',function(){
       if(c)c.classList.remove('mobile-open');
     }
   });
+  // 데스크탑 ↔ 모바일 전환 시 panel 자동 열기 (drawer 항상 표시 보장)
+  let _resizeTimer=null;
+  window.addEventListener('resize',function(){
+    clearTimeout(_resizeTimer);
+    _resizeTimer=setTimeout(function(){autoOpenMobilePanel();},200);
+  });
   var ft=document.getElementById('f-time');
   if(!ft)return;
   ft.addEventListener('wheel',function(e){
@@ -4836,7 +4893,14 @@ function getRecsForDate(d){return records.filter(r=>excelToKey(r['날짜'])===dk
 
 function calDates(y,m){const first=new Date(y,m-1,1),dow=first.getDay(),offset=(dow-2+7)%7,start=new Date(y,m-1,1-offset),out=[];for(let w=0;w<6;w++){for(let d=0;d<6;d++){const dt=new Date(start);dt.setDate(dt.getDate()+w*7+d);out.push(dt);}}return out;}
 
-function render(){document.getElementById('nav-month').textContent=currentMonth;document.getElementById('nav-year').textContent=currentYear;renderChips();renderCal();}
+function render(){document.getElementById('nav-month').textContent=currentMonth;document.getElementById('nav-year').textContent=currentYear;renderChips();renderCal();autoOpenMobilePanel();}
+// 모바일이면 자동으로 오늘 날짜 panel 열기 (drawer 항상 표시)
+function autoOpenMobilePanel(){
+  if(!window.matchMedia('(max-width:768px)').matches)return;
+  if(panelOpen)return;
+  if(typeof openPanel!=='function')return;
+  try{openPanel(new Date());}catch(e){}
+}
 
 
 
@@ -5349,7 +5413,7 @@ function togglePanelPrograms(){
   arrow.classList.toggle('open',_panelProgramsOpen);
 }
 function closePanel(){panelOpen=false;selected=null;document.getElementById('panel').style.display='none';document.getElementById('main-area').style.marginRight='0';render();}
-function changeMonth(delta){currentMonth+=delta;if(currentMonth<1){currentMonth=12;currentYear--;}if(currentMonth>12){currentMonth=1;currentYear++;}_weekState={};_calAnimateOnNextRender=true;closePanel();}
+function changeMonth(delta){currentMonth+=delta;if(currentMonth<1){currentMonth=12;currentYear--;}if(currentMonth>12){currentMonth=1;currentYear++;}_weekState={};_calAnimateOnNextRender=true;if(window.matchMedia('(max-width:768px)').matches){render();}else{closePanel();}}
 
 function onPlatChange(){
   const p=document.getElementById('f-plat').value;
