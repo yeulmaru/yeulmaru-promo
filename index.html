@@ -749,10 +749,13 @@ function onSpDragStart(ev,rowIndex,fromKey){
   ev.dataTransfer.effectAllowed='move';
   try{ev.dataTransfer.setData('text/plain','sp:'+rowIndex);}catch(_){}
   ev.currentTarget.classList.add('ev-dragging');
+  // 마퀴 슬라이드 transition 일시 정지
+  document.querySelectorAll('.sp-track').forEach(function(t){t.style.transition='none';});
 }
 function onSpDragEnd(ev){
   ev.currentTarget.classList.remove('ev-dragging');
   document.querySelectorAll('.c.drag-over').forEach(function(c){c.classList.remove('drag-over');});
+  document.querySelectorAll('.sp-track').forEach(function(t){t.style.transition='';});
   _drag=null;
 }
 // .sp-area fallback — 마퀴 transform 적용된 상태에서도 현재 보이는 아이템 찾기
@@ -4913,6 +4916,8 @@ function startSpecialSlide(){
   if(_spSlideTimer){clearInterval(_spSlideTimer);_spSlideTimer=null;}
   // 단일 글로벌 interval — 모든 셀의 .sp-track 동시 슬라이드 (성능 효율)
   _spSlideTimer=setInterval(function(){
+    // 드래그 진행 중에는 슬라이드 건너뜀 (ghost 안정화)
+    if(_drag&&_drag.sp)return;
     _spSlideIdx++;
     document.querySelectorAll('.sp-track').forEach(function(tr){
       const cnt=Number(tr.dataset.spCount)||1;
