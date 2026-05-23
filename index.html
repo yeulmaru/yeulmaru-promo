@@ -311,6 +311,13 @@ button{font-family:inherit;cursor:pointer}
 .sp-time-reset:disabled{opacity:0.3;cursor:not-allowed}
 /* readonly 시간 input — 음영 강화 */
 .sp-time-input-ro{background:#e5e5e5 !important;color:#777 !important;cursor:not-allowed !important;opacity:1 !important}
+/* 컬럼 리사이즈 핸들 — 평소엔 안 보이고 호버 시 살짝 */
+table.promo-board-table{table-layout:fixed}
+table.promo-board-table th{position:relative;overflow:hidden}
+.col-resize-handle{position:absolute;top:25%;right:-3px;width:6px;height:50%;cursor:col-resize;background:transparent;border-radius:3px;transition:background 0.18s;z-index:5}
+.col-resize-handle:hover{background:rgba(255,255,255,0.45)}
+.col-resize-handle.dragging{background:#fff;height:80%;top:10%}
+table.promo-board-table th:last-child .col-resize-handle{display:none}
 .p-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .2s;cursor:pointer}
 .p-card:hover{box-shadow:0 4px 16px rgba(74,77,231,0.1);transform:translateY(-1px);border-color:rgba(74,77,231,0.2)}
 .p-card.done{opacity:0.55}
@@ -1411,7 +1418,7 @@ function openSpecialEntry(key, editRowIndex){
     '<label style="'+lbSt+'">내용<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     '<input id="sp-label" type="text" placeholder="예: 마케팅 세미나 / 황세웅 휴무" style="'+inpSt+'">'+
     '<div style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label style="'+lbSt+'">시작일<span style="color:var(--peach);margin-left:3px">*</span></label><input id="sp-start" type="date" value="'+today+'" onchange="_onSpStartChange(this.value)" style="'+inpSt+'"></div>'+
-    '<div style="flex:1"><label style="'+lbSt+'">종료일 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(같으면 단일)</span></label><input id="sp-end" type="date" value="'+today+'" onchange="_spEndManuallyChanged=true" style="'+inpSt+'"></div></div>'+
+    '<div style="flex:1"><label style="'+lbSt+'">종료일 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(같으면 단일)</span></label><input id="sp-end" type="date" value="'+today+'" min="'+today+'" onchange="_spEndManuallyChanged=true" style="'+inpSt+'"></div></div>'+
     '<label style="'+lbSt+'">시간<span style="color:var(--peach);margin-left:3px">*</span> <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(스크롤 ±10분 / 09:00~18:00 / 휴무·출장 자동)</span></label>'+
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input id="sp-time-start" type="time" step="600" style="'+inpSt+';flex:1" placeholder="시작"><button type="button" class="sp-time-unset" onclick="_toggleSpTimeUnset(\'sp-time-start\',this)">미정</button></div><span style="color:#aaa;font-size:14px">~</span><div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input id="sp-time-end" type="time" step="600" style="'+inpSt+';flex:1" placeholder="종료"><button type="button" class="sp-time-unset" onclick="_toggleSpTimeUnset(\'sp-time-end\',this)">미정</button></div></div>'+
     '<div id="sp-time-adders" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;color:#aaa;margin-right:2px">빠른 종료시간:</span><button type="button" class="sp-time-add" onclick="_addSpTime(-60)">-1시간</button><button type="button" class="sp-time-add" onclick="_addSpTime(-30)">-30분</button><button type="button" class="sp-time-add" onclick="_addSpTime(30)">+30분</button><button type="button" class="sp-time-add" onclick="_addSpTime(60)">+1시간</button><button type="button" class="sp-time-reset" onclick="_resetSpTime()">리셋</button></div>'+
@@ -1463,7 +1470,7 @@ function openSpecialEntry(key, editRowIndex){
     if(isEdit&&_editingSpecial){
       const lb=document.getElementById('sp-label');if(lb)lb.value=_editingSpecial.label||'';
       const st=document.getElementById('sp-start');if(st)st.value=_editingSpecial.start||'';
-      const en=document.getElementById('sp-end');if(en)en.value=_editingSpecial.end||'';
+      const en=document.getElementById('sp-end');if(en){en.value=_editingSpecial.end||'';en.min=_editingSpecial.start||'';}
       const redTypes={'휴무':1,'출장':1};
       if(!redTypes[initType]){
         const parsed=_parseSpTime(_editingSpecial.time||'');
@@ -1676,8 +1683,10 @@ function _attachSpTimeWheel(id){
 // 시작일 변경 시 종료일 자동 동기화 (사용자가 종료일 직접 변경 안 했을 때만)
 let _spEndManuallyChanged=false;
 function _onSpStartChange(v){
+  // 종료일 min — 시작일 이전 회색 처리
+  const en=document.getElementById('sp-end');
+  if(en)en.min=v;
   if(!_spEndManuallyChanged){
-    const en=document.getElementById('sp-end');
     if(en){
       en.value=v;
       // 종료일 picker 자동 열기 (Chrome 99+)
@@ -1808,6 +1817,64 @@ function onSpContextMenu(event,rowIndex){
 
 // === 홍보 신청 검토 페이지 ===
 let _promoFilter={status:'all',q:'',hidePast:true,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
+// 컬럼 너비 localStorage 로드
+let _colWidths={};
+try{const _s=localStorage.getItem('promoBoardColWidths');if(_s)_colWidths=JSON.parse(_s)||{};}catch(e){}
+// 컬럼 리사이즈 핸들러 — 인접 컬럼 폭 조정 (전체 테이블 폭 유지)
+let _colResizeState=null;
+function _onColResizeStart(e,th){
+  e.preventDefault();
+  e.stopPropagation();
+  if(!th)return;
+  const table=th.closest('table');
+  if(!table)return;
+  const ths=Array.from(table.querySelectorAll('th[data-col]'));
+  const idx=ths.indexOf(th);
+  if(idx===-1||idx>=ths.length-1)return;  // 마지막 컬럼은 리사이즈 X
+  const nextTh=ths[idx+1];
+  // auto width 컬럼(콘텐츠 등) 픽셀화
+  if(!th.style.width)th.style.width=th.offsetWidth+'px';
+  if(!nextTh.style.width)nextTh.style.width=nextTh.offsetWidth+'px';
+  _colResizeState={
+    th, nextTh,
+    startX:e.clientX,
+    startWidth:th.offsetWidth,
+    nextStartWidth:nextTh.offsetWidth,
+    handle:e.target
+  };
+  if(_colResizeState.handle)_colResizeState.handle.classList.add('dragging');
+  document.body.style.userSelect='none';
+  document.body.style.cursor='col-resize';
+  document.addEventListener('mousemove',_onColResizeMove);
+  document.addEventListener('mouseup',_onColResizeEnd);
+}
+function _onColResizeMove(e){
+  if(!_colResizeState)return;
+  const dx=e.clientX-_colResizeState.startX;
+  const minW=50;
+  let newW=_colResizeState.startWidth+dx;
+  let newNextW=_colResizeState.nextStartWidth-dx;
+  if(newW<minW){newW=minW;newNextW=_colResizeState.startWidth+_colResizeState.nextStartWidth-minW;}
+  if(newNextW<minW){newNextW=minW;newW=_colResizeState.startWidth+_colResizeState.nextStartWidth-minW;}
+  _colResizeState.th.style.width=newW+'px';
+  _colResizeState.nextTh.style.width=newNextW+'px';
+}
+function _onColResizeEnd(){
+  if(!_colResizeState)return;
+  if(_colResizeState.handle)_colResizeState.handle.classList.remove('dragging');
+  document.body.style.userSelect='';
+  document.body.style.cursor='';
+  // localStorage 저장
+  const widths={};
+  document.querySelectorAll('table.promo-board-table th[data-col]').forEach(function(t){
+    widths[t.dataset.col]=t.offsetWidth;
+  });
+  try{localStorage.setItem('promoBoardColWidths',JSON.stringify(widths));}catch(e){}
+  _colWidths=widths;
+  document.removeEventListener('mousemove',_onColResizeMove);
+  document.removeEventListener('mouseup',_onColResizeEnd);
+  _colResizeState=null;
+}
 // 3단 토글: hide(감추기) → mix(같이 보기) → only(특수일정만)
 function _cycleSpecialMode(){
   const order=['hide','mix','only'];
@@ -2064,12 +2131,15 @@ function renderPromoBoard(){
         arrowColor='rgba(255,255,255,0.42)';
         arrowSize='9px';
       }
-      const widthStyle=width?'width:'+width+'px;':'';
+      // localStorage 저장된 width 우선
+      const savedW=_colWidths&&_colWidths[col];
+      const useW=savedW||width;
+      const widthStyle=useW?'width:'+useW+'px;':'';
       const activeStyle=isOn?'background:rgba(255,255,255,0.12);font-weight:800;':'';
-      return '<th onclick="setPromoSort(\''+col+'\')" style="padding:10px 12px;text-align:left;'+widthStyle+'cursor:pointer;user-select:none;color:#fff;'+activeStyle+'" title="클릭: 정렬 / 다시 클릭: 역순 / 한 번 더: 정렬 해제">'+label+'<span style="margin-left:5px;font-size:'+arrowSize+';color:'+arrowColor+'">'+arrow+'</span></th>';
+      return '<th data-col="'+col+'" onclick="setPromoSort(\''+col+'\')" style="padding:10px 12px;text-align:left;'+widthStyle+'cursor:pointer;user-select:none;color:#fff;'+activeStyle+'" title="클릭: 정렬 / 다시 클릭: 역순 / 한 번 더: 정렬 해제">'+label+'<span style="margin-left:5px;font-size:'+arrowSize+';color:'+arrowColor+'">'+arrow+'</span><span class="col-resize-handle" onmousedown="_onColResizeStart(event,this.parentElement)" onclick="event.stopPropagation()"></span></th>';
     }
     // 모서리 둥근 wrapper + 살짝 투명도 헤더
-    html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
+    html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
     html+=_sh('no','NO',60);
     html+=_sh('status','상태',80);
     html+=_sh('date','날짜',90);
@@ -2078,7 +2148,8 @@ function renderPromoBoard(){
     html+=_sh('category','구분',70);
     html+=_sh('content','콘텐츠',null);
     html+=_sh('applicant','신청자',80);
-    html+='<th style="padding:10px 4px;text-align:center;width:60px;color:#fff">액션</th>';
+    const actW=(_colWidths&&_colWidths.action)||60;
+    html+='<th data-col="action" style="padding:10px 4px;text-align:center;width:'+actW+'px;color:#fff">액션</th>';
     html+='</tr></thead><tbody>';
     rows.forEach(function(r,idx){
       const _animDelay=Math.min(idx*25,600)+'ms';
@@ -2103,11 +2174,12 @@ function renderPromoBoard(){
         // 콘텐츠 칸: 라벨
         const labelStr=it.label||typeStr;
         const rawNo=(r['#']!==''&&r['#']!==null&&r['#']!==undefined)?r['#']:(r._rowIndex-1);
-        const noVal='S'+String(rawNo).padStart(2,'0');
+        const noShort='S'+String((parseInt(rawNo,10)||0)%100).padStart(2,'0');
+        const noTitle='고유번호: '+rawNo;
         const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
         const clickAttr=userRole==='admin'?' onclick="_schedReturnFlag=true;closePromoBoard();setTimeout(function(){openSpecialEntry(null,'+r._rowIndex+');},50)"':'';
         html+='<tr class="promo-row"'+clickAttr+' style="border-bottom:1px solid #f0f0f0;cursor:'+(userRole==='admin'?'pointer':'default')+';'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
-        html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600">'+escapeHtml(noVal)+'</td>';
+        html+='<td title="'+escapeHtml(noTitle)+'" style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;cursor:help">'+escapeHtml(noShort)+'</td>';
         // 상태: 예정 (콘텐츠 예정과 동일)
         html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:#E8F5EC;color:#0F8B4C;font-size:11px;font-weight:600;white-space:nowrap">예정</span></td>';
         html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';white-space:nowrap"><span style="font-variant-numeric:tabular-nums">'+rangeStr+'</span>'+todayBadge+'</td>';
@@ -2158,14 +2230,15 @@ function renderPromoBoard(){
       const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
       // NO: r['#'] 값 우선, 빈 값이면 _rowIndex 기반 fallback
       const rawNo=(r['#']!==''&&r['#']!==null&&r['#']!==undefined)?r['#']:(r._rowIndex-1);
-      const noVal='H'+String(rawNo).padStart(2,'0');
+      const noShort='H'+String((parseInt(rawNo,10)||0)%100).padStart(2,'0');
+      const noTitle='고유번호: '+rawNo;
       // 콘텐츠 (제목 + 프로그램)
       const title=r['콘텐츠 제목']||'';
       const prog=r['프로그램']||'-';
       // 플랫폼 (P1 › P2)
       const platHtml=escapeHtml(plat1||'-')+(plat2?'<span style="color:#bbb;margin:0 4px">›</span>'+escapeHtml(plat2):'');
       html+='<tr class="promo-row" onclick="openPromoBoardRow(\''+dateKey+'\','+r._rowIndex+')" style="border-bottom:1px solid #f0f0f0;cursor:pointer;'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
-      html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600">'+escapeHtml(noVal)+'</td>';
+      html+='<td title="'+escapeHtml(noTitle)+'" style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;cursor:help">'+escapeHtml(noShort)+'</td>';
       html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:'+sBg+';color:'+sColor+';font-size:11px;font-weight:600;white-space:nowrap">'+escapeHtml(status)+'</span></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';white-space:nowrap"><span style="font-variant-numeric:tabular-nums">'+m2+'/'+d2+'</span>'+todayBadge+'</td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';font-variant-numeric:tabular-nums;white-space:nowrap">'+timeStr+'</td>';
