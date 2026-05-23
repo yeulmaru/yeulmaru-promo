@@ -1139,9 +1139,8 @@ function renderPromoBoard(){
     const on=_promoFilter.status===t.k;
     html+='<button onclick="_promoFilter.status=\''+t.k+'\';renderPromoBoard()" style="'+ctrlStyle+';border:1.5px solid '+(on?'var(--accent)':'#ddd')+';background:'+(on?'rgba(74,77,231,0.08)':'#fff')+';color:'+(on?'var(--accent)':'#666')+';font-weight:'+(on?'600':'500')+'">'+t.l+'</button>';
   });
-  // 지난 일정 감추기 체크박스 (탭과 동일 외형 박스 + 가시 background/border)
-  const hp=_promoFilter.hidePast;
-  html+='<label style="'+ctrlStyle+';gap:6px;background:'+(hp?'#E8F5EC':'#fafafa')+';border:1.5px solid '+(hp?'#0F8B4C':'#ddd')+';color:'+(hp?'#0F8B4C':'#555')+';user-select:none;font-weight:'+(hp?'600':'500')+';margin-left:4px"><input type="checkbox"'+(hp?' checked':'')+' onchange="_promoFilter.hidePast=this.checked;renderPromoBoard()" style="width:14px;height:14px;cursor:pointer;margin:0;accent-color:var(--accent);flex-shrink:0">지난 일정 감추기</label>';
+  // 지난 일정 감추기 체크박스 (배경/보더 없음, 탭과 동일한 box-sizing/height로 라인 정렬)
+  html+='<label style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;box-sizing:border-box;font-size:12px;line-height:1;color:#666;cursor:pointer;user-select:none;font-family:inherit;margin-left:4px"><input type="checkbox"'+(_promoFilter.hidePast?' checked':'')+' onchange="_promoFilter.hidePast=this.checked;renderPromoBoard()" style="width:14px;height:14px;margin:0;padding:0;cursor:pointer;accent-color:var(--accent);flex-shrink:0">지난 일정 감추기</label>';
   // === 본인/전체 토글 ===
   if(myApplicant){
     html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
