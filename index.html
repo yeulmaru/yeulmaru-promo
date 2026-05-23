@@ -213,14 +213,13 @@ button{font-family:inherit;cursor:pointer}
   .dn .pf{display:none}
   .dn .ps{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
 }
-/* 셀이 더 좁아지면 콘텐츠 카드 타이틀 숨김 — 줄임말 시간+플랫폼만 */
-@container (max-width:115px){
-  .ev > .ev-title{display:none !important}
-  .ev{justify-content:flex-start}
+/* 더 좁아지면 D-day 숨김 — 동그라미 + 줄임말만 */
+@container (max-width:110px){
+  .dn .pday{display:none !important}
 }
-/* 셀이 매우 좁으면 시간까지 숨김 — 플랫폼 줄임말(공/문 등)만 */
-@container (max-width:80px){
-  .ev > .ev-time{display:none !important}
+/* 매우 좁으면 이름까지 숨김 — 동그라미 라벨(공/전/교/대)만 */
+@container (max-width:90px){
+  .dn .pname{display:none !important}
 }
 .diag{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.02) 4px,rgba(0,0,0,0.02) 5px);pointer-events:none}
 /* 특별 일정 세로 슬라이드 (전광판) — 한 줄 영역 항상 확보, 위로 사라지는 느낌 */
@@ -803,9 +802,9 @@ if(!cperfs.length)return'';
 var out='';
 for(var i=0;i<cperfs.length;i++){var perf=cperfs[i],fn=perf.f||perf.n,sn=perf.n,dd=perf.dday,lb=perf.t==='e'?'전':perf.t==='a'?'교':perf.t==='r'?'대':'공';
 var nameHtml='<span class="pf">'+fn+'</span><span class="ps">'+sn+'</span>';
-if(past)out+='<span style="display:inline-flex;align-items:center;margin-left:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.22);flex-shrink:0">'+lb+'</span><span style="margin-left:4px;font-size:9px;color:rgba(0,0,0,0.18)">'+nameHtml+'</span></span>';
-else if(td)out+='<span style="display:inline-flex;align-items:center;margin-left:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;background:rgba(255,255,255,0.85);color:#111;flex-shrink:0">'+lb+'</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:#111">'+nameHtml+'</span></span>';
-else out+='<span style="display:inline-flex;align-items:center;margin-left:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;background:var(--accent);color:#fff;flex-shrink:0">'+lb+'</span><span style="margin-left:5px;font-size:9px;font-weight:700;color:var(--text)">'+nameHtml+'</span>'+(dd!==null&&dd!==0?'<span style="margin-left:8px;font-size:9px;color:var(--dim);white-space:nowrap">'+getDdayText(dd)+'</span>':'')+'</span>';
+if(past)out+='<span style="display:inline-flex;align-items:center;margin-left:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.22);flex-shrink:0">'+lb+'</span><span class="pname" style="margin-left:4px;font-size:9px;color:rgba(0,0,0,0.18)">'+nameHtml+'</span></span>';
+else if(td)out+='<span style="display:inline-flex;align-items:center;margin-left:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;background:rgba(255,255,255,0.85);color:#111;flex-shrink:0">'+lb+'</span><span class="pname" style="margin-left:5px;font-size:9px;font-weight:700;color:#111">'+nameHtml+'</span></span>';
+else out+='<span style="display:inline-flex;align-items:center;margin-left:6px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;background:var(--accent);color:#fff;flex-shrink:0">'+lb+'</span><span class="pname" style="margin-left:5px;font-size:9px;font-weight:700;color:var(--text)">'+nameHtml+'</span>'+(dd!==null&&dd!==0?'<span class="pday" style="margin-left:8px;font-size:9px;color:var(--dim);white-space:nowrap">'+getDdayText(dd)+'</span>':'')+'</span>';
 }return out;
 }
 let password='',userRole='user',records=[],currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth()+1;
