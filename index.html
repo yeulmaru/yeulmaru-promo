@@ -1322,7 +1322,7 @@ function setPromoSort(col){
   renderPromoBoard();
 }
 function openPromoBoard(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePromoBoard)"><div class="modal" style="width:96vw;max-width:1100px;height:88vh;max-height:88vh;overflow:hidden;padding:0;position:relative;display:flex;flex-direction:column"><button class="modal-x" onclick="closePromoBoard()" title="닫기" aria-label="닫기" style="z-index:2">✕</button><div id="promo-board-body" style="flex:1;overflow:auto;padding:24px;text-align:center;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePromoBoard)"><div class="modal" style="width:96vw;max-width:1100px;height:88vh;max-height:88vh;overflow:hidden;padding:0;position:relative;display:flex;flex-direction:column"><button class="modal-x" onclick="closePromoBoard()" title="닫기" aria-label="닫기" style="position:absolute;top:16px;right:18px;float:none;margin:0;z-index:10">✕</button><div id="promo-board-body" style="flex:1;overflow:auto;padding:26px 30px 26px 30px;text-align:center;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('promo-board');
   if(!el){el=document.createElement('div');el.id='promo-board';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -1427,12 +1427,11 @@ function renderPromoBoard(){
   // 오늘 건수 (완료/취소 제외)
   const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
   // === 헤더 ===
-  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;border-bottom:1px solid #eee">';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
   html+='<h3 style="margin:0;flex:1;text-align:left">일정 확인 및 관리';
   if(!isAdmin&&myApplicant)html+='<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:8px">· '+escapeHtml(myApplicant)+' 님</span>';
   html+='</h3>';
   if(!isAdmin)html+='<button class="m-btn save" onclick="openPromoWizardFromBoard()" style="padding:7px 14px">+ 새 신청</button>';
-  html+='<button class="m-btn cancel" onclick="renderPromoBoard()" style="padding:7px 12px" title="새로고침">↻</button>';
   html+='</div>';
   // === 오늘 요약 한 줄 박스 ===
   const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소';}).length;
