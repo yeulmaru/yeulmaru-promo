@@ -629,31 +629,55 @@ h+='<div style="height:0;border-top:2px solid '+(past?'rgba(0,0,0,0.04)':st[i].o
 }
 return h+'</div>';
 }
-// 특별 일정 세로 슬라이드 (위로 사라지는 느낌) — 영역 항상 확보
+// 시간 파싱: "09:00 - 14:00" / "09:00~14:00" / "09:00" → {s:시작, e:종료}
+function _parseSpTime(t){
+  if(!t)return{s:'',e:''};
+  const cleaned=String(t).replace(/\s+/g,'');
+  const m=cleaned.match(/^(\d{1,2}:?\d{0,2})[-~]?(\d{1,2}:\d{2})?$/);
+  if(m)return{s:m[1]||'',e:m[2]||''};
+  return{s:cleaned,e:''};
+}
+// 특별 일정 세로 슬라이드 — 콘텐츠 카드와 동일한 3컬럼 구조 (시간 / ~종료 / 유형+담당자)
 function renderSpecialMarquee(d,nm,past){
   if(nm)return'';
   const key=dk(d);
   const items=(PROMO_SPECIAL||[]).filter(function(s){return key>=s.start&&key<=s.end;});
   if(!items.length){
-    // 영역만 확보 (빈 채로) — 셀 레이아웃 일관성 유지
     return '<div class="sp-area" aria-hidden="true"></div>';
   }
-  const emoMap={'교육':'📚','휴가':'🏖️','출장':'✈️','회의':'👥','기타':'📌'};
   // 시간 있는 순 정렬 (휴무는 뒤로)
   items.sort(function(a,b){
     if(a.time&&!b.time)return -1;
     if(!a.time&&b.time)return 1;
     return (a.time||'').localeCompare(b.time||'');
   });
+  // 빨강 표시 type: 휴무·출장·휴가
+  const redTypes={'휴무':1,'출장':1,'휴가':1};
+  const timeCol=past?'var(--past-text)':'var(--text)';
+  const personCol=past?'var(--past-text)':'var(--text)';
   let inner='';
   items.forEach(function(it){
-    const hasTime=it.time&&it.time.length>0;
-    const t=hasTime?it.time:'휴무';
-    const cls='sp-time'+(hasTime?'':' off');
-    const emo=emoMap[it.type]||'📌';
-    const label=it.label||it.type||'';
-    const personStr=it.person?' ('+it.person+')':'';
-    inner+='<div class="sp-item" title="'+escapeHtml(it.type+' · '+label+personStr)+'"><span class="'+cls+'">'+escapeHtml(t)+'</span><span class="sp-label">'+emo+' '+escapeHtml(label)+escapeHtml(personStr)+'</span></div>';
+    const parsed=_parseSpTime(it.time);
+    const startT=parsed.s;
+    const endT=parsed.e;
+    // 표시 type: 시간 없으면 '휴무' 우선, type 있으면 그대로
+    let typeStr=it.type||'';
+    if(!startT)typeStr='휴무';
+    const isRed=!!redTypes[typeStr];
+    const typeCol=past?'var(--past-text)':(isRed?'#E24B4A':'var(--accent)');
+    const personStr=it.person?' '+it.person:'';
+    const endStr=endT?'~'+endT:'';
+    const tipParts=[typeStr];
+    if(it.person)tipParts.push(it.person);
+    if(it.label)tipParts.push(it.label);
+    inner+='<div class="sp-item" title="'+escapeHtml(tipParts.join(' · '))+'">'+
+      '<span class="ev-time" style="color:'+timeCol+';font-weight:600">'+escapeHtml(startT)+'</span>'+
+      '<span class="ev-plat" style="color:'+timeCol+';font-weight:600">'+escapeHtml(endStr)+'</span>'+
+      '<span class="ev-title">'+
+        '<span style="color:'+typeCol+';font-weight:600">'+escapeHtml(typeStr)+'</span>'+
+        '<span style="color:'+personCol+'">'+escapeHtml(personStr)+'</span>'+
+      '</span>'+
+      '</div>';
   });
   // 항목 1개: 슬라이드 없이. 2개 이상: 글로벌 interval이 transform 변경
   return '<div class="sp-area" title="특별 일정 — 호버 시 정지"><div class="sp-track" data-sp-count="'+items.length+'">'+inner+'</div></div>';
@@ -1268,16 +1292,16 @@ function openSpecialEntry(key){
   const inpSt='width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit';
   const lbSt='display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px';
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeSpecialEntry)"><div class="modal" style="width:96vw;max-width:480px;padding:24px;position:relative;text-align:left"><button class="modal-x" onclick="closeSpecialEntry()" title="닫기" aria-label="닫기">✕</button>'+
-    '<h3 style="margin:0 0 4px">📌 특별 일정 추가</h3>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:8px">교육·휴가·출장·회의 등 — 캘린더 셀에 한 줄 마퀴로 표시됩니다</div>'+
+    '<h3 style="margin:0 0 4px">특별 일정 추가</h3>'+
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">교육·휴가·출장·회의 등 — 캘린더 셀에 한 줄로 표시됩니다</div>'+
     '<label style="'+lbSt+'">유형<span style="color:var(--peach);margin-left:3px">*</span></label>'+
-    '<select id="sp-type" style="'+inpSt+'"><option value="교육">📚 교육</option><option value="휴가">🏖️ 휴가</option><option value="출장">✈️ 출장</option><option value="회의">👥 회의</option><option value="기타">📌 기타</option></select>'+
+    '<select id="sp-type" style="'+inpSt+'"><option value="교육">교육</option><option value="휴가">휴가</option><option value="출장">출장</option><option value="회의">회의</option><option value="기타">기타</option></select>'+
     '<label style="'+lbSt+'">내용<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     '<input id="sp-label" type="text" placeholder="예: 마케팅 세미나 / 황세웅 휴가" style="'+inpSt+'">'+
     '<div style="display:flex;gap:8px"><div style="flex:1"><label style="'+lbSt+'">시작일<span style="color:var(--peach);margin-left:3px">*</span></label><input id="sp-start" type="date" value="'+today+'" style="'+inpSt+'"></div>'+
     '<div style="flex:1"><label style="'+lbSt+'">종료일<span style="color:var(--peach);margin-left:3px">*</span></label><input id="sp-end" type="date" value="'+today+'" style="'+inpSt+'"></div></div>'+
-    '<label style="'+lbSt+'">시간 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(비우면 "휴무"로 표시)</span></label>'+
-    '<input id="sp-time" type="time" step="1800" style="'+inpSt+'">'+
+    '<label style="'+lbSt+'">시간 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(예: 09:00 - 14:00 또는 09:00 / 비우면 "휴무")</span></label>'+
+    '<input id="sp-time" type="text" placeholder="09:00 - 14:00" style="'+inpSt+'">'+
     '<label style="'+lbSt+'">담당자 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(선택)</span></label>'+
     '<input id="sp-person" type="text" placeholder="예: 황세웅" style="'+inpSt+'">'+
     '<div style="display:flex;gap:8px;margin-top:18px"><button onclick="closeSpecialEntry()" class="m-btn cancel">취소</button><button onclick="saveSpecialEntry()" class="m-btn save" style="margin-left:auto">저장</button></div>'+
