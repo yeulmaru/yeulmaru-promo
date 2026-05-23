@@ -113,6 +113,68 @@ button{font-family:inherit;cursor:pointer}
 .kst{font-size:12px;color:var(--dim);font-weight:500;font-variant-numeric:tabular-nums}
 .icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(0,0,0,0.06);background:var(--glass);backdrop-filter:blur(8px);font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .icon-btn:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent-glow)}
+/* 햄버거 — 데스크탑에서는 숨김 */
+.hamburger{display:none;background:transparent;border:none;cursor:pointer;padding:8px;margin-right:4px;color:var(--text);align-items:center;justify-content:center;border-radius:8px;transition:background .15s}
+.hamburger:hover{background:rgba(0,0,0,0.04)}
+.hamburger svg{width:22px;height:22px;display:block}
+/* ═══ 반응형 — 모바일 ═══ */
+@media (max-width:768px){
+  .hamburger{display:inline-flex}
+  .nav-sub{display:none}  /* "홍보 계획표" 부제 숨김 */
+  .nav-center{display:none}
+  .nav-center.mobile-open{
+    display:flex !important;
+    position:absolute;
+    top:56px;
+    left:0;
+    right:0;
+    flex-direction:column;
+    background:#fff;
+    padding:8px;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+    box-shadow:0 8px 24px rgba(0,0,0,0.08);
+    z-index:90;
+    gap:2px;
+  }
+  .nav-center.mobile-open .nav-btn{
+    width:100%;
+    text-align:left;
+    padding:12px 16px;
+    border-radius:8px;
+    background:transparent;
+    color:#444;
+    font-size:14px;
+  }
+  .nav-center.mobile-open .nav-btn.on{
+    background:var(--accent-light);
+    color:var(--accent);
+    font-weight:700;
+  }
+  .nav-center.mobile-open .nav-btn:hover{
+    background:rgba(74,77,231,0.06);
+    color:var(--accent);
+  }
+  .nav-center.mobile-open .nav-pill{display:none}
+  .nav-right .kst{display:none}  /* 시계 모바일에서 숨김 */
+  #main-area{padding:16px !important}
+  /* 플랫폼 필터 — 가로 스크롤로 (chip은 그대로 보이고 스와이프) */
+  .chips{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    padding-bottom:4px;
+    margin-right:-16px;
+    padding-right:16px;
+  }
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex-shrink:0}
+  .prog-btn{flex-shrink:0;position:sticky;right:0;background:var(--glass);box-shadow:-8px 0 12px rgba(255,255,255,0.8)}
+  /* 월/연도 폰트 살짝 축소 */
+  .month-text{font-size:26px}
+  .year-text{font-size:14px}
+  .arrow{width:34px;height:34px;font-size:16px}
+}
 
 /* ═══ HEADER ═══ */
 .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:0;flex-wrap:wrap;gap:12px;position:sticky;top:56px;z-index:6;background:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);padding:16px 0 12px 0}
@@ -493,6 +555,9 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 <!-- ═══ APP ═══ -->
 <div id="app" style="display:none">
   <nav class="nav">
+    <button class="hamburger" onclick="toggleMobileNav()" aria-label="메뉴">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
     <div class="nav-left">
       <span class="nav-logo">YEULMARU</span>
       <span class="nav-sub">홍보 계획표</span>
@@ -1219,6 +1284,14 @@ async function logout(){
   location.reload();
 }
 
+function toggleMobileNav(){
+  const c=document.getElementById('nav-menus');
+  if(c)c.classList.toggle('mobile-open');
+}
+function closeMobileNav(){
+  const c=document.getElementById('nav-menus');
+  if(c)c.classList.remove('mobile-open');
+}
 function buildNav(){
   const c=document.getElementById('nav-menus');c.innerHTML='';
   const pill=document.createElement('div');pill.className='nav-pill';c.appendChild(pill);
@@ -1226,6 +1299,7 @@ function buildNav(){
   menus.forEach(m=>{
     const b=document.createElement('button');b.className='nav-btn'+(m.id==='cal'?' on':'')+(m.id==='admin'?' nav-admin':'');b.textContent=m.label;
     b.onclick=()=>{
+      closeMobileNav();  // 메뉴 클릭 시 모바일 드롭다운 자동 닫힘
       if(m.id==='annual'){window.open('https://yeulmaru.github.io/yeulmaru-calandar-2026/','_blank');return;}
       if(m.id==='admin'){openAdminPanel();return;}
       if(m.id==='schedule'){openPromoBoard();return;}
@@ -4592,6 +4666,19 @@ function startClock(){function tick(){const n=new Date();document.getElementById
 
 // f-time input wheel 이벤트 - 10분 단위 +/-
 document.addEventListener('DOMContentLoaded',function(){
+  // 모바일 nav — 외부 클릭/ESC 시 자동 닫힘
+  document.addEventListener('click',function(e){
+    const c=document.getElementById('nav-menus');
+    if(!c||!c.classList.contains('mobile-open'))return;
+    if(e.target.closest('.hamburger')||e.target.closest('#nav-menus'))return;
+    c.classList.remove('mobile-open');
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      const c=document.getElementById('nav-menus');
+      if(c)c.classList.remove('mobile-open');
+    }
+  });
   var ft=document.getElementById('f-time');
   if(!ft)return;
   ft.addEventListener('wheel',function(e){
