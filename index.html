@@ -1422,8 +1422,9 @@ function renderPromoBoard(){
     html+='</tr></thead><tbody>';
     rows.forEach(function(r,idx){
       const status=r['진행 상태']||'-';
-      const sColor=status==='완료'?'#0F8B4C':status==='취소'?'#888':status==='예정'?'#C97A11':status==='대기 중'?'var(--accent)':'#888';
-      const sBg=status==='완료'?'#E8F5EC':status==='취소'?'#f0f0f0':status==='예정'?'#FFF4DC':status==='대기 중'?'rgba(74,77,231,0.1)':'#f5f5f5';
+      // 상태별 색상: 대기 중=살구 / 예정=초록 / 완료=파랑 / 취소=회색
+      const sColor=status==='완료'?'#2563EB':status==='취소'?'#888':status==='예정'?'#0F8B4C':status==='대기 중'?'var(--peach)':'#888';
+      const sBg=status==='완료'?'#DBEAFE':status==='취소'?'#f0f0f0':status==='예정'?'#E8F5EC':status==='대기 중'?'var(--peach-light)':'#f5f5f5';
       const m2=String(r['월']||'').padStart(2,'0'),d2=String(r['일']||'').padStart(2,'0');
       let timeStr='';
       const ts=r['입력시간(KST)'];
@@ -1438,14 +1439,14 @@ function renderPromoBoard(){
       const isFuture=dateKey>todayKey;
       const isPast=dateKey<todayKey;
       const isPending=status==='대기 중';
-      // 행 배경: 대기 중(진한 강조색) → 오늘(옅은 강조색) → 본인 미래(매우 옅음) → 기본
+      // 행 배경: 대기 중(살구) → 오늘(강조색1) → 본인 미래(옅은 강조색1) → 기본
       let trBg='',trBorder='border-left:3px solid transparent';
-      if(isPending){trBg='background:rgba(74,77,231,0.1)';trBorder='border-left:3px solid var(--accent)';}
-      else if(isToday){trBg='background:rgba(74,77,231,0.04)';trBorder='border-left:3px solid var(--accent)';}
+      if(isPending){trBg='background:var(--peach-bg)';trBorder='border-left:3px solid var(--peach)';}
+      else if(isToday){trBg='background:rgba(74,77,231,0.05)';trBorder='border-left:3px solid var(--accent)';}
       else if(isMine&&isFuture){trBg='background:rgba(74,77,231,0.02)';trBorder='border-left:3px solid rgba(74,77,231,0.35)';}
-      const hoverBg=isPending?'rgba(74,77,231,0.15)':isToday?'rgba(74,77,231,0.08)':'#f5f5f5';
+      const hoverBg=isPending?'var(--peach-light)':isToday?'rgba(74,77,231,0.1)':'#f5f5f5';
       const baseBg=trBg.replace('background:','')||'transparent';
-      // 오늘 배지 (강조색)
+      // 오늘 배지 (강조색1)
       const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
       // NO: r['#'] 값 우선, 빈 값이면 _rowIndex 기반 fallback
       const noVal=(r['#']!==''&&r['#']!==null&&r['#']!==undefined)?r['#']:(r._rowIndex-1);
@@ -1463,14 +1464,14 @@ function renderPromoBoard(){
       html+='<td style="padding:10px 12px;text-align:left;color:#666;font-size:11px;white-space:nowrap">'+escapeHtml(cat||'-')+'</td>';
       html+='<td style="padding:10px 12px;text-align:left;color:#222;font-weight:500">'+escapeHtml(title)+'<div style="font-size:11px;color:#888;font-weight:400;margin-top:2px">'+escapeHtml(prog)+'</div></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+'">'+escapeHtml(r['게시 담당자']||'-')+(isMine?' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:6px;margin-left:2px">나</span>':'')+'</td>';
-      // 액션 — 대기 중(admin만 접수) / 예정(본인·admin 완료)
+      // 액션 — 대기 중(admin만 접수) / 예정(본인·admin 완료) — 평소 ✓, hover 시 텍스트(초록)
       const canApprove=isAdmin&&status==='대기 중';
       const canComplete=(isMine||isAdmin)&&status==='예정';
       html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
       if(canApprove){
-        html+='<button onclick="event.stopPropagation();approvePromoFromBoard('+r._rowIndex+')" title="신청 접수 (대기 중 → 예정)" style="padding:5px 14px;border-radius:8px;border:none;background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap" onmouseover="this.style.background=\'rgba(74,77,231,0.08)\'" onmouseout="this.style.background=\'transparent\'">접수</button>';
+        html+='<button onclick="event.stopPropagation();approvePromoFromBoard('+r._rowIndex+')" title="신청 접수 (대기 중 → 예정)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:var(--peach);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'접수\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.color=\'var(--peach)\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
       }else if(canComplete){
-        html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 14px;border-radius:8px;border:none;background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap" onmouseover="this.style.background=\'rgba(74,77,231,0.08)\'" onmouseout="this.style.background=\'transparent\'">완료</button>';
+        html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#0F8B4C;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'완료\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
       }
       html+='</td>';
       html+='</tr>';
