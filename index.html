@@ -331,8 +331,16 @@ button{font-family:inherit;cursor:pointer}
   0%{transform:translateY(40px) scale(0.96);opacity:0}
   100%{transform:translateY(0) scale(1);opacity:1}
 }
-/* 연간 일정 모달 — 슬라이드 인 + 강한 그림자 */
-.annual-modal{animation:annualSlideIn .42s cubic-bezier(.2,.85,.25,1) !important;box-shadow:0 24px 64px rgba(0,0,0,0.22),0 8px 24px rgba(0,0,0,0.12)}
+/* 연간 일정 모달 — 슬라이드 인 + 글래스 모피즘 + scrollbar 영역 확보(우측 padding) */
+.annual-modal{
+  animation:annualSlideIn .42s cubic-bezier(.2,.85,.25,1) !important;
+  background:rgba(255,255,255,0.72) !important;
+  backdrop-filter:blur(32px) saturate(170%) !important;
+  -webkit-backdrop-filter:blur(32px) saturate(170%) !important;
+  box-shadow:0 24px 64px rgba(74,77,231,0.16),0 8px 28px rgba(216,132,85,0.12),0 0 0 1px rgba(255,255,255,0.4) inset !important;
+  border:1px solid rgba(255,255,255,0.5) !important;
+  padding:0 2px 0 0 !important;
+}
 
 /* ═══ HEADER ═══ */
 .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:0;flex-wrap:wrap;gap:12px;position:sticky;top:56px;z-index:6;background:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);padding:16px 0 12px 0}
@@ -1520,44 +1528,45 @@ function injectAnnualTheme(iframe){
         /* === 색상 변수 통일 === */
         :root{--accent:#4A4DE7 !important}
 
-        /* === 상단 챠콜 헤더 — 컴팩트 + 강조색 글래스 === */
+        /* === 상단 헤더 — 컴팩트 + 살구색 그라데이션 (보라 → 살구) === */
         .hd{
-          padding:22px 24px 28px !important;
-          background:linear-gradient(135deg, rgba(74,77,231,0.96) 0%, rgba(74,77,231,0.85) 100%) !important;
-          backdrop-filter:blur(12px) !important;
-          -webkit-backdrop-filter:blur(12px) !important;
+          padding:24px 24px 32px !important;
+          background:linear-gradient(135deg, rgba(240,196,184,0.92) 0%, rgba(216,132,85,0.78) 100%) !important;
+          backdrop-filter:blur(16px) saturate(140%) !important;
+          -webkit-backdrop-filter:blur(16px) saturate(140%) !important;
         }
-        .hd h1{font-size:clamp(32px,7vw,48px) !important;letter-spacing:2.5px !important}
-        .hd .s1{margin-top:7px !important;font-size:11.5px !important;letter-spacing:2px !important}
-        .hd .s2{margin-top:5px !important}
-        .hd::after{background:rgba(253,246,243,0.98) !important;height:32px !important}
+        .hd h1{font-size:clamp(34px,7vw,52px) !important;letter-spacing:2.5px !important;color:#fff !important;text-shadow:0 2px 8px rgba(140,70,40,0.18)}
+        .hd .s1{margin-top:8px !important;font-size:11.5px !important;letter-spacing:2px !important;color:rgba(255,255,255,0.92) !important}
+        .hd .s2{display:none !important}  /* 기준일 텍스트 숨김 */
+        .hd::after{background:rgba(255,255,255,0.98) !important;height:36px !important}
         .hd-tri{
-          border-top-color:rgba(240,196,184,0.85) !important;
+          border-top-color:rgba(74,77,231,0.65) !important;
           border-left-width:60px !important;
           border-top-width:60px !important;
         }
 
-        /* === 월 네비 — 챠콜 → 흰색 글래스 모피즘 === */
+        /* === 월 네비 — 흰색 글래스 모피즘 (강화) === */
         .mnav{
-          background:rgba(255,255,255,0.72) !important;
-          backdrop-filter:blur(20px) saturate(160%) !important;
-          -webkit-backdrop-filter:blur(20px) saturate(160%) !important;
-          box-shadow:0 1px 3px rgba(0,0,0,0.05), 0 2px 16px rgba(74,77,231,0.06) !important;
-          border-bottom:1px solid rgba(74,77,231,0.08) !important;
+          background:rgba(255,255,255,0.55) !important;
+          backdrop-filter:blur(28px) saturate(180%) !important;
+          -webkit-backdrop-filter:blur(28px) saturate(180%) !important;
+          box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 4px 24px rgba(216,132,85,0.08) !important;
+          border-bottom:1px solid rgba(255,255,255,0.6) !important;
         }
-        .mnav a{color:rgba(0,0,0,0.4) !important}
-        .mnav a:hover{color:rgba(74,77,231,0.7) !important;background:rgba(74,77,231,0.03) !important}
-        .mnav a.active{color:#4A4DE7 !important;font-weight:700 !important;background:rgba(74,77,231,0.06) !important}
+        .mnav a{color:rgba(0,0,0,0.42) !important}
+        .mnav a:hover{color:rgba(74,77,231,0.78) !important;background:rgba(74,77,231,0.04) !important}
+        .mnav a.active{color:#4A4DE7 !important;font-weight:700 !important;background:rgba(74,77,231,0.07) !important}
         .mnav a.active::after{background:#4A4DE7 !important}
 
-        /* === 본문 검정/챠콜 → 강조색 + 살구색 === */
-        /* 큰 월 번호(JANUARY 등 옆 숫자) — 검정 → 강조색 */
-        .mo-n{color:#4A4DE7 !important;opacity:0.92}
+        /* === 본문 ===  */
+        .mo-n{color:#4A4DE7 !important;opacity:0.94}
 
-        /* 유지보수 박스 — 살구 톤으로 */
+        /* 유지보수 박스 — 살구 톤 */
         .mt{
-          background:rgba(240,196,184,0.18) !important;
-          border:2px dashed rgba(216,132,85,0.45) !important;
+          background:rgba(240,196,184,0.22) !important;
+          border:2px dashed rgba(216,132,85,0.5) !important;
+          backdrop-filter:blur(8px);
+          -webkit-backdrop-filter:blur(8px);
         }
         .mt-t{color:#5a3a2a !important}
         .mt-d{color:#7a5a45 !important}
@@ -1566,7 +1575,7 @@ function injectAnnualTheme(iframe){
           color:#4A4DE7 !important;
         }
 
-        /* 추천 태그 (시그니처!/히트작! 등) — 검정 보더 → 강조색 */
+        /* 추천 태그 (시그니처!/히트작! 등) */
         .co{
           border-color:#4A4DE7 !important;
           color:#4A4DE7 !important;
@@ -1574,15 +1583,15 @@ function injectAnnualTheme(iframe){
         }
         .co::after{border-top-color:#4A4DE7 !important}
 
-        /* timeline dot — 강조색 */
-        .ev-dot{border-color:#4A4DE7 !important}
+        /* timeline dot, 날짜, 링크 — 강조색 */
+        .ev-dot{border-color:#4A4DE7 !important;background:#fff !important;box-shadow:0 2px 6px rgba(74,77,231,0.2)}
         .ev-date{color:#4A4DE7 !important}
         .ev-link{
           color:#4A4DE7 !important;
           border-bottom-color:rgba(74,77,231,0.3) !important;
         }
 
-        /* 공연장 라벨 — 큰=강조색, 작은=살구색 */
+        /* 공연장 라벨 */
         .venue-big{background:#4A4DE7 !important;color:#fff !important}
         .venue-sm{background:rgba(216,132,85,0.92) !important;color:#fff !important}
 
@@ -1590,10 +1599,12 @@ function injectAnnualTheme(iframe){
         .top-tri{border-bottom-color:#4A4DE7 !important}
         .top-label{background:#4A4DE7 !important}
 
-        /* === body 배경 — 홍보 계획표 톤 통일 === */
+        /* === body 배경 — 흰색 베이스 (홍보 계획표와 통일) === */
         body{
-          background:linear-gradient(180deg, #FDF6F3 0%, #FBF0EC 60%, #F7E8DF 100%) !important;
+          background:#FDFCFB !important;
         }
+        /* timeline 가운데 선 — 살짝 살구 톤 */
+        .tl::before{background:rgba(216,132,85,0.18) !important}
       `;
       doc.head.appendChild(style);
     }
