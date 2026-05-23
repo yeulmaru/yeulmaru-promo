@@ -235,6 +235,12 @@ button{font-family:inherit;cursor:pointer}
   60%{opacity:1}
   100%{opacity:1;transform:scaleY(1);max-height:200px}
 }
+/* 일정 확인 페이지 행 stagger 애니메이션 (촤르륵) */
+.promo-row{animation:promo-row-in 0.32s cubic-bezier(0.34,1.56,0.64,1) backwards}
+@keyframes promo-row-in{
+  0%{opacity:0;transform:translateY(-6px) scale(0.99)}
+  100%{opacity:1;transform:translateY(0) scale(1)}
+}
 
 /* ═══ PANEL ═══ */
 .panel{position:fixed;top:56px;right:0;width:360px;height:calc(100vh - 56px);background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-left:1px solid var(--glass-border);box-shadow:-8px 0 32px rgba(74,77,231,0.06);z-index:10;display:flex;flex-direction:column;animation:slideIn .25s ease}
@@ -1308,7 +1314,7 @@ function setPromoSort(col){
   renderPromoBoard();
 }
 function openPromoBoard(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePromoBoard)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closePromoBoard()" title="닫기" aria-label="닫기">✕</button><div id="promo-board-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePromoBoard)"><div class="modal" style="width:96vw;max-width:1100px;height:88vh;max-height:88vh;overflow:hidden;padding:0;position:relative;display:flex;flex-direction:column"><button class="modal-x" onclick="closePromoBoard()" title="닫기" aria-label="닫기" style="z-index:2">✕</button><div id="promo-board-body" style="flex:1;overflow:auto;padding:24px;text-align:center;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('promo-board');
   if(!el){el=document.createElement('div');el.id='promo-board';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -1530,7 +1536,9 @@ function renderPromoBoard(){
       const prog=r['프로그램']||'-';
       // 플랫폼 (P1 › P2)
       const platHtml=escapeHtml(plat1||'-')+(plat2?'<span style="color:#bbb;margin:0 4px">›</span>'+escapeHtml(plat2):'');
-      html+='<tr onclick="openPromoBoardRow(\''+dateKey+'\','+r._rowIndex+')" style="border-bottom:1px solid #f0f0f0;cursor:pointer;'+trBg+';'+trBorder+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
+      // stagger 애니메이션 delay (촤르륵)
+      const _animDelay=Math.min(idx*25,600)+'ms';
+      html+='<tr class="promo-row" onclick="openPromoBoardRow(\''+dateKey+'\','+r._rowIndex+')" style="border-bottom:1px solid #f0f0f0;cursor:pointer;'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
       html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:12px">'+escapeHtml(String(noVal))+'</td>';
       html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:'+sBg+';color:'+sColor+';font-size:11px;font-weight:600;white-space:nowrap">'+escapeHtml(status)+'</span></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';white-space:nowrap"><span style="font-variant-numeric:tabular-nums">'+m2+'/'+d2+'</span>'+todayBadge+'</td>';
