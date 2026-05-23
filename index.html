@@ -262,6 +262,24 @@ button{font-family:inherit;cursor:pointer}
 .panel-close:hover{background:var(--accent-light);color:var(--accent)}
 .panel-body{flex:1;padding:16px 24px;overflow-y:auto}
 .panel-empty{text-align:center;padding:40px 0;color:var(--dim);font-size:14px}
+/* === 사이드 패널 특수일정 섹션 === */
+.panel-sp-section{background:rgba(240,196,184,0.12);border:1px solid rgba(240,196,184,0.4);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.panel-sp-label{font-size:10.5px;color:#888;text-transform:uppercase;letter-spacing:0.6px;font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.panel-sp-label .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:#D88455;color:#fff;border-radius:9px;font-size:10px;font-weight:700;letter-spacing:0}
+.sp-card{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,0.85);border:1px solid rgba(216,132,85,0.18);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all 0.15s;position:relative}
+.sp-card:hover{background:#fff;border-color:rgba(216,132,85,0.4);box-shadow:0 2px 8px rgba(216,132,85,0.12);transform:translateY(-1px)}
+.sp-card:last-child{margin-bottom:0}
+.sp-card-time{font-size:11.5px;font-weight:700;color:var(--text);flex-shrink:0;min-width:88px;line-height:1.4;font-variant-numeric:tabular-nums}
+.sp-card-time .sep{color:var(--dim);font-weight:400;margin:0 3px}
+.sp-card-time .empty{color:var(--dim);font-weight:500}
+.sp-card-content{flex:1;min-width:0;overflow:hidden;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sp-card-type{font-size:12.5px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.sp-card-type.red{color:#E24B4A}
+.sp-card-type.blue{color:var(--accent)}
+.sp-card-person{font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis}
+.sp-card-label{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;margin-left:auto;flex-shrink:1}
+.sp-card-del{background:none;border:none;color:#ccc;cursor:pointer;padding:4px 6px;font-size:11px;border-radius:4px;flex-shrink:0;transition:all 0.15s;line-height:1}
+.sp-card-del:hover{color:#E24B4A;background:rgba(226,75,74,0.1)}
 .p-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .2s;cursor:pointer}
 .p-card:hover{box-shadow:0 4px 16px rgba(74,77,231,0.1);transform:translateY(-1px);border-color:rgba(74,77,231,0.2)}
 .p-card.done{opacity:0.55}
@@ -670,7 +688,8 @@ function renderSpecialMarquee(d,nm,past){
     const tipParts=[typeStr];
     if(it.person)tipParts.push(it.person);
     if(it.label)tipParts.push(it.label);
-    inner+='<div class="sp-item" title="'+escapeHtml(tipParts.join(' · '))+'">'+
+    const ctxAttr=userRole==='admin'?' oncontextmenu="onSpContextMenu(event,'+it._rowIndex+');return false;" style="cursor:context-menu"':'';
+    inner+='<div class="sp-item"'+ctxAttr+' title="'+escapeHtml(tipParts.join(' · '))+(userRole==='admin'?' (우클릭: 수정/삭제)':'')+'">'+
       '<span class="ev-time" style="color:'+timeCol+';font-weight:600">'+escapeHtml(startT)+'</span>'+
       '<span class="ev-plat" style="color:'+timeCol+';font-weight:600">'+escapeHtml(endStr)+'</span>'+
       '<span class="ev-title">'+
@@ -725,7 +744,8 @@ async function loadPromoSpecial(){
         end:it['종료일']||'',
         time:it['시간']||'',
         person:it['담당자']||'',
-        author:it['작성자']||''
+        author:it['작성자']||'',
+        kstStr:it['입력시간(KST)']||it['입력시간']||''
       };
     });
   }catch(e){
@@ -1286,13 +1306,20 @@ async function cancelPromoRequest(rowIndex){
 }
 
 // === 특별 일정 (교육/휴가/출장/회의) 등록 ===
-function openSpecialEntry(key){
+let _editingSpecial=null;
+function openSpecialEntry(key, editRowIndex){
   if(userRole!=='admin'){showToast('관리자만 등록 가능','error');return;}
-  const today=key||(function(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
+  // 수정 모드: editRowIndex로 PROMO_SPECIAL 찾기
+  _editingSpecial=null;
+  if(editRowIndex){
+    _editingSpecial=PROMO_SPECIAL.find(function(it){return it._rowIndex===editRowIndex;});
+  }
+  const isEdit=!!_editingSpecial;
+  const today=(_editingSpecial&&_editingSpecial.start)||key||(function(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
   const inpSt='width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit';
   const lbSt='display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px';
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeSpecialEntry)"><div class="modal" style="width:96vw;max-width:480px;padding:24px;position:relative;text-align:left"><button class="modal-x" onclick="closeSpecialEntry()" title="닫기" aria-label="닫기">✕</button>'+
-    '<h3 style="margin:0 0 4px">특별 일정 추가</h3>'+
+    '<h3 style="margin:0 0 4px">'+(isEdit?'특별 일정 수정':'특별 일정 추가')+'</h3>'+
     '<div style="font-size:11px;color:#888;margin-bottom:8px">교육·휴가·출장·회의 등 — 캘린더 셀에 한 줄로 표시됩니다</div>'+
     '<label style="'+lbSt+'">유형<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     '<select id="sp-type" style="'+inpSt+'"><option value="교육">교육</option><option value="휴가">휴가</option><option value="출장">출장</option><option value="회의">회의</option><option value="기타">기타</option></select>'+
@@ -1304,16 +1331,29 @@ function openSpecialEntry(key){
     '<input id="sp-time" type="text" placeholder="09:00 - 14:00" style="'+inpSt+'">'+
     '<label style="'+lbSt+'">담당자 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(선택)</span></label>'+
     '<input id="sp-person" type="text" placeholder="예: 황세웅" style="'+inpSt+'">'+
-    '<div style="display:flex;gap:8px;margin-top:18px"><button onclick="closeSpecialEntry()" class="m-btn cancel">취소</button><button onclick="saveSpecialEntry()" class="m-btn save" style="margin-left:auto">저장</button></div>'+
+    '<div style="display:flex;gap:8px;margin-top:18px"><button onclick="closeSpecialEntry()" class="m-btn cancel">취소</button>'+
+    (isEdit?'<button onclick="closeSpecialEntry();deleteSpecialEntry('+_editingSpecial._rowIndex+')" class="m-btn" style="background:#E24B4A;color:#fff;margin-left:auto">삭제</button>':'')+
+    '<button onclick="saveSpecialEntry()" class="m-btn save"'+(isEdit?'':' style="margin-left:auto"')+'>'+(isEdit?'수정 저장':'저장')+'</button></div>'+
     '</div></div>';
   let el=document.getElementById('special-entry');
   if(!el){el=document.createElement('div');el.id='special-entry';document.body.appendChild(el);}
   el.innerHTML=html;
-  setTimeout(function(){const lb=document.getElementById('sp-label');if(lb)lb.focus();},80);
+  setTimeout(function(){
+    if(isEdit&&_editingSpecial){
+      const ty=document.getElementById('sp-type');if(ty)ty.value=_editingSpecial.type||'기타';
+      const lb=document.getElementById('sp-label');if(lb)lb.value=_editingSpecial.label||'';
+      const st=document.getElementById('sp-start');if(st)st.value=_editingSpecial.start||'';
+      const en=document.getElementById('sp-end');if(en)en.value=_editingSpecial.end||'';
+      const tm=document.getElementById('sp-time');if(tm)tm.value=_editingSpecial.time||'';
+      const pn=document.getElementById('sp-person');if(pn)pn.value=_editingSpecial.person||'';
+    }
+    const lb=document.getElementById('sp-label');if(lb)lb.focus();
+  },80);
 }
 function closeSpecialEntry(){
   const el=document.getElementById('special-entry');
   if(el)el.innerHTML='';
+  _editingSpecial=null;
 }
 async function saveSpecialEntry(){
   if(userRole!=='admin'){showToast('관리자만 등록 가능','error');return;}
@@ -1330,24 +1370,79 @@ async function saveSpecialEntry(){
   // KST 시각
   const now=new Date();
   const kstStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
-  const serial='SP-'+Date.now();
   let author='admin';
   try{author=localStorage.getItem('myApplicant')||'admin';}catch(e){}
+  const isEdit=!!_editingSpecial;
+  const editTarget=_editingSpecial;  // 닫기 전에 보존
   showOverlayLoad();
   try{
-    // PromoSpecial 11컬럼: # / 입력시간(KST) / 시리얼 / 시작일 / 종료일 / 시간 / 유형 / 내용 / 담당자 / 작성자 / 비고
-    await api('POST','/api/sheet/special',{values:[
-      '',kstStr,serial,start,end,time||'',type,label,person,author,''
-    ]});
+    if(isEdit){
+      // 수정 — 기존 시리얼/입력시간/작성자 보존, 나머지만 새로
+      const values=['',editTarget.kstStr||kstStr,editTarget.id||('SP-'+Date.now()),start,end,time||'',type,label,person,editTarget.author||author,''];
+      await api('PATCH','/api/sheet/special/'+editTarget._rowIndex,{values:values});
+    }else{
+      const serial='SP-'+Date.now();
+      // 신규 — 11컬럼
+      await api('POST','/api/sheet/special',{values:['',kstStr,serial,start,end,time||'',type,label,person,author,'']});
+    }
     await loadPromoSpecial();
     closeSpecialEntry();
     renderCal();
-    showToast('특별 일정이 추가되었습니다 ('+type+')');
+    // 사이드 패널 열려있으면 재렌더
+    if(panelOpen&&selected){
+      const d=new Date(selected);
+      openPanel(d,getRecsForDate(d));
+    }
+    showToast(isEdit?'특별 일정이 수정되었습니다':'특별 일정이 추가되었습니다 ('+type+')');
   }catch(e){
-    showToast('저장 실패: '+(e.message||e),'error');
+    showToast((isEdit?'수정':'저장')+' 실패: '+(e.message||e),'error');
   }finally{
     hideOverlayLoad();
   }
+}
+// 삭제
+async function deleteSpecialEntry(rowIndex){
+  if(userRole!=='admin'){showToast('관리자만 가능','error');return;}
+  if(!confirm('이 특별 일정을 삭제하시겠습니까?'))return;
+  showOverlayLoad();
+  try{
+    await api('DELETE','/api/sheet/special/'+rowIndex);
+    await loadPromoSpecial();
+    renderCal();
+    if(panelOpen&&selected){
+      const d=new Date(selected);
+      openPanel(d,getRecsForDate(d));
+    }
+    showToast('특별 일정이 삭제되었습니다');
+  }catch(e){
+    showToast('삭제 실패: '+(e.message||e),'error');
+  }finally{
+    hideOverlayLoad();
+  }
+}
+// 우클릭 컨텍스트 메뉴
+function onSpContextMenu(event,rowIndex){
+  if(userRole!=='admin')return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeCellContextMenu();
+  const menu=document.createElement('div');
+  menu.id='cell-context-menu';
+  menu.innerHTML=
+    '<div class="ccm-item" onclick="closeCellContextMenu();openSpecialEntry(null,'+rowIndex+')"><span class="emo">✏️</span>수정</div>'+
+    '<div class="ccm-item" onclick="closeCellContextMenu();deleteSpecialEntry('+rowIndex+')"><span class="emo">🗑️</span>삭제</div>';
+  const mx=event.clientX,my=event.clientY;
+  document.body.appendChild(menu);
+  const rect=menu.getBoundingClientRect();
+  const x=Math.min(mx,window.innerWidth-rect.width-8);
+  const y=Math.min(my,window.innerHeight-rect.height-8);
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+  setTimeout(function(){
+    document.addEventListener('click',closeCellContextMenu,{once:true});
+    document.addEventListener('contextmenu',function(e){if(!e.target.closest('#cell-context-menu'))closeCellContextMenu();},{once:true});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeCellContextMenu();},{once:true});
+  },0);
 }
 
 // === 홍보 신청 검토 페이지 ===
@@ -4340,7 +4435,45 @@ function openPanel(dateObj,recs){
   panelOpen=true;var p=document.getElementById('panel'),dn=DAY_NAMES[dateObj.getDay()];
   document.getElementById('main-area').style.marginRight='360px';
   var h='<div class="panel-hdr"><div><div class="panel-date">'+(dateObj.getMonth()+1)+'월 '+dateObj.getDate()+'일</div><div class="panel-day">'+dn+'요일</div></div><button class="panel-close" onclick="closePanel()">✕</button></div><div class="panel-body">';
-  // === 홍보 일정 섹션 (먼저) ===
+  // === 특수 일정 섹션 (홍보 콘텐츠 위, 살구 톤 구분) ===
+  var dKey=dk(dateObj);
+  var spItems=(PROMO_SPECIAL||[]).filter(function(s){return dKey>=s.start&&dKey<=s.end;});
+  if(spItems.length>0){
+    var redTypes={'휴무':1,'출장':1,'휴가':1};
+    spItems.sort(function(a,b){
+      if(a.time&&!b.time)return -1;
+      if(!a.time&&b.time)return 1;
+      return (a.time||'').localeCompare(b.time||'');
+    });
+    h+='<div class="panel-sp-section">';
+    h+='<div class="panel-sp-label">특별 일정<span class="cnt">'+spItems.length+'</span></div>';
+    spItems.forEach(function(it){
+      var parsed=_parseSpTime(it.time);
+      var typeStr=it.type||'';
+      if(!parsed.s)typeStr='휴무';
+      var isRed=!!redTypes[typeStr];
+      var typeClass=isRed?'red':'blue';
+      // 시간 표시
+      var timeHtml='';
+      if(parsed.s&&parsed.e)timeHtml=escapeHtml(parsed.s)+'<span class="sep">~</span>'+escapeHtml(parsed.e);
+      else if(parsed.s)timeHtml=escapeHtml(parsed.s);
+      else timeHtml='<span class="empty">종일</span>';
+      // 클릭 (admin만)
+      var clickAttr=userRole==='admin'?' onclick="openSpecialEntry(null,'+it._rowIndex+')"':'';
+      var ctxAttr=userRole==='admin'?' oncontextmenu="onSpContextMenu(event,'+it._rowIndex+');return false;"':'';
+      h+='<div class="sp-card"'+clickAttr+ctxAttr+'>';
+      h+='<div class="sp-card-time">'+timeHtml+'</div>';
+      h+='<div class="sp-card-content">';
+      h+='<span class="sp-card-type '+typeClass+'">'+escapeHtml(typeStr)+'</span>';
+      if(it.person)h+='<span class="sp-card-person">'+escapeHtml(it.person)+'</span>';
+      if(it.label&&it.label!==typeStr)h+='<span class="sp-card-label">'+escapeHtml(it.label)+'</span>';
+      h+='</div>';
+      if(userRole==='admin')h+='<button class="sp-card-del" onclick="event.stopPropagation();deleteSpecialEntry('+it._rowIndex+')" title="삭제">✕</button>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  // === 홍보 일정 섹션 ===
   // 시간순 정렬
   var sortedRecs=recs.slice().sort(function(a,b){
     var ta=recTimeStr(a)||'99:99',tb=recTimeStr(b)||'99:99';
