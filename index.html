@@ -1084,6 +1084,35 @@ function modalBgClick(e,closeFn){
   }
 }
 
+// === admin 접수 처리 (대기 중 → 예정) ===
+async function approvePromoFromBoard(rowIndex){
+  if(userRole!=='admin'){showToast('관리자만 접수 가능','error');return;}
+  const r=records.find(function(x){return x._rowIndex===rowIndex;});
+  if(!r){showToast('신청을 찾을 수 없어요','error');return;}
+  if((r['진행 상태']||'')!=='대기 중'){showToast('대기 중 상태만 접수 가능','error');return;}
+  const title=r['콘텐츠 제목']||'(제목 없음)';
+  const ok=await showConfirm('"'+title+'"\n\n이 신청을 접수(예정)하시겠습니까?');
+  if(!ok)return;
+  showOverlayLoad();
+  try{
+    const row=[
+      r['#']||'',r['입력시간(KST)']||'',r['시리얼']||'',r['연도']||'',r['월']||'',r['일']||'',r['요일']||'',
+      r['플랫폼 1']||'',r['플랫폼 2']||'',r['콘텐츠 구분']||'',r['프로그램']||'',r['담당 부서']||'',
+      r['콘텐츠 제목']||'',r['콘텐츠 형식']||'',r['콘텐츠 내용']||'',r['게시 담당자']||'',
+      '예정',
+      r['비고']||''
+    ];
+    await api('PATCH','/api/records/'+rowIndex,{values:row});
+    await syncReload(0);
+    renderPromoBoard();
+    showToast('접수되었습니다 (예정)');
+  }catch(e){
+    showToast('접수 실패: '+(e.message||e),'error');
+  }finally{
+    hideOverlayLoad();
+  }
+}
+
 // === 본인/admin 완료 처리 (예정 → 완료) ===
 async function completePromoRequest(rowIndex){
   const r=records.find(function(x){return x._rowIndex===rowIndex;});
@@ -1389,7 +1418,7 @@ function renderPromoBoard(){
     html+='<th style="padding:10px 12px;text-align:left;width:70px">구분</th>';
     html+='<th style="padding:10px 12px;text-align:left">콘텐츠</th>';
     html+='<th style="padding:10px 12px;text-align:left;width:100px">신청자</th>';
-    html+='<th style="padding:10px 8px;text-align:center;width:70px">액션</th>';
+    html+='<th style="padding:10px 4px;text-align:center;width:60px">액션</th>';
     html+='</tr></thead><tbody>';
     rows.forEach(function(r,idx){
       const status=r['진행 상태']||'-';
@@ -1434,11 +1463,14 @@ function renderPromoBoard(){
       html+='<td style="padding:10px 12px;text-align:left;color:#666;font-size:11px;white-space:nowrap">'+escapeHtml(cat||'-')+'</td>';
       html+='<td style="padding:10px 12px;text-align:left;color:#222;font-weight:500">'+escapeHtml(title)+'<div style="font-size:11px;color:#888;font-weight:400;margin-top:2px">'+escapeHtml(prog)+'</div></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+'">'+escapeHtml(r['게시 담당자']||'-')+(isMine?' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:6px;margin-left:2px">나</span>':'')+'</td>';
-      // 액션 컬럼 — 예정 상태일 때만 완료 처리 (본인/admin)
+      // 액션 — 대기 중(admin만 접수) / 예정(본인·admin 완료)
+      const canApprove=isAdmin&&status==='대기 중';
       const canComplete=(isMine||isAdmin)&&status==='예정';
-      html+='<td style="padding:10px 8px;text-align:center;white-space:nowrap">';
-      if(canComplete){
-        html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리" style="padding:4px 10px;border-radius:8px;border:none;background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap" onmouseover="this.style.background=\'rgba(74,77,231,0.08)\'" onmouseout="this.style.background=\'transparent\'">완료</button>';
+      html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
+      if(canApprove){
+        html+='<button onclick="event.stopPropagation();approvePromoFromBoard('+r._rowIndex+')" title="신청 접수 (대기 중 → 예정)" style="padding:5px 14px;border-radius:8px;border:none;background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap" onmouseover="this.style.background=\'rgba(74,77,231,0.08)\'" onmouseout="this.style.background=\'transparent\'">접수</button>';
+      }else if(canComplete){
+        html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 14px;border-radius:8px;border:none;background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap" onmouseover="this.style.background=\'rgba(74,77,231,0.08)\'" onmouseout="this.style.background=\'transparent\'">완료</button>';
       }
       html+='</td>';
       html+='</tr>';
