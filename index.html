@@ -582,7 +582,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 <div class="confirm-bg" id="confirm-modal">
   <div class="confirm">
     <div class="confirm-title" id="confirm-title">예울마루 알림</div>
-    <div class="confirm-msg" id="confirm-msg">정말로 삭제하시겠습니까?</div>
+    <div class="confirm-msg" id="confirm-msg">정말로 삭제할래요?</div>
     <div class="confirm-acts" id="confirm-acts">
       <button class="c-btn no" onclick="confirmResolve(false)">취소</button>
       <button class="c-btn yes" onclick="confirmResolve(true)">확인</button>
@@ -1133,7 +1133,7 @@ function updateRoleTag(){
 }
 async function switchRole(){
   if(userRole==='admin'){
-    if(await showConfirm('일반 모드로 전환하시겠습니까?')){
+    if(await showConfirm('일반 모드로 전환할래요?')){
       userRole='user';
       password='0510';
       sessionStorage.setItem('pw','0510');
@@ -1141,7 +1141,7 @@ async function switchRole(){
       updateRoleTag();
       buildNav();
       render();
-      showToast('일반 모드로 전환됨');
+      showToast('일반 모드로 전환됐어요');
     }
   }else{
     showRolePrompt();
@@ -1185,7 +1185,7 @@ async function submitRolePrompt(){
       updateRoleTag();
       buildNav();
       render();
-      showToast('관리자 모드로 전환됨');
+      showToast('관리자 모드로 전환됐어요');
     }else{
       // 실패: 흔들기
       err.textContent=d.ok?'관리자 PIN이 아님':'잘못된 PIN';
@@ -1203,7 +1203,7 @@ async function submitRolePrompt(){
   }
 }
 async function logout(){
-  const ok=await showConfirm('로그아웃하시겠습니까?');
+  const ok=await showConfirm('로그아웃할래요?');
   if(!ok)return;
   sessionStorage.removeItem('pw');
   sessionStorage.removeItem('role');
@@ -1241,7 +1241,7 @@ function openAdminPanel(){
     {id:'users',label:'사용자 관리',desc:'담당자 + 여부 필터'},
     {id:'programs',label:'프로그램 관리',desc:'프로그램 등록·수정·삭제'}
   ];
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:520px"><h3 style="margin:0 0 4px">관리자 패널</h3><div style="font-size:12px;color:var(--dim);margin-bottom:18px">관리할 항목을 선택하세요</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div><div style="margin-top:18px;text-align:right"><button onclick="closeAdminPanel()" style="padding:8px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:520px"><h3 style="margin:0 0 4px">관리자 패널</h3><div style="font-size:12px;color:var(--dim);margin-bottom:18px">관리할 항목을 골라 주세요</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div><div style="margin-top:18px;text-align:right"><button onclick="closeAdminPanel()" style="padding:8px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -1277,12 +1277,12 @@ function modalBgClick(e,closeFn){
 
 // === admin 접수 처리 (대기 중 → 예정) ===
 async function approvePromoFromBoard(rowIndex){
-  if(userRole!=='admin'){showToast('관리자만 접수 가능','error');return;}
+  if(userRole!=='admin'){showToast('관리자만 접수할 수 있어요','error');return;}
   const r=records.find(function(x){return x._rowIndex===rowIndex;});
   if(!r){showToast('신청을 찾을 수 없어요','error');return;}
-  if((r['진행 상태']||'')!=='대기 중'){showToast('대기 중 상태만 접수 가능','error');return;}
+  if((r['진행 상태']||'')!=='대기 중'){showToast('대기 중 상태만 접수할 수 있어요','error');return;}
   const title=r['콘텐츠 제목']||'(제목 없음)';
-  const ok=await showConfirm('"'+title+'"\n\n이 신청을 접수(예정)하시겠습니까?');
+  const ok=await showConfirm('"'+title+'"\n\n이 신청을 접수(예정)할래요?');
   if(!ok)return;
   showOverlayLoad();
   try{
@@ -1296,7 +1296,7 @@ async function approvePromoFromBoard(rowIndex){
     await api('PATCH','/api/records/'+rowIndex,{values:row});
     await syncReload(0);
     renderPromoBoard();
-    showToast('접수되었습니다 (예정)');
+    showToast('접수됐어요 (예정)');
   }catch(e){
     showToast('접수 실패: '+(e.message||e),'error');
   }finally{
@@ -1317,7 +1317,7 @@ async function completePromoRequest(rowIndex){
   const status=r['진행 상태']||'';
   if(status!=='예정'){showToast('예정 상태의 신청만 완료 처리할 수 있어요','error');return;}
   const title=r['콘텐츠 제목']||'(제목 없음)';
-  const ok=await showConfirm('"'+title+'"\n\n게시 완료 처리하시겠습니까?');
+  const ok=await showConfirm('"'+title+'"\n\n게시 완료 처리할래요?');
   if(!ok)return;
   showOverlayLoad();
   try{
@@ -1331,7 +1331,7 @@ async function completePromoRequest(rowIndex){
     await api('PATCH','/api/records/'+rowIndex,{values:row});
     await syncReload(0);
     renderPromoBoard();
-    showToast('게시 완료 처리되었습니다');
+    showToast('게시 완료 처리됐어요');
   }catch(e){
     showToast('완료 처리 실패: '+(e.message||e),'error');
   }finally{
@@ -1355,7 +1355,7 @@ async function cancelPromoRequest(rowIndex){
   if(status==='취소'){showToast('이미 취소된 신청이에요','error');return;}
   // 확인
   const title=r['콘텐츠 제목']||'(제목 없음)';
-  const ok=await showConfirm('"'+title+'"\n\n이 홍보 신청을 취소하시겠습니까?');
+  const ok=await showConfirm('"'+title+'"\n\n이 홍보 신청을 취소할래요?');
   if(!ok)return;
   // PATCH — 전체 row의 진행 상태만 '취소'로 변경 (다른 필드 유지)
   showOverlayLoad();
@@ -1383,7 +1383,7 @@ async function cancelPromoRequest(rowIndex){
     await api('PATCH','/api/records/'+rowIndex,{values:row});
     await syncReload(0);
     renderPromoBoard();
-    showToast('신청이 취소되었습니다');
+    showToast('신청이 취소됐어요');
   }catch(e){
     showToast('취소 실패: '+(e.message||e),'error');
   }finally{
@@ -1394,7 +1394,7 @@ async function cancelPromoRequest(rowIndex){
 // === 특별 일정 (교육/휴가/출장/회의) 등록 ===
 let _editingSpecial=null;
 function openSpecialEntry(key, editRowIndex){
-  if(userRole!=='admin'){showToast('관리자만 등록 가능','error');return;}
+  if(userRole!=='admin'){showToast('관리자만 등록할 수 있어요','error');return;}
   // 수정 모드: editRowIndex로 PROMO_SPECIAL 찾기
   _editingSpecial=null;
   if(editRowIndex){
@@ -1419,7 +1419,7 @@ function openSpecialEntry(key, editRowIndex){
   chipsHtml+='</div><input type="hidden" id="sp-type" value="회의">';
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeSpecialEntry)"><div class="modal" style="width:96vw;max-width:480px;padding:24px;position:relative;text-align:left;background:linear-gradient(135deg,#E0F2FE 0%,#F0F9FF 100%);border:1px solid rgba(125,211,252,0.5)"><button class="modal-x" onclick="closeSpecialEntry()" title="닫기" aria-label="닫기">✕</button>'+
     '<h3 style="margin:0 0 4px">'+(isEdit?'담당자 일정 수정':'담당자 일정 추가')+'</h3>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:8px">홍보 담당자가 지정한 개별 일정 — 캘린더에 별개로 표시됩니다<br><span style="color:#aaa">※ 닫기 시 입력 내용은 저장되지 않습니다</span></div>'+
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">홍보 담당자가 지정한 개별 일정 — 캘린더에 별개로 표시돼요<br><span style="color:#aaa">※ 닫기 시 입력 내용은 저장되지 않아요</span></div>'+
     '<label style="'+lbSt+'">유형<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     chipsHtml+
     '<label style="'+lbSt+'">내용<span style="color:var(--peach);margin-left:3px">*</span></label>'+
@@ -1710,7 +1710,7 @@ function closeSpecialEntry(){
   if(_schedReturnFlag){_schedReturnFlag=false;setTimeout(function(){openPromoBoard();},50);}
 }
 async function saveSpecialEntry(){
-  if(userRole!=='admin'){showToast('관리자만 등록 가능','error');return;}
+  if(userRole!=='admin'){showToast('관리자만 등록할 수 있어요','error');return;}
   let type=document.getElementById('sp-type').value;
   // 기타 input에 값이 있으면 그걸 type으로
   const otherInput=document.getElementById('sp-type-other');
@@ -1734,13 +1734,13 @@ async function saveSpecialEntry(){
   else if(tStart)time=tStart;
   else if(tEnd)time=tEnd;
   const person=(document.getElementById('sp-person').value||'').trim();
-  if(!label){showFieldError('sp-label','내용을 입력해주세요');return;}
-  if(!start){showFieldError('sp-start','시작일을 입력해주세요');return;}
+  if(!label){showFieldError('sp-label','내용을 입력해 주세요');return;}
+  if(!start){showFieldError('sp-start','시작일을 입력해 주세요');return;}
   if(!end)end=start;
   if(end<start){showFieldError('sp-end','종료일은 시작일 이후여야 합니다');return;}
   // 시간 필수 — 빈값 + 미정 OFF면 에러
   if(!tStart&&!tsUnset){showFieldError('sp-time-start','시간을 입력하거나 미정 표시');return;}
-  if(!person){showFieldError('sp-person','담당자를 선택해주세요');return;}
+  if(!person){showFieldError('sp-person','담당자를 골라 주세요');return;}
   // KST 시각
   const now=new Date();
   const kstStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
@@ -1767,7 +1767,7 @@ async function saveSpecialEntry(){
       const d=new Date(selected);
       openPanel(d,getRecsForDate(d));
     }
-    showToast(isEdit?'담당자 일정이 수정되었습니다':'담당자 일정이 추가되었습니다 ('+type+')');
+    showToast(isEdit?'담당자 일정이 수정했어요':'담당자 일정이 추가했어요 ('+type+')');
   }catch(e){
     showToast((isEdit?'수정':'저장')+' 실패: '+(e.message||e),'error');
   }finally{
@@ -1776,8 +1776,8 @@ async function saveSpecialEntry(){
 }
 // 삭제
 async function deleteSpecialEntry(rowIndex){
-  if(userRole!=='admin'){showToast('관리자만 가능','error');return;}
-  if(!await showConfirm('이 담당자 일정을 삭제하시겠습니까?',{title:'담당자 일정 삭제',okText:'삭제',danger:true}))return;
+  if(userRole!=='admin'){showToast('관리자만 할 수 있어요','error');return;}
+  if(!await showConfirm('이 담당자 일정을 삭제할래요?',{title:'담당자 일정 삭제',okText:'삭제',danger:true}))return;
   showOverlayLoad();
   try{
     await api('DELETE','/api/sheet/special/'+rowIndex);
@@ -1787,7 +1787,7 @@ async function deleteSpecialEntry(rowIndex){
       const d=new Date(selected);
       openPanel(d,getRecsForDate(d));
     }
-    showToast('담당자 일정이 삭제되었습니다');
+    showToast('담당자 일정이 삭제됐어요');
   }catch(e){
     showToast('삭제 실패: '+(e.message||e),'error');
   }finally{
@@ -2119,7 +2119,7 @@ function renderPromoBoard(){
   // === 빈 상태 처리 ===
   // 본인 신청 한 적 없는 user (admin은 본인 개념 없어서 표시 안 함)
   if(!isAdmin&&!myApplicant){
-    html+='<div style="background:#FFF4DC;color:#C97A11;padding:10px 14px;border-radius:10px;font-size:12px;margin-bottom:10px;text-align:left">아직 본인 신청 내역이 없어요. 새 신청을 작성하면 이후 본인 신청만 표시됩니다.</div>';
+    html+='<div style="background:#FFF4DC;color:#C97A11;padding:10px 14px;border-radius:10px;font-size:12px;margin-bottom:10px;text-align:left">아직 본인 신청 내역이 없어요. 새 신청을 작성하면 이후 본인 신청만 표시돼요.</div>';
   }
   // === 리스트 ===
   if(rows.length===0){
@@ -2378,7 +2378,7 @@ async function closePromoWizard(force){
     return;
   }
   // 진행 중 → confirm
-  const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫으시겠습니까?');
+  const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을래요?');
   if(ok)document.getElementById('promo-wizard').classList.remove('show');
 }
 function renderPwStep(){
@@ -2400,7 +2400,7 @@ function renderPwStep(){
       {label:'대관',items:activePerfs.filter(function(p){return p.t==='r';})}
     ];
     let html='<div class="pw-question">어떤 프로그램의 홍보를 신청하시겠어요?</div>';
-    html+='<div class="pw-hint">현재 판매 중인 프로그램에서 선택하거나, 항목이 없으면 직접 입력해주세요</div>';
+    html+='<div class="pw-hint">현재 판매 중인 프로그램에서 선택하거나, 항목이 없으면 직접 입력해 주세요</div>';
     const inputStyle='width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit';
     html+='<select id="pw-program" onchange="onPwProgSelect(this)" style="'+inputStyle+'">';
     html+='<option value="">선택</option>';
@@ -2451,7 +2451,7 @@ function renderPwStep(){
   }else if(_pwStep===2){
     // Step 2: 콘텐츠 제목
     let html='<div class="pw-question">콘텐츠 제목을 지어주세요</div>';
-    html+='<div class="pw-hint">관리자가 알아보기 쉬운 콘텐츠 제목을 입력해주세요</div>';
+    html+='<div class="pw-hint">관리자가 알아보기 쉬운 콘텐츠 제목을 입력해 주세요</div>';
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">콘텐츠 제목<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<input id="pw-title" type="text" value="'+escapeHtml(_pwData.title)+'" placeholder="예: 6월 공연 홍보" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box">';
     body.innerHTML=html;
@@ -2460,7 +2460,7 @@ function renderPwStep(){
   }else if(_pwStep===3){
     // Step 3: 언제 홍보할까요? (날짜 + 시간 30분 단위 + 판매기간 검증)
     let html='<div class="pw-question">언제 홍보할까요?</div>';
-    html+='<div class="pw-hint">'+(_pwData.fromCalendar?'캘린더에서 선택한 날짜로 자동 입력됐어요. 시간만 선택해주세요 · 날짜는 클릭해서 변경 가능':'게시 희망 날짜와 시간을 선택해주세요')+'</div>';
+    html+='<div class="pw-hint">'+(_pwData.fromCalendar?'캘린더에서 선택한 날짜로 자동 입력됐어요. 시간만 골라 주세요 · 날짜는 클릭해서 변경 가능':'게시 희망 날짜와 시간을 골라 주세요')+'</div>';
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">날짜<span style="color:var(--peach);margin-left:3px">*</span>'+(_pwData.fromCalendar?' <span style="color:var(--accent);font-weight:600;text-transform:none;letter-spacing:0;margin-left:4px">📅 캘린더 선택</span>':'')+'</label>';
     html+='<input id="pw-date" type="date" value="'+escapeHtml(_pwData.date)+'" onchange="onPwDateChange()" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid '+(_pwData.fromCalendar?'rgba(74,77,231,0.3)':'rgba(0,0,0,0.06)')+';border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
     html+='<div id="pw-date-warn" style="margin-top:8px"></div>';
@@ -2609,18 +2609,18 @@ function validatePwStep(){
   if(_pwMode==='admin')return validateAwStep();
   if(_pwStep===1){
     if(_pwData.isCustom){
-      if(!_pwData.customName){showFieldError('pw-custom-name','프로그램명을 입력해주세요');return false;}
-      if(!_pwData.customCat){showFieldError('pw-custom-cat','콘텐츠 구분을 선택해주세요');return false;}
+      if(!_pwData.customName){showFieldError('pw-custom-name','프로그램명을 입력해 주세요');return false;}
+      if(!_pwData.customCat){showFieldError('pw-custom-cat','콘텐츠 구분을 골라 주세요');return false;}
       _pwData.program=_pwData.customName;
       _pwData.programType=_pwData.customCat;
     }else{
-      if(!_pwData.program){showFieldError('pw-program','프로그램을 선택해주세요');return false;}
+      if(!_pwData.program){showFieldError('pw-program','프로그램을 골라 주세요');return false;}
     }
   }else if(_pwStep===2){
-    if(!_pwData.title){showFieldError('pw-title','콘텐츠 제목을 입력해주세요');return false;}
+    if(!_pwData.title){showFieldError('pw-title','콘텐츠 제목을 입력해 주세요');return false;}
   }else if(_pwStep===3){
-    if(!_pwData.date){showFieldError('pw-date','날짜를 선택해주세요');return false;}
-    if(!_pwData.time){showFieldError('pw-time','시간을 선택해주세요');return false;}
+    if(!_pwData.date){showFieldError('pw-date','날짜를 골라 주세요');return false;}
+    if(!_pwData.time){showFieldError('pw-time','시간을 골라 주세요');return false;}
     // 판매기간 검증은 경고만, 진행은 허용
   }else if(_pwStep===4){
     return validatePwSubStep();
@@ -2927,7 +2927,7 @@ function renderPwSubPlat(body,next){
   // "기타"가 데이터에 없으면 추가
   if(plat1s.indexOf('기타')<0)plat1s.push('기타');
   let html='<div class="pw-question">어디에 홍보하시겠어요?</div>';
-  html+='<div class="pw-hint">먼저 플랫폼을 선택해주세요</div>';
+  html+='<div class="pw-hint">먼저 플랫폼을 골라 주세요</div>';
   html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">플랫폼<span style="color:var(--peach);margin-left:3px">*</span></label>';
   html+='<select id="pw-plat1" onchange="onPwPlat1Change()" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit"><option value="">선택</option>';
   plat1s.forEach(function(p){html+='<option value="'+escapeHtml(p)+'"'+(_pwData.plat1===p?' selected':'')+'>'+escapeHtml(p)+'</option>';});
@@ -2949,7 +2949,7 @@ function renderPwSubPlat(body,next){
 // === Step 4 — 콘텐츠 형식 선택 ===
 function renderPwSubFormat(body,next){
   let html='<div class="pw-question">어떤 형식의 콘텐츠인가요?</div>';
-  html+='<div class="pw-hint">콘텐츠 형식을 선택해주세요</div>';
+  html+='<div class="pw-hint">콘텐츠 형식을 골라 주세요</div>';
   // 카카오/인스타는 이미지·영상만 (텍스트는 별도 step) · 그 외는 텍스트 포함
   const p1=_pwData.plat1;
   const formats=(p1==='카카오톡'||p1==='인스타그램')?['이미지','영상']:['이미지','영상','텍스트'];
@@ -3010,9 +3010,9 @@ function renderPwSubDetail(body,next){
     // 카카오톡 — 76자 제한
     if(p1==='카카오톡'){
       html='<div class="pw-question">카카오톡 텍스트를 작성해주세요</div>';
-      html+='<div class="pw-hint">76자까지 입력 가능합니다</div>';
+      html+='<div class="pw-hint">76자까지 입력할 수 있어요</div>';
       html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span></label>';
-      html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="76자까지 입력 가능합니다" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
+      html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="76자까지 입력할 수 있어요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
       html+='<div style="display:flex;justify-content:flex-end;margin-top:6px"><span id="pw-kakao-count" style="font-size:11px;color:#888">'+(_pwData.kakaoText||'').length+' / 76</span></div>';
       body.innerHTML=html;next.textContent='다음';return;
     }
@@ -3020,12 +3020,12 @@ function renderPwSubDetail(body,next){
     if(p1==='인스타그램'){
       const tpl=_pwData.instaText||getInstaTemplate();
       html='<div class="pw-question">인스타그램 본문을 작성해주세요</div>';
-      html+='<div class="pw-hint">일정·장소·가격 등 프로그램 개요를 포함한 팔로워 소개 문구를 입력해주세요</div>';
+      html+='<div class="pw-hint">일정·장소·가격 등 프로그램 개요를 포함한 팔로워 소개 문구를 입력해 주세요</div>';
       html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px">';
       html+='<label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문 (틀 제공)<span style="color:var(--peach);margin-left:3px">*</span></label>';
       html+='<button type="button" onclick="pwCopyContentNoHash(\'pw-insta-text\')" style="padding:5px 10px;background:#F0F0F8;border:1px solid rgba(0,0,0,0.08);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:#555">📋 # 제외 복사</button>';
       html+='</div>';
-      html+='<div style="font-size:11px;color:#999;margin-bottom:6px">※ 복사 시 # 으로 시작하는 헤더 줄은 제외됩니다</div>';
+      html+='<div style="font-size:11px;color:#999;margin-bottom:6px">※ 복사 시 # 으로 시작하는 헤더 줄은 제외돼요</div>';
       html+='<textarea id="pw-insta-text" rows="18" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.6">'+escapeHtml(tpl)+'</textarea>';
       body.innerHTML=html;next.textContent='다음';return;
     }
@@ -3033,12 +3033,12 @@ function renderPwSubDetail(body,next){
     if(p1==='B2B'&&p2==='GS칼텍스 여수공장 인트라넷'){
       const tpl=_pwData.b2bIntraText||getB2BIntraTemplate();
       html='<div class="pw-question">B2B 인트라넷 본문을 작성해주세요</div>';
-      html+='<div class="pw-hint">일정·장소·가격 등 프로그램 개요를 포함한 소개 문구를 입력해주세요</div>';
+      html+='<div class="pw-hint">일정·장소·가격 등 프로그램 개요를 포함한 소개 문구를 입력해 주세요</div>';
       html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px">';
       html+='<label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문 (틀 제공)<span style="color:var(--peach);margin-left:3px">*</span></label>';
       html+='<button type="button" onclick="pwCopyContentNoHash(\'pw-b2b-text\')" style="padding:5px 10px;background:#F0F0F8;border:1px solid rgba(0,0,0,0.08);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:#555">📋 # 제외 복사</button>';
       html+='</div>';
-      html+='<div style="font-size:11px;color:#999;margin-bottom:6px">※ 복사 시 # 으로 시작하는 헤더 줄은 제외됩니다</div>';
+      html+='<div style="font-size:11px;color:#999;margin-bottom:6px">※ 복사 시 # 으로 시작하는 헤더 줄은 제외돼요</div>';
       html+='<textarea id="pw-b2b-text" rows="16" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.6">'+escapeHtml(tpl)+'</textarea>';
       body.innerHTML=html;next.textContent='다음';return;
     }
@@ -3052,7 +3052,7 @@ function renderPwSubDetail(body,next){
     }
   }
   // 폴백 — 형식 미설정 등
-  html='<div class="pw-question">형식을 먼저 선택해주세요</div>';
+  html='<div class="pw-question">형식을 먼저 골라 주세요</div>';
   html+='<div class="pw-hint">이전 화면으로 돌아가서 형식을 골라주세요</div>';
   body.innerHTML=html;
   next.textContent='다음';
@@ -3064,19 +3064,19 @@ function renderPwSubText(body,next){
   let html='';
   if(p1==='카카오톡'){
     html+='<div class="pw-question">카카오톡 텍스트를 작성해주세요</div>';
-    html+='<div class="pw-hint">'+escapeHtml(_pwData.format||'이미지/영상')+' + 텍스트가 함께 발송됩니다 · 76자까지 입력 가능합니다</div>';
+    html+='<div class="pw-hint">'+escapeHtml(_pwData.format||'이미지/영상')+' + 텍스트가 함께 발송돼요 · 76자까지 입력할 수 있어요</div>';
     html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span></label>';
-    html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="76자까지 입력 가능합니다" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
+    html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="76자까지 입력할 수 있어요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
     html+='<div style="display:flex;justify-content:flex-end;margin-top:6px"><span id="pw-kakao-count" style="font-size:11px;color:#888">'+(_pwData.kakaoText||'').length+' / 76</span></div>';
   }else if(p1==='인스타그램'){
     const tpl=_pwData.instaText||getInstaTemplate();
     html+='<div class="pw-question">인스타그램 본문을 작성해주세요</div>';
-    html+='<div class="pw-hint">'+escapeHtml(_pwData.format||'이미지/영상')+' + 본문이 함께 게시됩니다 · 일정·장소·가격 등 프로그램 개요를 포함한 팔로워 소개 문구를 입력해주세요</div>';
+    html+='<div class="pw-hint">'+escapeHtml(_pwData.format||'이미지/영상')+' + 본문이 함께 게시돼요 · 일정·장소·가격 등 프로그램 개요를 포함한 팔로워 소개 문구를 입력해 주세요</div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px">';
     html+='<label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문 (틀 제공)<span style="color:var(--peach);margin-left:3px">*</span></label>';
     html+='<button type="button" onclick="pwCopyContentNoHash(\'pw-insta-text\')" style="padding:5px 10px;background:#F0F0F8;border:1px solid rgba(0,0,0,0.08);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:#555">📋 # 제외 복사</button>';
     html+='</div>';
-    html+='<div style="font-size:11px;color:#999;margin-bottom:6px">※ 복사 시 # 으로 시작하는 헤더 줄은 제외됩니다</div>';
+    html+='<div style="font-size:11px;color:#999;margin-bottom:6px">※ 복사 시 # 으로 시작하는 헤더 줄은 제외돼요</div>';
     html+='<textarea id="pw-insta-text" rows="18" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.6">'+escapeHtml(tpl)+'</textarea>';
   }else{
     html+='<div class="pw-question">텍스트 입력</div>';
@@ -3099,7 +3099,7 @@ function renderPwSubIntent(body,next){
 
 // === Step 4 — 블로그·맘카페 (글 방향 + 참고자료 통합) ===
 function renderPwSubBlog(body,next){
-  let html='<div class="pw-question">블로그·맘카페 콘텐츠 정보를 입력해주세요</div>';
+  let html='<div class="pw-question">블로그·맘카페 콘텐츠 정보를 입력해 주세요</div>';
   html+='<div class="pw-hint">글 작성 방향과 참고 자료를 알려주세요</div>';
   html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">글 작성 방향<span style="color:var(--peach);margin-left:3px">*</span></label>';
   html+='<div style="font-size:12px;color:#666;margin-bottom:6px">프로그램의 기획 의도, 글의 작성 방향 등을 구체적으로 명시해주세요. (최소 100자)</div>';
@@ -3117,8 +3117,8 @@ function renderPwSubBlog(body,next){
 
 // === Step 4 — B2B 인트라넷 c) 링크 ===
 function renderPwSubB2BLink(body,next){
-  let html='<div class="pw-question">B2B 구매 링크를 입력해주세요</div>';
-  html+='<div class="pw-hint">전용 B2B 구매 링크가 있으면 입력해주세요. 없으면 홈페이지 링크를 입력해주세요.</div>';
+  let html='<div class="pw-question">B2B 구매 링크를 입력해 주세요</div>';
+  html+='<div class="pw-hint">전용 B2B 구매 링크가 있으면 입력해 주세요. 없으면 홈페이지 링크를 입력해 주세요.</div>';
   html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">B2B 링크 또는 홈페이지 링크<span style="color:var(--peach);margin-left:3px">*</span></label>';
   html+='<input id="pw-b2b-link" type="url" value="'+escapeHtml(_pwData.b2bLink)+'" placeholder="https://..." style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
   body.innerHTML=html;
@@ -3389,56 +3389,56 @@ function collectPwSubStep(){
 function validatePwSubStep(){
   const key=currentPwSubKey();
   if(key==='plat'){
-    if(!_pwData.plat1){showFieldError('pw-plat1','플랫폼을 선택해주세요');return false;}
+    if(!_pwData.plat1){showFieldError('pw-plat1','플랫폼을 골라 주세요');return false;}
     if(_pwData.plat1==='기타'){
-      if(!_pwData.customPlatform){showFieldError('pw-custom-platform','플랫폼명을 직접 입력해주세요');return false;}
+      if(!_pwData.customPlatform){showFieldError('pw-custom-platform','플랫폼명을 직접 입력해 주세요');return false;}
     }else{
       const plat2s=PLATFORMS.filter(function(p){return p['플랫폼1']===_pwData.plat1&&p['플랫폼2']&&p['플랫폼2']!=='-';});
-      if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showFieldError('pw-plat2','세부 채널을 선택해주세요');return false;}
+      if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showFieldError('pw-plat2','세부 채널을 골라 주세요');return false;}
     }
   }else if(key==='format'){
     // 라디오 박스는 인라인 에러 부착 어색 → toast 유지
-    if(!_pwData.format){showToast('콘텐츠 형식을 선택해주세요','error');return false;}
+    if(!_pwData.format){showToast('콘텐츠 형식을 골라 주세요','error');return false;}
   }else if(key==='detail'){
     const p1=_pwData.plat1,p2=_pwData.plat2,fmt=_pwData.format;
     if(p1==='B2B'&&p2==='여수시청 홈페이지'){
-      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
+      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해 주세요');return false;}
     }else if(p1==='B2B'&&p2==='GS칼텍스 여수공장 식당'){
-      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
+      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해 주세요');return false;}
     }else if(fmt==='이미지'||fmt==='영상'){
-      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
+      if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해 주세요');return false;}
     }else if(fmt==='텍스트'){
-      if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showFieldError('pw-kakao-text','본문을 입력해주세요');return false;}
-      if(p1==='인스타그램'&&!_pwData.instaText.trim()){showFieldError('pw-insta-text','본문을 입력해주세요');return false;}
-      if(p1==='B2B'&&p2==='GS칼텍스 여수공장 인트라넷'&&!_pwData.b2bIntraText.trim()){showFieldError('pw-b2b-text','본문을 입력해주세요');return false;}
-      if(p1==='기타'&&!(_pwData.freeText||'').trim()){showFieldError('pw-free-text','본문을 입력해주세요');return false;}
+      if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showFieldError('pw-kakao-text','본문을 입력해 주세요');return false;}
+      if(p1==='인스타그램'&&!_pwData.instaText.trim()){showFieldError('pw-insta-text','본문을 입력해 주세요');return false;}
+      if(p1==='B2B'&&p2==='GS칼텍스 여수공장 인트라넷'&&!_pwData.b2bIntraText.trim()){showFieldError('pw-b2b-text','본문을 입력해 주세요');return false;}
+      if(p1==='기타'&&!(_pwData.freeText||'').trim()){showFieldError('pw-free-text','본문을 입력해 주세요');return false;}
     }
   }else if(key==='text'){
     const p1=_pwData.plat1;
-    if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showFieldError('pw-kakao-text','본문을 입력해주세요 (최대 76자)');return false;}
-    if(p1==='인스타그램'&&!_pwData.instaText.trim()){showFieldError('pw-insta-text','본문을 입력해주세요');return false;}
+    if(p1==='카카오톡'&&!_pwData.kakaoText.trim()){showFieldError('pw-kakao-text','본문을 입력해 주세요 (최대 76자)');return false;}
+    if(p1==='인스타그램'&&!_pwData.instaText.trim()){showFieldError('pw-insta-text','본문을 입력해 주세요');return false;}
   }else if(key==='intent'){
-    if(!(_pwData.intent||'').trim()){showFieldError('pw-intent','홍보 의도를 입력해주세요');return false;}
+    if(!(_pwData.intent||'').trim()){showFieldError('pw-intent','홍보 의도를 입력해 주세요');return false;}
   }else if(key==='blog'){
     if(!_pwData.blogDirection||_pwData.blogDirection.length<100){showFieldError('pw-blog-dir','글 작성 방향을 최소 100자 이상 작성해주세요');return false;}
-    if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해주세요');return false;}
+    if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해 주세요');return false;}
   }else if(key==='b2b_link'){
-    if(!_pwData.b2bLink){showFieldError('pw-b2b-link','B2B 또는 홈페이지 링크를 입력해주세요');return false;}
+    if(!_pwData.b2bLink){showFieldError('pw-b2b-link','B2B 또는 홈페이지 링크를 입력해 주세요');return false;}
   }else if(key==='sms_target'){
     if(!_pwData.residenceAny){
-      if(!_pwData.residence){showFieldError('pw-residence','거주지를 선택해주세요');return false;}
-      if(_pwData.residence==='기타'&&!_pwData.residenceCustom){showFieldError('pw-residence-custom','거주지를 직접 입력해주세요');return false;}
+      if(!_pwData.residence){showFieldError('pw-residence','거주지를 골라 주세요');return false;}
+      if(_pwData.residence==='기타'&&!_pwData.residenceCustom){showFieldError('pw-residence-custom','거주지를 직접 입력해 주세요');return false;}
     }
     if(!_pwData.genreAny){
-      if(!_pwData.genre){showFieldError('pw-genre','관심 장르를 입력해주세요');return false;}
+      if(!_pwData.genre){showFieldError('pw-genre','관심 장르를 입력해 주세요');return false;}
     }
     if(!_pwData.ageAny){
-      if(!_pwData.ageRanges||_pwData.ageRanges.length===0){showToast('연령대를 설정해주세요','error');return false;}
+      if(!_pwData.ageRanges||_pwData.ageRanges.length===0){showToast('연령대를 설정해 주세요','error');return false;}
     }
   }else if(key==='sms_body'){
-    if(!_pwData.smsBody.trim()){showFieldError('pw-sms-body','문자 본문을 입력해주세요');return false;}
+    if(!_pwData.smsBody.trim()){showFieldError('pw-sms-body','문자 본문을 입력해 주세요');return false;}
   }else if(key==='author'){
-    if(!_pwData.applicant){showFieldError('pw-applicant','게시자를 선택해주세요');return false;}
+    if(!_pwData.applicant){showFieldError('pw-applicant','게시자를 골라 주세요');return false;}
   }
   return true;
 }
@@ -3485,7 +3485,7 @@ function pwCopyContentNoHash(textareaId){
   });
   const text=out.join('\n').trim();
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(function(){showToast('복사되었습니다 (# 제외)');},function(){fallbackCopy(text);});
+    navigator.clipboard.writeText(text).then(function(){showToast('복사했어요 (# 제외)');},function(){fallbackCopy(text);});
   }else{
     fallbackCopy(text);
   }
@@ -3496,7 +3496,7 @@ function fallbackCopy(text){
     ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();
     document.execCommand('copy');document.body.removeChild(ta);
-    showToast('복사되었습니다 (# 제외)');
+    showToast('복사했어요 (# 제외)');
   }catch(e){showToast('복사 실패: '+e.message,'error');}
 }
 
@@ -3593,8 +3593,8 @@ function renderAwStep(body,next,bar){
   const reqStar='<span style="color:var(--peach);margin-left:3px">*</span>';
   if(_pwStep===1){
     // 담당자 선택
-    let html='<div class="pw-question">담당자를 선택해주세요</div>';
-    html+='<div class="pw-hint">콘텐츠를 게시할 담당자를 선택해주세요</div>';
+    let html='<div class="pw-question">담당자를 골라 주세요</div>';
+    html+='<div class="pw-hint">콘텐츠를 게시할 담당자를 골라 주세요</div>';
     html+='<label style="'+labelStyle+'">게시 담당자'+reqStar+'</label>';
     html+='<select id="aw-author" style="'+inputStyle+'"><option value="">선택</option>';
     PR_MANAGERS.forEach(function(m){const n=m['담당자'];html+='<option value="'+escapeHtml(n)+'"'+(_pwData.author===n?' selected':'')+'>'+escapeHtml(n)+'</option>';});
@@ -3604,7 +3604,7 @@ function renderAwStep(body,next,bar){
   }else if(_pwStep===2){
     // 언제
     let html='<div class="pw-question">언제 홍보하나요?</div>';
-    html+='<div class="pw-hint">게시할 날짜와 시간을 선택해주세요</div>';
+    html+='<div class="pw-hint">게시할 날짜와 시간을 골라 주세요</div>';
     html+='<label style="'+labelStyle+'">날짜'+reqStar+'</label>';
     html+='<input id="aw-date" type="date" value="'+escapeHtml(_pwData.date)+'" style="'+inputStyle+'">';
     html+='<label style="'+labelStyle+'">시간 <span style="font-size:10px;color:#999;font-weight:400;text-transform:none;margin-left:6px;letter-spacing:0">🖱 스크롤로 조정 가능해요</span></label>';
@@ -3614,7 +3614,7 @@ function renderAwStep(body,next,bar){
   }else if(_pwStep===3){
     // 어디에
     let html='<div class="pw-question">어디에 홍보하나요?</div>';
-    html+='<div class="pw-hint">플랫폼을 선택해주세요</div>';
+    html+='<div class="pw-hint">플랫폼을 골라 주세요</div>';
     const plat1s=[...new Set(PLATFORMS.map(function(p){return p['플랫폼1'];}))];
     html+='<label style="'+labelStyle+'">플랫폼 1'+reqStar+'</label>';
     html+='<select id="aw-plat1" onchange="onAwPlat1Change()" style="'+inputStyle+'"><option value="">선택</option>';
@@ -3626,7 +3626,7 @@ function renderAwStep(body,next,bar){
   }else if(_pwStep===4){
     // 어떤 것
     let html='<div class="pw-question">어떤 것을 홍보하나요?</div>';
-    html+='<div class="pw-hint">콘텐츠 정보를 입력해주세요</div>';
+    html+='<div class="pw-hint">콘텐츠 정보를 입력해 주세요</div>';
     html+='<label style="'+labelStyle+'">콘텐츠 구분</label>';
     html+='<select id="aw-cat" onchange="awFocusNext(\'aw-program\')" style="'+inputStyle+'"><option value="">선택</option>';
     CONTENT_TYPES.forEach(function(t){html+='<option value="'+escapeHtml(t)+'"'+(_pwData.cat===t?' selected':'')+'>'+escapeHtml(t)+'</option>';});
@@ -3749,14 +3749,14 @@ function collectAwStep(){
   }
 }
 function validateAwStep(){
-  if(_pwStep===1){if(!_pwData.author){showToast('담당자를 선택해주세요','error');return false;}}
-  else if(_pwStep===2){if(!_pwData.date){showToast('날짜를 선택해주세요','error');return false;}}
+  if(_pwStep===1){if(!_pwData.author){showToast('담당자를 골라 주세요','error');return false;}}
+  else if(_pwStep===2){if(!_pwData.date){showToast('날짜를 골라 주세요','error');return false;}}
   else if(_pwStep===3){
-    if(!_pwData.plat1){showToast('플랫폼을 선택해주세요','error');return false;}
+    if(!_pwData.plat1){showToast('플랫폼을 골라 주세요','error');return false;}
     const plat2s=PLATFORMS.filter(function(p){return p['플랫폼1']===_pwData.plat1&&p['플랫폼2']&&p['플랫폼2']!=='-';});
-    if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showToast('플랫폼 2를 선택해주세요','error');return false;}
+    if(plat2s.length>0&&(!_pwData.plat2||_pwData.plat2==='-')){showToast('플랫폼 2를 골라 주세요','error');return false;}
   }
-  else if(_pwStep===4){if(!_pwData.title){showToast('콘텐츠 제목을 입력해주세요','error');return false;}}
+  else if(_pwStep===4){if(!_pwData.title){showToast('콘텐츠 제목을 입력해 주세요','error');return false;}}
   return true;
 }
 async function submitAdminEntry(){
@@ -3790,7 +3790,7 @@ async function submitAdminEntry(){
     await api('POST','/api/records',{values:row});
     await syncReload();
     closePromoWizard(true);
-    showToast('등록되었습니다');
+    showToast('등록됐어요');
   }catch(e){
     showToast('등록 실패: '+e.message,'error');
   }finally{
@@ -3920,11 +3920,11 @@ function buildScheduleListHtml(rows){
   html+='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#555;background:#fafafa;padding:6px 12px;border:1px solid #ddd;border-radius:8px;user-select:none"><input type="checkbox" onchange="toggleHidePast(this.checked)"'+(_schedFilter.hidePast?' checked':'')+' style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)"> 지난 일정 감추기</label>';
   if(_schedFilter.month!=='all'||_schedFilter.cat!=='all'||_schedFilter.status!=='all'||_schedFilter.q)
     html+='<button onclick="resetSchedFilter()" style="padding:5px 12px;background:#fafafa;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:11px;color:#666">필터 초기화</button>';
-  html+='<span style="font-size:11px;color:#888;margin-left:auto">'+(isAdmin?'💡 row 클릭 = 수정':'🔒 관리자만 수정 가능')+'</span>';
+  html+='<span style="font-size:11px;color:#888;margin-left:auto">'+(isAdmin?'💡 row 클릭 = 수정':'🔒 관리자만 수정할 수 있어요')+'</span>';
   html+='</div>';
   
   if(displayRows.length===0){
-    html+='<div style="padding:40px;text-align:center;color:#888">조건에 맞는 일정이 없음</div>';
+    html+='<div style="padding:40px;text-align:center;color:#888">조건에 맞는 일정이 없어요</div>';
     return html;
   }
   
@@ -3995,16 +3995,16 @@ function resetSchedFilter(){_schedFilter={month:'all',cat:'all',status:'all',q:'
 function toggleHidePast(on){_schedFilter.hidePast=on;_schedPage=1;renderScheduleList();}
 function setSchedPage(p){_schedPage=p;renderScheduleList();window.scrollTo(0,0);}
 function openScheduleRow(dateKey,rowIndex){
-  if(userRole!=='admin'){showToast('관리자만 수정 가능','error');return;}
+  if(userRole!=='admin'){showToast('관리자만 수정할 수 있어요','error');return;}
   const rec=records.find(r=>r._rowIndex===rowIndex);
-  if(!rec){showToast('row를 찾을 수 없음','error');return;}
+  if(!rec){showToast('row를 찾을 수 없어요','error');return;}
   _schedReturnFlag=true;
   closeAdminPanel();
   openModal(dateKey,rec);
 }
 
 function addScheduleFromList(){
-  if(userRole!=='admin'){showToast('관리자만 추가 가능','error');return;}
+  if(userRole!=='admin'){showToast('관리자만 추가할 수 있어요','error');return;}
   closeAdminPanel();
   const today=new Date();
   const y=today.getFullYear(),m=today.getMonth()+1,d=today.getDate();
@@ -4041,7 +4041,7 @@ function exportScheduleCsv(){
     const at=Number(a['입력시간(KST)'])||0,bt=Number(b['입력시간(KST)'])||0;
     return at-bt;
   });
-  if(!rows.length){showToast('다운로드할 일정이 없음','error');return;}
+  if(!rows.length){showToast('다운로드할 일정이 없어요','error');return;}
   // 시간 변환 처리한 새 행 만들기
   const exported=rows.map(r=>{
     const ts=r['입력시간(KST)'];let hhmm='';
@@ -4133,7 +4133,7 @@ function buildLogsListHtml(){
   html+='</div>';
   
   if(rows.length===0){
-    html+='<div style="padding:40px;text-align:center;color:#888">조건에 맞는 로그가 없음</div>';
+    html+='<div style="padding:40px;text-align:center;color:#888">조건에 맞는 로그가 없어요</div>';
     return html;
   }
   
@@ -4210,7 +4210,7 @@ function exportLogsCsv(){
       (String(r['대상 시트']||'')).toLowerCase().includes(q)
     );
   }
-  if(!rows.length){showToast('다운로드할 로그가 없음','error');return;}
+  if(!rows.length){showToast('다운로드할 로그가 없어요','error');return;}
   // 시간 시리얼 → KST 텍스트
   const exported=rows.map(r=>{
     let timeStr='';
@@ -4241,7 +4241,7 @@ function exportLogsCsv(){
 // === 일반화 시트 관리 (platform / content / manager 공용) ===
 async function openSheetAdmin(slug){
   const cfg=SHEET_CONFIG[slug];
-  if(!cfg){showToast('알 수 없는 시트입니다: '+slug,'error');return;}
+  if(!cfg){showToast('알 수 없는 시트예요: '+slug,'error');return;}
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px"><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
@@ -4389,7 +4389,7 @@ async function saveSheetRow(slug,rowIndex){
 }
 
 async function deleteSheetRow(slug,rowIndex){
-  if(!await showConfirm('정말 삭제하시겠습니까?',{title:'행 삭제',okText:'삭제',danger:true}))return;
+  if(!await showConfirm('정말 삭제할래요?',{title:'행 삭제',okText:'삭제',danger:true}))return;
   showOverlayLoad('\uC0AD\uC81C \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('DELETE','/api/sheet/'+slug+'/'+rowIndex);
@@ -4523,7 +4523,7 @@ async function saveProgram(rowIndex){
 async function deleteProgram(rowIndex){
   const p=_programsCache.find(pp=>pp._rowIndex===rowIndex);
   if(!p)return;
-  if(!await showConfirm('정말 삭제하시겠습니까?\n\n['+(p['풀네임']||'')+']',{title:'프로그램 삭제',okText:'삭제',danger:true}))return;
+  if(!await showConfirm('정말 삭제할래요?\n\n['+(p['풀네임']||'')+']',{title:'프로그램 삭제',okText:'삭제',danger:true}))return;
   showOverlayLoad('\uC0AD\uC81C \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('DELETE','/api/sheet/program/'+rowIndex);
@@ -4575,7 +4575,7 @@ function _typeLoop(elId,text,speed){
 }
 async function loadData(){
   var cal=document.getElementById('cal');
-  if(cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중입니다... \uD83D\uDE09',65);}
+  if(cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중이에요... \uD83D\uDE09',65);}
   try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
   // 특별 일정 — 실패해도 records 렌더는 진행
   try{await loadPromoSpecial();}catch(e){console.warn('[loadData] promoSpecial',e);}
@@ -5446,8 +5446,8 @@ function _resolveCopyAsk(val){
 function _resolveCopyAskOk(){
   const d=document.getElementById('cp-date').value;
   const t=document.getElementById('cp-time').value;
-  if(!d){showFieldError('cp-date','날짜를 입력해주세요');return;}
-  if(!t){showFieldError('cp-time','시간을 입력해주세요');return;}
+  if(!d){showFieldError('cp-date','날짜를 입력해 주세요');return;}
+  if(!t){showFieldError('cp-time','시간을 입력해 주세요');return;}
   _resolveCopyAsk({date:d,time:t});
 }
 async function copyRec(rowIndex,dateKey){
@@ -5486,7 +5486,7 @@ async function copyRec(rowIndex,dateKey){
     // 점등 효과 — 새 날짜 셀
     _justCopiedDateKey=newDt.date;
     await syncReload();
-    showToast('복사되었습니다 → '+newDt.date+' '+newDt.time);
+    showToast('복사했어요 → '+newDt.date+' '+newDt.time);
     // 2.5초 후 클래스 제거 (다음 render에서 빠짐)
     setTimeout(function(){
       _justCopiedDateKey=null;
@@ -5507,7 +5507,7 @@ function showConfirm(msg, opts){
   return new Promise(function(resolve){
     _confirmResolve=resolve;
     document.getElementById('confirm-title').textContent=opts.title||'예울마루 알림';
-    document.getElementById('confirm-msg').textContent=msg||'정말로 진행하시겠습니까?';
+    document.getElementById('confirm-msg').textContent=msg||'정말로 진행할래요?';
     const acts=document.getElementById('confirm-acts');
     const okCls=opts.danger?'danger':'yes';
     acts.innerHTML=
@@ -5611,19 +5611,19 @@ function addFieldAttention(el){
 
 async function saveEntry(){
   const title=document.getElementById('f-title').value.trim();
-  if(!title){showToast('콘텐츠 제목을 입력하세요','error');focusField('f-title');return;}
+  if(!title){showToast('콘텐츠 제목을 입력해 주세요','error');focusField('f-title');return;}
   const platSel=document.getElementById('f-plat').value;
   // plat2 필수 검증 (블로그·맘카페 / B2B / 문자)
   if(platSel==='블로그·맘카페'||platSel==='B2B'||platSel==='문자'){
-    if(!document.getElementById('f-plat2').value){showToast('플랫폼 2를 선택해주세요','error');focusField('f-plat2');return;}
+    if(!document.getElementById('f-plat2').value){showToast('플랫폼 2를 골라 주세요','error');focusField('f-plat2');return;}
   }
   // 콘텐츠 구분 필수
-  if(!document.getElementById('f-cat').value){showToast('콘텐츠 구분을 선택해주세요','error');focusField('f-cat');return;}
+  if(!document.getElementById('f-cat').value){showToast('콘텐츠 구분을 골라 주세요','error');focusField('f-cat');return;}
   // 게시 담당자 필수
-  if(!document.getElementById('f-author').value){showToast('게시 담당자를 선택해주세요','error');focusField('f-author');return;}
+  if(!document.getElementById('f-author').value){showToast('게시 담당자를 골라 주세요','error');focusField('f-author');return;}
   // 날짜는 폼의 f-date에서 (사용자가 변경 가능)
   const dateKey=document.getElementById('f-date').value||editing.dateKey;
-  if(!dateKey){showToast('날짜를 입력해주세요','error');focusField('f-date');return;}
+  if(!dateKey){showToast('날짜를 입력해 주세요','error');focusField('f-date');return;}
   const isEdit=!!(editing.existing);
   const existingRowIndex=editing.existing&&editing.existing._rowIndex;
   const[y,m,d]=dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
@@ -5652,23 +5652,23 @@ async function saveEntry(){
     closeModal();
     await syncReload(isEdit?0:1);
     clickDate(dateKey);
-    showToast('저장되었습니다');
+    showToast('저장됐어요');
   }catch(e){showToast('저장 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
 async function delEntry(){
   if(!editing?.existing)return;
   const dateKey=editing.dateKey;const ri=editing.existing._rowIndex;
-  const ok=await showConfirm('정말로 삭제하시겠습니까?');if(!ok)return;
+  const ok=await showConfirm('정말로 삭제할래요?');if(!ok)return;
   showOverlayLoad();
-  try{await api('DELETE','/api/records/'+ri);closeModal();await syncReload(-1);closePanel();showToast('삭제되었습니다');}catch(e){showToast('삭제 실패: '+e.message,'error');}
+  try{await api('DELETE','/api/records/'+ri);closeModal();await syncReload(-1);closePanel();showToast('삭제됐어요');}catch(e){showToast('삭제 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
 
 async function approvePromo(){
   if(!editing?.existing)return;
-  if(userRole!=='admin'){showToast('관리자만 가능','error');return;}
-  const ok=await showConfirm('이 홍보 신청을 승인하시겠습니까?');if(!ok)return;
+  if(userRole!=='admin'){showToast('관리자만 할 수 있어요','error');return;}
+  const ok=await showConfirm('이 홍보 신청을 승인할래요?');if(!ok)return;
   showOverlayLoad();
   try{
     // 진행 상태 = "예정"으로 변경 + 시간/날짜 등은 modal 폼에서 현재 값으로
@@ -5676,15 +5676,15 @@ async function approvePromo(){
     // 현재 모달 폼의 값으로 갱신 (관리자가 시간/날짜 조정 가능)
     document.getElementById('f-status').value='예정';
     await saveEntry();  // saveEntry가 새 row 만들고 기존 row 삭제 (수정 패턴)
-    showToast('승인되었습니다');
+    showToast('승인됐어요');
   }catch(e){showToast('승인 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
 
 async function rejectPromo(){
   if(!editing?.existing)return;
-  if(userRole!=='admin'){showToast('관리자만 가능','error');return;}
-  const ok=await showConfirm('이 홍보 신청을 거절하시겠습니까? 삭제됩니다.');if(!ok)return;
+  if(userRole!=='admin'){showToast('관리자만 할 수 있어요','error');return;}
+  const ok=await showConfirm('이 홍보 신청을 거절할래요? 삭제돼요.');if(!ok)return;
   showOverlayLoad();
   try{
     const ri=editing.existing._rowIndex;
@@ -5692,21 +5692,21 @@ async function rejectPromo(){
     closeModal();
     await syncReload(-1);
     closePanel();
-    showToast('거절되었습니다');
+    showToast('거절했어요');
   }catch(e){showToast('거절 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
 
 async function deleteRec(rowIndex,dateKey){
-  if(userRole!=='admin'){showToast('관리자만 삭제 가능','error');return;}
-  const ok=await showConfirm('정말로 삭제하시겠습니까?');
+  if(userRole!=='admin'){showToast('관리자만 삭제할 수 있어요','error');return;}
+  const ok=await showConfirm('정말로 삭제할래요?');
   if(!ok)return;
   showOverlayLoad();
   try{
     await api('DELETE','/api/records/'+rowIndex);
     await syncReload(-1);
     closePanel();
-    showToast('삭제되었습니다');
+    showToast('삭제됐어요');
   }catch(e){showToast('삭제 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
@@ -5743,8 +5743,8 @@ async function onCellDrop(ev,toKey){
   // 특수일정 이동
   if(drag.sp){
     const it=PROMO_SPECIAL.find(function(s){return s._rowIndex===drag.rowIndex;});
-    if(!it){showToast('담당자 일정을 찾을 수 없음','error');return;}
-    const ok=await showConfirm('담당자 일정을 '+toKey+'(으)로 이동하시겠습니까?');
+    if(!it){showToast('담당자 일정을 찾을 수 없어요','error');return;}
+    const ok=await showConfirm('담당자 일정을 '+toKey+'(으)로 이동할래요?');
     if(!ok)return;
     // delta 계산 (drag fromKey가 정확한 출발 셀)
     const fp=drag.fromKey.split('-').map(Number);
@@ -5773,7 +5773,7 @@ async function onCellDrop(ev,toKey){
         const d=new Date(selected);
         openPanel(d,getRecsForDate(d));
       }
-      showToast('이동되었습니다');
+      showToast('이동됐어요');
     }catch(e){
       showToast('이동 실패: '+(e.message||e),'error');
     }finally{
@@ -5782,10 +5782,10 @@ async function onCellDrop(ev,toKey){
     return;
   }
   // === 기존 콘텐츠 이동 ===
-  const ok=await showConfirm('정말로 일정을 이동하시겠습니까?');
+  const ok=await showConfirm('정말로 일정을 이동할래요?');
   if(!ok)return;
   const rec=records.find(function(r){return r._rowIndex===drag.rowIndex;});
-  if(!rec){showToast('레코드를 찾을 수 없음','error');return;}
+  if(!rec){showToast('레코드를 찾을 수 없어요','error');return;}
   const[y,m,d]=toKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
   const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
   var ts=rec['입력시간(KST)'],hhmm='10:00';
@@ -5800,7 +5800,7 @@ async function onCellDrop(ev,toKey){
     catch(e){console.error('이동 후 기존 행 삭제 실패:',e);showToast('이동됨. 단, 기존 행 삭제 실패로 중복이 생겼을 수 있어','error');}
     await syncReload(0);
     closePanel();
-    showToast('이동되었습니다');
+    showToast('이동됐어요');
   }catch(e){showToast('이동 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
 }
