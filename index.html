@@ -157,7 +157,7 @@ button{font-family:inherit;cursor:pointer}
 .week{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border);position:relative}
 .week:last-child{border-bottom:none}
 .week.tw{position:relative}
-.c-inner{overflow-x:hidden;overflow-y:auto;height:calc(100% - 38px);margin-top:18px;margin-bottom:20px;scrollbar-width:none;-ms-overflow-style:none;scrollbar-color:rgba(0,0,0,0.15) transparent}
+.c-inner{overflow-x:hidden;overflow-y:auto;height:calc(100% - 55px);margin-top:18px;margin-bottom:0;scrollbar-width:none;-ms-overflow-style:none;scrollbar-color:rgba(0,0,0,0.15) transparent}
 .c-count{position:absolute;top:4px;right:6px;font-size:9px;color:rgba(0,0,0,0.4);font-weight:600;letter-spacing:0.3px;z-index:6;pointer-events:none;font-variant-numeric:tabular-nums}
 .c.today .c-count{color:rgba(0,0,0,0.6)}
 .c.past .c-count{color:rgba(0,0,0,0.25)}
@@ -207,9 +207,9 @@ button{font-family:inherit;cursor:pointer}
 }
 .diag{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.02) 4px,rgba(0,0,0,0.02) 5px);pointer-events:none}
 /* 특별 일정 세로 슬라이드 (전광판) — 한 줄 영역 항상 확보, 위로 사라지는 느낌 */
-.sp-area{position:absolute;bottom:14px;left:6px;right:6px;height:12px;overflow:hidden;pointer-events:auto}
+.sp-area{position:absolute;bottom:26px;left:8px;right:8px;height:19px;overflow:hidden;pointer-events:auto}
 .sp-track{position:relative;transition:transform 0.5s cubic-bezier(0.55,0,0.45,1);will-change:transform}
-.sp-item{height:12px;display:flex;align-items:center;gap:4px;font-size:10px;line-height:12px;white-space:nowrap;overflow:hidden}
+.sp-item{height:19px;display:flex;align-items:center;gap:4px;font-size:10.5px;line-height:1.4;padding:2px 0;white-space:nowrap;overflow:hidden}
 .sp-time{font-weight:700;color:var(--accent);min-width:30px;display:inline-block;text-align:left;font-variant-numeric:tabular-nums;flex-shrink:0}
 .sp-time.off{color:#C04040}
 .sp-label{color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -4252,7 +4252,7 @@ function startSpecialSlide(){
       const cnt=Number(tr.dataset.spCount)||1;
       if(cnt<=1)return;  // 항목 1개는 슬라이드 X
       const idx=_spSlideIdx%cnt;
-      tr.style.transform='translateY('+(-idx*12)+'px)';
+      tr.style.transform='translateY('+(-idx*19)+'px)';
     });
   },2800);  // 2.8초마다 다음 항목
 }
