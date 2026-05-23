@@ -1412,9 +1412,9 @@ function openSpecialEntry(key, editRowIndex){
     '<input id="sp-label" type="text" placeholder="예: 마케팅 세미나 / 황세웅 휴무" style="'+inpSt+'">'+
     '<div style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label style="'+lbSt+'">시작일<span style="color:var(--peach);margin-left:3px">*</span></label><input id="sp-start" type="date" value="'+today+'" onchange="_onSpStartChange(this.value)" style="'+inpSt+'"></div>'+
     '<div style="flex:1"><label style="'+lbSt+'">종료일 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(같으면 단일)</span></label><input id="sp-end" type="date" value="'+today+'" onchange="_spEndManuallyChanged=true" style="'+inpSt+'"></div></div>'+
-    '<label style="'+lbSt+'">시간<span style="color:var(--peach);margin-left:3px">*</span> <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(스크롤 ±10분 / 휴무·출장은 자동 09:00~18:00)</span></label>'+
+    '<label style="'+lbSt+'">시간<span style="color:var(--peach);margin-left:3px">*</span> <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(스크롤 ±10분 / 09:00~18:00 / 휴무·출장 자동)</span></label>'+
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input id="sp-time-start" type="time" step="600" style="'+inpSt+';flex:1" placeholder="시작"><button type="button" class="sp-time-unset" onclick="_toggleSpTimeUnset(\'sp-time-start\',this)">미정</button></div><span style="color:#aaa;font-size:14px">~</span><div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input id="sp-time-end" type="time" step="600" style="'+inpSt+';flex:1" placeholder="종료"><button type="button" class="sp-time-unset" onclick="_toggleSpTimeUnset(\'sp-time-end\',this)">미정</button></div></div>'+
-    '<div id="sp-time-adders" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;color:#aaa;margin-right:2px">빠른 종료시간:</span><button type="button" class="sp-time-add" onclick="_addSpTime(30)">+30분</button><button type="button" class="sp-time-add" onclick="_addSpTime(60)">+1시간</button><button type="button" class="sp-time-add" onclick="_addSpTime(120)">+2시간</button><button type="button" class="sp-time-add" onclick="_addSpTime(180)">+3시간</button><button type="button" class="sp-time-reset" onclick="_resetSpTime()">리셋</button></div>'+
+    '<div id="sp-time-adders" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center"><span style="font-size:10.5px;color:#aaa;margin-right:2px">빠른 종료시간:</span><button type="button" class="sp-time-add" onclick="_addSpTime(-60)">-1시간</button><button type="button" class="sp-time-add" onclick="_addSpTime(-30)">-30분</button><button type="button" class="sp-time-add" onclick="_addSpTime(30)">+30분</button><button type="button" class="sp-time-add" onclick="_addSpTime(60)">+1시간</button><button type="button" class="sp-time-reset" onclick="_resetSpTime()">리셋</button></div>'+
     '<label style="'+lbSt+'">담당자<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     '<select id="sp-person" style="'+inpSt+'">'+personOpts+'</select>'+
     '<div style="display:flex;gap:8px;margin-top:18px">'+
@@ -1440,14 +1440,25 @@ function openSpecialEntry(key, editRowIndex){
         if(oi)oi.value=t;
       }
     }
-    // 시간 기본값 — 신규 모드는 빈값(미정 자동 X, 사용자가 입력 또는 추가 버튼)
+    // 시간 기본값 — 신규 모드는 시작 10:00 / 종료 미정 (사용자가 +버튼으로 늘림)
     const ts0=document.getElementById('sp-time-start');
     const te0=document.getElementById('sp-time-end');
     if(!isEdit){
-      if(ts0)ts0.value='';
+      if(ts0)ts0.value='10:00';
       if(te0)te0.value='';
     }
     _setSpType(initType);
+    // 신규 + 일반 유형(휴무/출장 아님)이면 종료 미정 active로
+    if(!isEdit){
+      const redTypes={'휴무':1,'출장':1};
+      if(!redTypes[initType]){
+        const teBtn=document.querySelector('button.sp-time-unset[onclick*="sp-time-end"]');
+        if(teBtn&&!teBtn.disabled){
+          teBtn.classList.add('active');
+          if(te0){te0.readOnly=true;te0.classList.add('sp-time-input-ro');te0.value='';}
+        }
+      }
+    }
     // prefill (수정 모드)
     if(isEdit&&_editingSpecial){
       const lb=document.getElementById('sp-label');if(lb)lb.value=_editingSpecial.label||'';
@@ -1538,11 +1549,17 @@ function _toggleSpTimeUnset(id,btnEl){
   if(btnEl.disabled)return;
   const isActive=btnEl.classList.contains('active');
   if(isActive){
-    // OFF — readonly 풀고 기본값 복원
+    // OFF — readonly 풀고 기본값 채움
     btnEl.classList.remove('active');
     el.readOnly=false;
     el.classList.remove('sp-time-input-ro');
-    el.value=(id==='sp-time-start')?'09:00':'18:00';
+    if(id==='sp-time-start'){
+      el.value='10:00';
+    }else{
+      // 종료 — 시작 시간과 동일하게 (사용자가 +버튼으로 늘림)
+      const ts=document.getElementById('sp-time-start');
+      el.value=(ts&&ts.value)?ts.value:'10:00';
+    }
   }else{
     // ON — readonly + 빈값 + 활성화 표시
     btnEl.classList.add('active');
@@ -1551,7 +1568,7 @@ function _toggleSpTimeUnset(id,btnEl){
     el.value='';
   }
 }
-// 종료 시간에 N분 추가 (누적)
+// 종료 시간에 N분 가감 (누적). 범위: [시작, 18:00] clamp
 function _addSpTime(mins){
   const ts=document.getElementById('sp-time-start');
   const te=document.getElementById('sp-time-end');
@@ -1559,33 +1576,47 @@ function _addSpTime(mins){
   // 시작이 미정이면 무시
   const tsBtn=document.querySelector('button.sp-time-unset[onclick*="sp-time-start"]');
   if(tsBtn&&tsBtn.classList.contains('active'))return;
-  // 시작 없으면 09:00 기본
-  if(!ts.value)ts.value='09:00';
-  // 종료 미정 해제 (있으면)
+  // 시작 없으면 10:00 기본
+  if(!ts.value)ts.value='10:00';
+  // 종료 미정 해제 (활성이면)
   const teBtn=document.querySelector('button.sp-time-unset[onclick*="sp-time-end"]');
-  if(teBtn&&teBtn.classList.contains('active')){
+  const wasUnset=teBtn&&teBtn.classList.contains('active');
+  if(wasUnset){
     teBtn.classList.remove('active');
     te.readOnly=false;
     te.classList.remove('sp-time-input-ro');
-    te.value=ts.value;
+    te.value=ts.value;  // 미정에서 풀릴 때 시작 시간부터
   }
   // 종료가 없거나 시작보다 이르면 시작에 맞춤
   if(!te.value||te.value<ts.value)te.value=ts.value;
   const parts=te.value.split(':');
   let h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;
   let total=h*60+m+mins;
-  if(total>=24*60)total=24*60-1;
-  if(total<0)total=0;
+  // 제약: 시작 시간 이상, 18:00 이하
+  const tsParts=ts.value.split(':');
+  const minEnd=(parseInt(tsParts[0])||0)*60+(parseInt(tsParts[1])||0);
+  const maxEnd=18*60;
+  if(total<minEnd)total=minEnd;
+  if(total>maxEnd)total=maxEnd;
   const nh=Math.floor(total/60),nm=total%60;
   te.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
 }
-// 시간 리셋 — 시작 09:00, 종료 18:00, 미정 해제
+// 시간 리셋 — 시작 10:00, 종료 미정 (active), 시작 미정 해제
 function _resetSpTime(){
   const ts=document.getElementById('sp-time-start');
   const te=document.getElementById('sp-time-end');
-  if(ts&&!ts.disabled){ts.value='09:00';ts.readOnly=false;ts.classList.remove('sp-time-input-ro');}
-  if(te&&!te.disabled){te.value='18:00';te.readOnly=false;te.classList.remove('sp-time-input-ro');}
-  document.querySelectorAll('.sp-time-unset.active').forEach(function(b){b.classList.remove('active');});
+  if(ts&&!ts.disabled){ts.value='10:00';ts.readOnly=false;ts.classList.remove('sp-time-input-ro');}
+  if(te&&!te.disabled){te.value='';te.readOnly=true;te.classList.add('sp-time-input-ro');}
+  // 시작 미정 해제, 종료 미정 active
+  document.querySelectorAll('.sp-time-unset').forEach(function(b){
+    if(b.disabled)return;
+    const onclickAttr=b.getAttribute('onclick')||'';
+    if(onclickAttr.indexOf('sp-time-start')!==-1){
+      b.classList.remove('active');
+    }else if(onclickAttr.indexOf('sp-time-end')!==-1){
+      b.classList.add('active');
+    }
+  });
 }
 // 시간 input wheel ±10분
 function _attachSpTimeWheel(id){
@@ -1595,13 +1626,25 @@ function _attachSpTimeWheel(id){
     if(el.readOnly)return;
     e.preventDefault();
     let cur=el.value||'';
-    if(!cur){el.value='09:00';return;}
+    if(!cur){el.value='10:00';return;}
     const parts=cur.split(':');
     let h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;
     let total=h*60+m;
     total+=(e.deltaY<0?10:-10);
-    if(total<0)total+=24*60;
-    if(total>=24*60)total-=24*60;
+    // 제약: 시작 09:00~18:00, 종료 시작~18:00
+    if(id==='sp-time-start'){
+      if(total<9*60)total=9*60;
+      if(total>18*60)total=18*60;
+    }else if(id==='sp-time-end'){
+      const ts=document.getElementById('sp-time-start');
+      let minEnd=9*60;
+      if(ts&&ts.value){
+        const p2=ts.value.split(':');
+        minEnd=(parseInt(p2[0])||0)*60+(parseInt(p2[1])||0);
+      }
+      if(total<minEnd)total=minEnd;
+      if(total>18*60)total=18*60;
+    }
     const nh=Math.floor(total/60),nm=total%60;
     el.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
   },{passive:false});
