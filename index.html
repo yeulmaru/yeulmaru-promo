@@ -808,6 +808,7 @@ async function loadPromoSpecial(){
     PROMO_SPECIAL=(r.rows||[]).map(function(it){
       return {
         id:it['시리얼']||it['#']||'',
+        sheetNo:it['#']||'',
         _rowIndex:it._rowIndex,
         type:it['유형']||'기타',
         label:it['내용']||'',
@@ -1418,7 +1419,7 @@ function openSpecialEntry(key, editRowIndex){
     '<select id="sp-person" style="'+inpSt+'">'+personOpts+'</select>'+
     '<div style="display:flex;gap:8px;margin-top:18px">'+
     (isEdit?'<button onclick="closeSpecialEntry();deleteSpecialEntry('+_editingSpecial._rowIndex+')" class="m-btn" style="background:#f5f5f5;color:#888;border:1px solid #ddd">삭제</button>':'')+
-    '<button onclick="saveSpecialEntry()" class="m-btn save" style="margin-left:auto">'+(isEdit?'수정 저장':'저장')+'</button></div>'+
+    '<button onclick="saveSpecialEntry()" class="m-btn save" style="margin-left:auto">저장</button></div>'+
     '</div></div>';
   let el=document.getElementById('special-entry');
   if(!el){el=document.createElement('div');el.id='special-entry';document.body.appendChild(el);}
@@ -1610,7 +1611,11 @@ let _spEndManuallyChanged=false;
 function _onSpStartChange(v){
   if(!_spEndManuallyChanged){
     const en=document.getElementById('sp-end');
-    if(en)en.value=v;
+    if(en){
+      en.value=v;
+      // 종료일 picker 자동 열기 (Chrome 99+)
+      try{en.focus();en.showPicker&&en.showPicker();}catch(e){}
+    }
   }
 }
 function closeSpecialEntry(){
@@ -1714,6 +1719,9 @@ function onSpContextMenu(event,rowIndex){
   closeCellContextMenu();
   const menu=document.createElement('div');
   menu.id='cell-context-menu';
+  // 담당자 일정 메뉴 — 모달과 동일한 옅은 하늘색
+  menu.style.background='linear-gradient(135deg,#E0F2FE 0%,#F0F9FF 100%)';
+  menu.style.borderColor='rgba(125,211,252,0.5)';
   menu.innerHTML=
     '<div class="ccm-item" onclick="closeCellContextMenu();openSpecialEntry(null,'+rowIndex+')"><span class="emo">✏️</span>수정</div>'+
     '<div class="ccm-item" onclick="closeCellContextMenu();deleteSpecialEntry('+rowIndex+')"><span class="emo">🗑️</span>삭제</div>';
@@ -1753,7 +1761,7 @@ function _spToRecord(it){
     _spItem:it,
     _spParsed:parsed,
     _spTypeStr:typeStr,
-    '#':'SP',
+    '#':it.sheetNo||(it._rowIndex-1),
     '연도':sd.getFullYear(),
     '월':sd.getMonth()+1,
     '일':sd.getDate(),
@@ -1984,14 +1992,14 @@ function renderPromoBoard(){
     }
     // 모서리 둥근 wrapper + 살짝 투명도 헤더
     html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
-    html+=_sh('no','NO',48);
+    html+=_sh('no','NO',60);
     html+=_sh('status','상태',80);
     html+=_sh('date','날짜',90);
     html+=_sh('time','시간',70);
     html+=_sh('platform','플랫폼',125);
     html+=_sh('category','구분',70);
     html+=_sh('content','콘텐츠',null);
-    html+=_sh('applicant','신청자',100);
+    html+=_sh('applicant','신청자',80);
     html+='<th style="padding:10px 4px;text-align:center;width:60px;color:#fff">액션</th>';
     html+='</tr></thead><tbody>';
     rows.forEach(function(r,idx){
@@ -2016,11 +2024,12 @@ function renderPromoBoard(){
         const endStr=parsed.e?'~'+parsed.e:'';
         // 콘텐츠 칸: 라벨
         const labelStr=it.label||typeStr;
-        const noVal=r['#']||'SP';
+        const rawNo=(r['#']!==''&&r['#']!==null&&r['#']!==undefined)?r['#']:(r._rowIndex-1);
+        const noVal='S'+String(rawNo).padStart(2,'0');
         const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
         const clickAttr=userRole==='admin'?' onclick="_schedReturnFlag=true;closePromoBoard();setTimeout(function(){openSpecialEntry(null,'+r._rowIndex+');},50)"':'';
         html+='<tr class="promo-row"'+clickAttr+' style="border-bottom:1px solid #f0f0f0;cursor:'+(userRole==='admin'?'pointer':'default')+';'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
-        html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:12px">'+escapeHtml(String(noVal))+'</td>';
+        html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600">'+escapeHtml(noVal)+'</td>';
         // 상태: 예정 (콘텐츠 예정과 동일)
         html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:#E8F5EC;color:#0F8B4C;font-size:11px;font-weight:600;white-space:nowrap">예정</span></td>';
         html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';white-space:nowrap"><span style="font-variant-numeric:tabular-nums">'+rangeStr+'</span>'+todayBadge+'</td>';
@@ -2034,7 +2043,7 @@ function renderPromoBoard(){
         // 액션 — admin만 삭제
         html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
         if(userRole==='admin'){
-          html+='<button onclick="event.stopPropagation();deleteSpecialEntry('+r._rowIndex+')" title="담당자 일정 삭제" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#ccc;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'삭제\';this.style.color=\'#E24B4A\';this.style.background=\'rgba(226,75,74,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✕\';this.style.color=\'#ccc\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✕</button>';
+          html+='<button onclick="event.stopPropagation();deleteSpecialEntry('+r._rowIndex+')" title="담당자 일정 삭제" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#ccc;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'삭제\';this.style.color=\'#E24B4A\';this.style.background=\'rgba(226,75,74,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'—\';this.style.color=\'#ccc\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">—</button>';
         }
         html+='</td>';
         html+='</tr>';
@@ -2070,14 +2079,15 @@ function renderPromoBoard(){
       // 오늘 배지 (강조색1)
       const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
       // NO: r['#'] 값 우선, 빈 값이면 _rowIndex 기반 fallback
-      const noVal=(r['#']!==''&&r['#']!==null&&r['#']!==undefined)?r['#']:(r._rowIndex-1);
+      const rawNo=(r['#']!==''&&r['#']!==null&&r['#']!==undefined)?r['#']:(r._rowIndex-1);
+      const noVal='H'+String(rawNo).padStart(2,'0');
       // 콘텐츠 (제목 + 프로그램)
       const title=r['콘텐츠 제목']||'';
       const prog=r['프로그램']||'-';
       // 플랫폼 (P1 › P2)
       const platHtml=escapeHtml(plat1||'-')+(plat2?'<span style="color:#bbb;margin:0 4px">›</span>'+escapeHtml(plat2):'');
       html+='<tr class="promo-row" onclick="openPromoBoardRow(\''+dateKey+'\','+r._rowIndex+')" style="border-bottom:1px solid #f0f0f0;cursor:pointer;'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
-      html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:12px">'+escapeHtml(String(noVal))+'</td>';
+      html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600">'+escapeHtml(noVal)+'</td>';
       html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:'+sBg+';color:'+sColor+';font-size:11px;font-weight:600;white-space:nowrap">'+escapeHtml(status)+'</span></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';white-space:nowrap"><span style="font-variant-numeric:tabular-nums">'+m2+'/'+d2+'</span>'+todayBadge+'</td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';font-variant-numeric:tabular-nums;white-space:nowrap">'+timeStr+'</td>';
