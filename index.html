@@ -1022,7 +1022,7 @@ async function logout(){
 function buildNav(){
   const c=document.getElementById('nav-menus');c.innerHTML='';
   const pill=document.createElement('div');pill.className='nav-pill';c.appendChild(pill);
-  const menus=userRole==='admin'?[...MENUS,{label:'관리',id:'admin'}]:MENUS;
+  const menus=userRole==='admin'?[...MENUS.filter(function(m){return m.id!=='promo';}),{label:'관리',id:'admin'}]:MENUS;
   menus.forEach(m=>{
     const b=document.createElement('button');b.className='nav-btn'+(m.id==='cal'?' on':'')+(m.id==='admin'?' nav-admin':'');b.textContent=m.label;
     b.onclick=()=>{
