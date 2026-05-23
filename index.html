@@ -286,9 +286,15 @@ button{font-family:inherit;cursor:pointer}
 /* 특수일정 입력 폼 유형 chip 라디오 */
 .sp-chip{padding:7px 14px;border-radius:14px;border:1.5px solid #ddd;background:#fff;color:#666;font-size:12.5px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit;line-height:1}
 .sp-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
+.sp-chip:focus{outline:2px solid rgba(74,77,231,0.4);outline-offset:2px}
 .sp-chip.selected{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
 .sp-chip.selected.red{background:#E24B4A;border-color:#E24B4A}
 .sp-chip.selected.red:hover{background:#c93f3e;border-color:#c93f3e}
+.sp-chip-divider{display:inline-block;width:1px;height:18px;background:#ddd;margin:0 4px;vertical-align:middle}
+.sp-other-input{padding:7px 12px;border-radius:14px;border:1.5px solid var(--accent);background:rgba(74,77,231,0.06);color:var(--accent);font-size:12.5px;font-weight:600;outline:none;font-family:inherit;width:130px;box-sizing:border-box;line-height:1}
+.sp-time-unset{padding:5px 10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;flex-shrink:0;line-height:1}
+.sp-time-unset:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
+.sp-time-unset:disabled{opacity:0.3;cursor:not-allowed}
 .p-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .2s;cursor:pointer}
 .p-card:hover{box-shadow:0 4px 16px rgba(74,77,231,0.1);transform:translateY(-1px);border-color:rgba(74,77,231,0.2)}
 .p-card.done{opacity:0.55}
@@ -678,8 +684,8 @@ function renderSpecialMarquee(d,nm,past){
     if(!a.time&&b.time)return 1;
     return (a.time||'').localeCompare(b.time||'');
   });
-  // 빨강 표시 type: 휴무·출장·휴가
-  const redTypes={'휴무':1,'출장':1,'휴가':1};
+  // 빨강 표시 type: 휴무·출장
+  const redTypes={'휴무':1,'출장':1};
   const timeCol=past?'var(--past-text)':'var(--text)';
   const personCol=past?'var(--past-text)':'var(--text)';
   let inner='';
@@ -1369,26 +1375,29 @@ function openSpecialEntry(key, editRowIndex){
   const lbSt='display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px';
   // 담당자 옵션 (PR_MANAGERS DB)
   const personOpts='<option value="">선택</option>'+PR_MANAGERS.map(function(m){return '<option value="'+escapeHtml(m['담당자'])+'">'+escapeHtml(m['담당자'])+'</option>';}).join('');
-  // 유형 chip
-  const types=['교육','휴가','출장','회의','기타'];
-  const redTypes={'휴무':1,'출장':1,'휴가':1};
-  let chipsHtml='<div id="sp-type-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">';
-  types.forEach(function(t){
-    chipsHtml+='<button type="button" data-val="'+t+'" onclick="_setSpType(\''+t+'\')" class="sp-chip">'+t+'</button>';
+  // 유형 chip — 휴무 출장 | 교육 회의 | 기타(입력 변환)
+  const groups=[['휴무','출장'],['교육','회의'],['기타']];
+  let chipsHtml='<div id="sp-type-chips" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px">';
+  groups.forEach(function(grp,gi){
+    if(gi>0)chipsHtml+='<span class="sp-chip-divider"></span>';
+    grp.forEach(function(t){
+      chipsHtml+='<button type="button" data-val="'+t+'" onclick="_setSpType(\''+t+'\')" class="sp-chip">'+t+'</button>';
+    });
   });
-  chipsHtml+='</div><input type="hidden" id="sp-type" value="교육">';
+  chipsHtml+='<input id="sp-type-other" class="sp-other-input" type="text" placeholder="유형 입력" style="display:none" oninput="document.getElementById(\'sp-type\').value=this.value.trim()||\'기타\'">';
+  chipsHtml+='</div><input type="hidden" id="sp-type" value="휴무">';
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeSpecialEntry)"><div class="modal" style="width:96vw;max-width:480px;padding:24px;position:relative;text-align:left;background:linear-gradient(135deg,#E0F2FE 0%,#F0F9FF 100%);border:1px solid rgba(125,211,252,0.5)"><button class="modal-x" onclick="closeSpecialEntry()" title="닫기" aria-label="닫기">✕</button>'+
     '<h3 style="margin:0 0 4px">'+(isEdit?'특별 일정 수정':'특별 일정 추가')+'</h3>'+
-    '<div style="font-size:11px;color:#888;margin-bottom:8px">교육·휴가·출장·회의 등 — 캘린더 셀에 한 줄로 표시됩니다</div>'+
+    '<div style="font-size:11px;color:#888;margin-bottom:8px">휴무·출장·교육·회의 등 — 캘린더 셀에 한 줄로 표시됩니다</div>'+
     '<label style="'+lbSt+'">유형<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     chipsHtml+
     '<label style="'+lbSt+'">내용<span style="color:var(--peach);margin-left:3px">*</span></label>'+
-    '<input id="sp-label" type="text" placeholder="예: 마케팅 세미나 / 황세웅 휴가" style="'+inpSt+'">'+
+    '<input id="sp-label" type="text" placeholder="예: 마케팅 세미나 / 황세웅 휴무" style="'+inpSt+'">'+
     '<div style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label style="'+lbSt+'">시작일<span style="color:var(--peach);margin-left:3px">*</span></label><input id="sp-start" type="date" value="'+today+'" onchange="_onSpStartChange(this.value)" style="'+inpSt+'"></div>'+
     '<div style="flex:1"><label style="'+lbSt+'">종료일 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(같으면 단일)</span></label><input id="sp-end" type="date" value="'+today+'" onchange="_spEndManuallyChanged=true" style="'+inpSt+'"></div></div>'+
-    '<label style="'+lbSt+'">시간 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(스크롤 ±10분 / 둘 다 비우면 "휴무")</span></label>'+
-    '<div style="display:flex;gap:8px;align-items:center"><input id="sp-time-start" type="time" step="600" style="'+inpSt+'" placeholder="시작"><span style="color:#aaa;font-size:14px">~</span><input id="sp-time-end" type="time" step="600" style="'+inpSt+'" placeholder="종료"></div>'+
-    '<label style="'+lbSt+'">담당자 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(선택)</span></label>'+
+    '<label style="'+lbSt+'">시간 <span style="color:#aaa;font-weight:400;text-transform:none;letter-spacing:0">(스크롤 ±10분 / 휴무·출장은 자동 종일)</span></label>'+
+    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input id="sp-time-start" type="time" step="600" style="'+inpSt+';flex:1" placeholder="시작"><button type="button" class="sp-time-unset" onclick="_unsetSpTime(\'sp-time-start\')">미정</button></div><span style="color:#aaa;font-size:14px">~</span><div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input id="sp-time-end" type="time" step="600" style="'+inpSt+';flex:1" placeholder="종료"><button type="button" class="sp-time-unset" onclick="_unsetSpTime(\'sp-time-end\')">미정</button></div></div>'+
+    '<label style="'+lbSt+'">담당자<span style="color:var(--peach);margin-left:3px">*</span></label>'+
     '<select id="sp-person" style="'+inpSt+'">'+personOpts+'</select>'+
     '<div style="display:flex;gap:8px;margin-top:18px"><button onclick="closeSpecialEntry()" class="m-btn cancel">취소</button>'+
     (isEdit?'<button onclick="closeSpecialEntry();deleteSpecialEntry('+_editingSpecial._rowIndex+')" class="m-btn" style="background:#E24B4A;color:#fff;margin-left:auto">삭제</button>':'')+
@@ -1400,30 +1409,69 @@ function openSpecialEntry(key, editRowIndex){
   // 종료일 자동 동기화 플래그 리셋
   _spEndManuallyChanged=isEdit&&_editingSpecial&&_editingSpecial.start!==_editingSpecial.end;
   setTimeout(function(){
-    // 유형 chip 초기 선택
-    const initType=(isEdit&&_editingSpecial)?(_editingSpecial.type||'교육'):'교육';
+    // 유형 chip 초기 선택 — 기본 휴무 또는 수정 모드면 기존 값
+    const knownTypes={'휴무':1,'출장':1,'교육':1,'회의':1};
+    let initType='휴무';
+    if(isEdit&&_editingSpecial){
+      const t=_editingSpecial.type||'';
+      if(knownTypes[t]){
+        initType=t;
+      }else{
+        // 기타 — 기타 chip 선택 + input에 기존 값
+        initType='기타';
+        const oi=document.getElementById('sp-type-other');
+        if(oi)oi.value=t;
+      }
+    }
     _setSpType(initType);
     // prefill (수정 모드)
     if(isEdit&&_editingSpecial){
       const lb=document.getElementById('sp-label');if(lb)lb.value=_editingSpecial.label||'';
       const st=document.getElementById('sp-start');if(st)st.value=_editingSpecial.start||'';
       const en=document.getElementById('sp-end');if(en)en.value=_editingSpecial.end||'';
-      const parsed=_parseSpTime(_editingSpecial.time||'');
-      const ts=document.getElementById('sp-time-start');if(ts)ts.value=parsed.s||'';
-      const te=document.getElementById('sp-time-end');if(te)te.value=parsed.e||'';
+      // 휴무·출장이 아닐 때만 시간 prefill (readonly 안 풀리게)
+      const redTypes={'휴무':1,'출장':1};
+      if(!redTypes[initType]){
+        const parsed=_parseSpTime(_editingSpecial.time||'');
+        const ts=document.getElementById('sp-time-start');if(ts)ts.value=parsed.s||'';
+        const te=document.getElementById('sp-time-end');if(te)te.value=parsed.e||'';
+      }
       const pn=document.getElementById('sp-person');if(pn)pn.value=_editingSpecial.person||'';
     }
     // wheel 핸들러 부착
     _attachSpTimeWheel('sp-time-start');
     _attachSpTimeWheel('sp-time-end');
-    const lb=document.getElementById('sp-label');if(lb)lb.focus();
+    // 첫 활성화 — 선택된 chip에 focus (키보드 조작 가능하게)
+    const selectedChip=document.querySelector('#sp-type-chips .sp-chip.selected');
+    const firstChip=document.querySelector('#sp-type-chips .sp-chip');
+    const targetChip=selectedChip||firstChip;
+    if(targetChip&&targetChip.style.display!=='none')targetChip.focus();
   },80);
 }
 // 유형 chip 선택
 function _setSpType(val){
   const hid=document.getElementById('sp-type');
-  if(hid)hid.value=val;
-  const redTypes={'휴무':1,'출장':1,'휴가':1};
+  const otherInput=document.getElementById('sp-type-other');
+  const otherChip=document.querySelector('#sp-type-chips .sp-chip[data-val="기타"]');
+  const redTypes={'휴무':1,'출장':1};
+  // 기타 분기 — chip 숨기고 input 노출
+  if(val==='기타'){
+    if(otherChip)otherChip.style.display='none';
+    if(otherInput){
+      otherInput.style.display='inline-block';
+      if(!otherInput.value)otherInput.value='';
+      setTimeout(function(){otherInput.focus();otherInput.select();},30);
+    }
+    if(hid)hid.value=otherInput&&otherInput.value?otherInput.value:'기타';
+  }else{
+    if(otherChip)otherChip.style.display='';
+    if(otherInput){
+      otherInput.style.display='none';
+      otherInput.value='';
+    }
+    if(hid)hid.value=val;
+  }
+  // chip 선택 표시
   const isRed=!!redTypes[val];
   document.querySelectorAll('#sp-type-chips .sp-chip').forEach(function(c){
     if(c.dataset.val===val){
@@ -1433,6 +1481,24 @@ function _setSpType(val){
       c.classList.remove('selected','red');
     }
   });
+  // 휴무/출장 → 시간 자동 + readonly
+  const ts=document.getElementById('sp-time-start');
+  const te=document.getElementById('sp-time-end');
+  const unsetBtns=document.querySelectorAll('.sp-time-unset');
+  if(redTypes[val]){
+    if(ts){ts.value='09:00';ts.readOnly=true;ts.style.opacity='0.75';ts.style.cursor='not-allowed';}
+    if(te){te.value='18:00';te.readOnly=true;te.style.opacity='0.75';te.style.cursor='not-allowed';}
+    unsetBtns.forEach(function(b){b.disabled=true;});
+  }else{
+    if(ts){ts.readOnly=false;ts.style.opacity='';ts.style.cursor='';}
+    if(te){te.readOnly=false;te.style.opacity='';te.style.cursor='';}
+    unsetBtns.forEach(function(b){b.disabled=false;});
+  }
+}
+// 시간 미정 버튼 — input 비우기
+function _unsetSpTime(id){
+  const el=document.getElementById(id);
+  if(el&&!el.readOnly)el.value='';
 }
 // 시간 input wheel ±10분
 function _attachSpTimeWheel(id){
@@ -1468,7 +1534,14 @@ function closeSpecialEntry(){
 }
 async function saveSpecialEntry(){
   if(userRole!=='admin'){showToast('관리자만 등록 가능','error');return;}
-  const type=document.getElementById('sp-type').value;
+  let type=document.getElementById('sp-type').value;
+  // 기타 input에 값이 있으면 그걸 type으로
+  const otherInput=document.getElementById('sp-type-other');
+  if(otherInput&&otherInput.style.display!=='none'){
+    const ov=(otherInput.value||'').trim();
+    if(ov)type=ov;
+    else type='기타';
+  }
   const label=(document.getElementById('sp-label').value||'').trim();
   const start=document.getElementById('sp-start').value;
   let end=document.getElementById('sp-end').value;
@@ -1483,6 +1556,7 @@ async function saveSpecialEntry(){
   if(!start){showFieldError('sp-start','시작일을 입력해주세요');return;}
   if(!end)end=start;
   if(end<start){showFieldError('sp-end','종료일은 시작일 이후여야 합니다');return;}
+  if(!person){showFieldError('sp-person','담당자를 선택해주세요');return;}
   // KST 시각
   const now=new Date();
   const kstStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
@@ -1826,7 +1900,7 @@ function renderPromoBoard(){
         const it=r._spItem;
         const parsed=r._spParsed;
         const typeStr=r._spTypeStr;
-        const redTypes={'휴무':1,'출장':1,'휴가':1};
+        const redTypes={'휴무':1,'출장':1};
         const isRed=!!redTypes[typeStr];
         const typeCol=isRed?'#E24B4A':'var(--accent)';
         const m2=String(r['월']).padStart(2,'0'),d2=String(r['일']).padStart(2,'0');
@@ -4650,7 +4724,7 @@ function openPanel(dateObj,recs){
   var dKey=dk(dateObj);
   var spItems=(PROMO_SPECIAL||[]).filter(function(s){return dKey>=s.start&&dKey<=s.end;});
   if(spItems.length>0){
-    var redTypes={'휴무':1,'출장':1,'휴가':1};
+    var redTypes={'휴무':1,'출장':1};
     spItems.sort(function(a,b){
       if(a.time&&!b.time)return -1;
       if(!a.time&&b.time)return 1;
