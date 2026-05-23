@@ -199,10 +199,11 @@ button{font-family:inherit;cursor:pointer}
 /* 셀이 좁아지면 라인 안 깨지게 + 프로그램 풀이름 .pf → 줄임말 .ps 자동 전환 */
 .c.cell{container-type:inline-size}
 .dn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dn .pf,.dn .ps{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
+.dn .pf{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
+.dn .ps{display:none}
 @container (max-width:135px){
   .dn .pf{display:none}
-  .dn .ps{display:inline}
+  .dn .ps{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
 }
 .diag{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.02) 4px,rgba(0,0,0,0.02) 5px);pointer-events:none}
 
@@ -2098,7 +2099,7 @@ function renderAgeRangeRow(rg,i){
   let h='<div class="pw-age-row" data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;margin-bottom:6px">';
   h+='<div style="flex:1">';
   h+='<div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:4px"><span class="pw-age-label-min">'+min+'세</span><span class="pw-age-label-max">'+max+'세</span></div>';
-  h+='<div style="position:relative;height:24px">';
+  h+='<div class="pw-age-slider-cont" style="position:relative;height:24px" onmousemove="pwAgeMove(event,'+i+')" ontouchstart="pwAgeMove(event,'+i+')">';
   // 공통 track
   h+='<div class="pw-age-track"></div>';
   // 강조 영역 fill (두 thumb 사이)
@@ -2150,6 +2151,34 @@ function pwAgeRangeChange(i,key,val){
       fill.style.left=leftPct+'%';
       fill.style.right=(100-rightPct)+'%';
     }
+  }
+}
+
+// 마우스 위치에 가까운 thumb의 input을 z-index 최상으로 → 두 thumb 가까이 있어도 항상 잡힘
+function pwAgeMove(e,i){
+  const row=document.querySelector('.pw-age-row[data-idx="'+i+'"]');
+  if(!row||!_pwData.ageRanges[i])return;
+  const cont=row.querySelector('.pw-age-slider-cont');
+  if(!cont)return;
+  const rect=cont.getBoundingClientRect();
+  let cx=0;
+  if(e.touches&&e.touches[0])cx=e.touches[0].clientX;
+  else if(typeof e.clientX==='number')cx=e.clientX;
+  const x=cx-rect.left;
+  const w=rect.width;
+  if(w<=0)return;
+  const rg=_pwData.ageRanges[i];
+  const minPx=((rg.min-20)/50)*w;
+  const maxPx=((rg.max-20)/50)*w;
+  const minEl=cont.querySelector('.pw-age-min');
+  const maxEl=cont.querySelector('.pw-age-max');
+  if(!minEl||!maxEl)return;
+  if(Math.abs(x-minPx)<=Math.abs(x-maxPx)){
+    minEl.style.zIndex='5';
+    maxEl.style.zIndex='2';
+  }else{
+    minEl.style.zIndex='2';
+    maxEl.style.zIndex='5';
   }
 }
 
