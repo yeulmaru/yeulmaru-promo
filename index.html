@@ -157,6 +157,9 @@ button{font-family:inherit;cursor:pointer}
 .week{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border);position:relative}
 .week:last-child{border-bottom:none}
 .week.tw{position:relative}
+.week-collapse-btn{position:absolute;top:4px;right:6px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,0.06);color:#888;font-size:9px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.18s,background 0.18s,color 0.18s;z-index:5;line-height:1;padding:0}
+.week:hover .week-collapse-btn{opacity:0.7}
+.week-collapse-btn:hover{opacity:1 !important;background:var(--accent);color:#fff}
 .c-inner{overflow-x:hidden;overflow-y:auto;height:calc(100% - 42px);margin-top:18px;margin-bottom:10px;scrollbar-width:none;-ms-overflow-style:none;scrollbar-color:rgba(0,0,0,0.15) transparent}
 .c-count{position:absolute;top:4px;right:6px;font-size:9px;color:rgba(0,0,0,0.4);font-weight:600;letter-spacing:0.3px;z-index:6;pointer-events:none;font-variant-numeric:tabular-nums}
 .c.today .c-count{color:rgba(0,0,0,0.6)}
@@ -247,87 +250,6 @@ button{font-family:inherit;cursor:pointer}
 @keyframes cal-week-in{
   0%{opacity:0;transform:translateY(-10px) scale(0.985)}
   100%{opacity:1;transform:translateY(0) scale(1)}
-}
-
-/* 캘린더 우상단 로딩 인디케이터 — 캘린더 보이는 채로 데이터 fetch 표시 */
-.cal-loading{
-  position:absolute;top:10px;right:10px;
-  background:rgba(74,77,231,0.92);color:#fff;
-  padding:6px 12px 6px 10px;border-radius:14px;
-  font-size:11.5px;font-weight:500;letter-spacing:0.3px;
-  z-index:25;
-  box-shadow:0 2px 8px rgba(74,77,231,0.25);
-  display:flex;align-items:center;gap:7px;
-  pointer-events:none;
-  animation:fadeIn 0.2s ease;
-}
-.cal-loading::before{
-  content:'';
-  width:10px;height:10px;
-  border:2px solid rgba(255,255,255,0.35);
-  border-top-color:#fff;
-  border-radius:50%;
-  animation:cal-spin 0.8s linear infinite;
-}
-@keyframes cal-spin{to{transform:rotate(360deg)}}
-
-/* 똑딱이 리모콘 — 캘린더 가운데 floating, 원형 위/아래 분할 */
-.cal-remote{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:38px;height:38px;
-  border-radius:50%;
-  z-index:30;
-  background:#fff;
-  box-shadow:0 3px 10px rgba(0,0,0,0.18),0 1px 3px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.9);
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  user-select:none;
-  opacity:0.55;
-  transition:opacity 0.2s,transform 0.2s,box-shadow 0.2s,top 0.3s cubic-bezier(0.4,0,0.2,1);
-}
-.cal-remote:hover{
-  opacity:0.98;
-  transform:translate(-50%,-50%) scale(1.06);
-  box-shadow:0 5px 14px rgba(0,0,0,0.22),0 2px 4px rgba(0,0,0,0.12);
-}
-.cal-remote-half{
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:10px;
-  color:#999;
-  cursor:pointer;
-  transition:background 0.12s,color 0.12s;
-  line-height:1;
-}
-.cal-remote-half.up{
-  align-items:flex-end;
-  padding-bottom:2px;
-  border-bottom:1px solid rgba(0,0,0,0.08);
-  background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent);
-}
-.cal-remote-half.down{
-  align-items:flex-start;
-  padding-top:2px;
-  background:linear-gradient(0deg,rgba(0,0,0,0.02),transparent);
-}
-.cal-remote-half:hover{
-  background:rgba(74,77,231,0.1);
-  color:var(--accent);
-}
-.cal-remote-half:active{
-  background:rgba(74,77,231,0.2);
-}
-/* 비활성화 (더 접을/펼칠 게 없을 때) */
-.cal-remote-half.disabled{
-  color:#d8d8d8 !important;
-  cursor:not-allowed;
-  pointer-events:none;
-  background:rgba(0,0,0,0.03) !important;
 }
 /* 일정 확인 페이지 행 stagger 애니메이션 (촤르륵) */
 .promo-row{animation:promo-row-in 0.32s cubic-bezier(0.34,1.56,0.64,1) backwards}
@@ -517,7 +439,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="nav-right">
       <span class="role-tag" id="role-tag"></span>
       <span class="kst" id="kst"></span>
-      <button class="icon-btn" onclick="loadData(true)" title="새로고침">↻</button>
+      <button class="icon-btn" onclick="loadData()" title="새로고침">↻</button>
       <button class="icon-btn" onclick="logout()" title="로그아웃">⎋</button>
     </div>
   </nav>
@@ -534,16 +456,7 @@ button{font-family:inherit;cursor:pointer}
         <div class="chips" id="chips"></div>
       </div>
       <div class="cal-head-wrap" id="cal-head-wrap"></div>
-        <div class="cal-wrap" style="position:relative">
-          <div class="cal" id="cal"></div>
-          <!-- 작은 로딩 인디케이터 (캘린더 우상단, 캘린더 안 가림) -->
-          <div class="cal-loading" id="cal-loading" style="display:none">데이터 불러오는 중</div>
-          <!-- 똑딱이 리모콘 — 캘린더 정중앙 floating -->
-          <div class="cal-remote" id="cal-remote" title="위: 한 주 접기 / 아래: 한 주 펼치기">
-            <div class="cal-remote-half up" onclick="remoteCollapse()" title="한 주 접기">▲</div>
-            <div class="cal-remote-half down" onclick="remoteExpand()" title="한 주 펼치기">▼</div>
-          </div>
-        </div>
+        <div class="cal" id="cal"></div>
     </div>
     <div id="panel" class="panel" style="display:none" data-panel></div>
   </div>
@@ -778,56 +691,6 @@ function collapseWeek(wi){
   renderCal();
 }
 function toggleWeek(wi){expandWeek(wi);}  // 후방 호환
-// 똑딱이 리모콘 — 위에서부터 가장 가까운 펼친/접힌 주 1개 토글
-function _getWeekStates(){
-  const dates=calDates(currentYear,currentMonth);
-  const weeks=[];for(let i=0;i<dates.length;i+=6)weeks.push(dates.slice(i,i+6));
-  const todayKey=dk(new Date());
-  const isThisMonth=currentYear===new Date().getFullYear()&&currentMonth===new Date().getMonth()+1;
-  const twIdx=weeks.findIndex(w=>w.some(d=>dk(d)===todayKey));
-  return weeks.map(function(w,wi){
-    let isCollapsed;
-    // 마지노선: 저번주(twIdx-1), 이번주(twIdx), 다음주 이상 미래(wi>twIdx)는 무조건 펼침
-    if(twIdx>=0&&wi>=twIdx-1)isCollapsed=false;
-    else if(_weekState[wi]==='collapsed')isCollapsed=true;
-    else if(_weekState[wi]==='expanded')isCollapsed=false;
-    else isCollapsed=isThisMonth&&twIdx>=0&&wi<twIdx-1;
-    return{wi:wi,isCollapsed:isCollapsed,isToday:wi===twIdx};
-  });
-}
-function remoteCollapse(){
-  const states=_getWeekStates();
-  const twIdx=states.findIndex(function(s){return s.isToday;});
-  // 저저번주(twIdx-2)부터 위로 검토. 펼친 주 만나면 접음
-  const startIdx=twIdx>=0?twIdx-2:states.length-1;
-  for(let i=startIdx;i>=0;i--){
-    if(!states[i].isCollapsed){collapseWeek(i);return;}
-  }
-}
-function remoteExpand(){
-  const states=_getWeekStates();
-  const twIdx=states.findIndex(function(s){return s.isToday;});
-  // 저저번주(twIdx-2)부터 위로 검토. 접힌 주 만나면 펼침
-  const startIdx=twIdx>=0?twIdx-2:states.length-1;
-  for(let i=startIdx;i>=0;i--){
-    if(states[i].isCollapsed){expandWeek(i);return;}
-  }
-}
-// 비활성화 판단
-function _canCollapse(){
-  const states=_getWeekStates();
-  const twIdx=states.findIndex(function(s){return s.isToday;});
-  const startIdx=twIdx>=0?twIdx-2:states.length-1;
-  for(let i=startIdx;i>=0;i--){if(!states[i].isCollapsed)return true;}
-  return false;
-}
-function _canExpand(){
-  const states=_getWeekStates();
-  const twIdx=states.findIndex(function(s){return s.isToday;});
-  const startIdx=twIdx>=0?twIdx-2:states.length-1;
-  for(let i=startIdx;i>=0;i--){if(states[i].isCollapsed)return true;}
-  return false;
-}
 // === 특별 일정 (교육/휴가/출장/회의) — SharePoint PromoSpecial 시트 연동 ===
 let PROMO_SPECIAL=[];
 async function loadPromoSpecial(){
@@ -1126,25 +989,13 @@ function updatePerfOpen(){
     p.o=(now>=ss&&now<=se)?1:0;
   });
 }
-function showCalLoading(text){
-  const el=document.getElementById('cal-loading');
-  if(el){if(text)el.textContent=text;el.style.display='flex';}
-}
-function hideCalLoading(){
-  const el=document.getElementById('cal-loading');
-  if(el)el.style.display='none';
-}
 async function initApp(){
   buildNav();startClock();updateRoleTag();
-  // 캘린더 구조 먼저 그림 (빈 데이터로) — 사용자가 즉시 캘린더 봄
-  try{render();}catch(e){console.warn('[initApp render]',e);}
-  // 우상단 작은 인디케이터로 fetch 중 표시 (캘린더 안 가림)
-  showCalLoading('데이터 불러오는 중');
   try{await loadPrograms();}catch(e){console.warn('[initApp loadPrograms]',e);}
   try{await loadAllMasters();}catch(e){console.warn('[initApp loadAllMasters]',e);}
   try{await loadPromoSpecial();}catch(e){console.warn('[initApp loadPromoSpecial]',e);}
   updatePerfOpen();
-  loadData(false);  // 메시지 없이 records fetch (initApp의 인디케이터가 대신함)
+  loadData();
 }
 
 function updateRoleTag(){
@@ -4044,16 +3895,13 @@ function _typeLoop(elId,text,speed){
   }
   setTimeout(tick,100);
 }
-async function loadData(showLoading){
-  // showLoading: 명시 false면 인디케이터 안 띄움 (호출자가 이미 띄웠음)
-  const _sl=showLoading!==false;
-  if(_sl)showCalLoading('데이터 불러오는 중');
-  try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);showCalLoading('데이터 로드 실패 ✕');setTimeout(hideCalLoading,2000);return;}
+async function loadData(){
+  var cal=document.getElementById('cal');
+  if(cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중입니다... \uD83D\uDE09',65);}
+  try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
   // 특별 일정 — 실패해도 records 렌더는 진행
   try{await loadPromoSpecial();}catch(e){console.warn('[loadData] promoSpecial',e);}
-  render();
-  hideCalLoading();
-}
+  _typingId++;render();}
 
 // SharePoint Graph API 일관성 지연 회피용 - 변경 후 row 수 검증 + 자동 재시도
 async function syncReload(expectedDelta){
@@ -4257,6 +4105,10 @@ function renderCal(){
     }
     const justOpened=_justExpandedWeek===wi;
     h+=`<div class="week${isTW?' tw':''}${justOpened?' just-opened':''}${_calAnim}" style="${wi<weeks.length-1?'':'border-bottom:none;'}${_calDelay}">`;
+    // 펼친 주 접기 버튼 (호버 시 표시) — 오늘 주는 제외
+    if(!isTW){
+      h+='<button class="week-collapse-btn" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();event.preventDefault();collapseWeek('+wi+')" title="이 주 접기">▲</button>';
+    }
     week.forEach((d,di)=>{
       const key=dk(d),nm=d.getMonth()+1!==currentMonth,td=isToday(d),past=isThisMonth&&isPast(d)&&!td,isSat=di===4,isSun=di===5,isSel=selected===key,recs=nm?[]:getRecsForDate(d);
       let bg='rgba(255,255,255,0.3)';
@@ -4311,56 +4163,6 @@ function renderCal(){
       _animEls.forEach(function(el){el.style.animation='';});
     });
   }
-  // 리모콘 위치 + 상태 업데이트
-  _updateRemote();
-}
-// 리모콘 위치 + 비활성화 상태 동기화
-function _updateRemote(){
-  const remote=document.getElementById('cal-remote');
-  if(!remote)return;
-  const cal=document.getElementById('cal');
-  if(!cal)return;
-  const states=_getWeekStates();
-  const twIdx=states.findIndex(function(s){return s.isToday;});
-  const weekEls=cal.children;
-  const calRect=cal.getBoundingClientRect();
-  let topPx=null;
-  if(twIdx>=1){
-    // 일반: 저번주(twIdx-1) 시작 라인 + 위쪽 접힘 비율 × 저번주 height
-    const lastWkEl=weekEls[twIdx-1];
-    if(lastWkEl){
-      const lastWkRect=lastWkEl.getBoundingClientRect();
-      const lastWkTop=lastWkRect.top-calRect.top;
-      const lastWkHeight=lastWkRect.height;
-      // 위쪽 비마지노선 wi (0 ~ twIdx-2) 중 접힌 비율
-      let collapsedCount=0,totalCount=0;
-      for(let i=0;i<twIdx-1;i++){
-        totalCount++;
-        if(states[i].isCollapsed)collapsedCount++;
-      }
-      const ratio=totalCount>0?(collapsedCount/totalCount):0;
-      topPx=lastWkTop+ratio*lastWkHeight;
-    }
-  }else if(twIdx===0){
-    // 오늘이 첫 주 — 이번주 시작 = 0
-    const todayEl=weekEls[0];
-    if(todayEl){
-      topPx=todayEl.getBoundingClientRect().top-calRect.top;
-    }
-  }
-  if(topPx!==null){
-    remote.style.top=topPx+'px';
-    remote.style.left='50%';
-  }else{
-    // 다른 달 — 캘린더 가운데
-    remote.style.top='50%';
-    remote.style.left='50%';
-  }
-  // 비활성화 표시
-  const upBtn=remote.querySelector('.cal-remote-half.up');
-  const downBtn=remote.querySelector('.cal-remote-half.down');
-  if(upBtn)upBtn.classList.toggle('disabled',!_canCollapse());
-  if(downBtn)downBtn.classList.toggle('disabled',!_canExpand());
 }
 
 // 모든 .c 셀의 dn을 c 직접 자식(absolute)으로 이동 + c-inner에 fade mask 적용
