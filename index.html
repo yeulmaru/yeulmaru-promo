@@ -170,7 +170,7 @@ button{font-family:inherit;cursor:pointer}
 .c.today .c-inner{scrollbar-color:rgba(80,100,140,0.22) transparent}
 .c.today .c-inner::-webkit-scrollbar-thumb{background:rgba(80,100,140,0.22);border-radius:2px}
 .c.today .c-inner::-webkit-scrollbar-track{background:transparent;margin-top:24px;margin-bottom:8px}
-.c{height:110px;padding:7px 8px 20px 8px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,0.3)}
+.c{height:140px;padding:7px 8px 42px 8px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,0.3)}
 .c:last-child{border-right:none}
 .c.nm{background:var(--nm-bg)}
 .c.past{background:var(--past-bg)}
@@ -206,15 +206,13 @@ button{font-family:inherit;cursor:pointer}
   .dn .ps{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
 }
 .diag{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.02) 4px,rgba(0,0,0,0.02) 5px);pointer-events:none}
-/* 특별 일정 한 줄 마퀴 (전광판) — 전시 라인 위에 표시 */
-.special-marquee{position:absolute;bottom:18px;left:6px;right:6px;overflow:hidden;white-space:nowrap;height:13px;font-size:10px;line-height:13px;color:var(--text);pointer-events:auto}
-.special-marquee-track{display:inline-block;padding-left:100%;animation:sp-marquee-flow 18s linear infinite;will-change:transform}
-.special-marquee:hover .special-marquee-track{animation-play-state:paused;cursor:help}
-@keyframes sp-marquee-flow{from{transform:translateX(0)}to{transform:translateX(-100%)}}
-.sp-item{display:inline-flex;align-items:center;gap:3px;margin-right:12px}
-.sp-time{font-weight:700;color:var(--accent);min-width:36px;display:inline-block;text-align:left;font-variant-numeric:tabular-nums}
+/* 특별 일정 세로 슬라이드 (전광판) — 한 줄 영역 항상 확보, 위로 사라지는 느낌 */
+.sp-area{position:absolute;bottom:24px;left:6px;right:6px;height:18px;overflow:hidden;pointer-events:auto}
+.sp-track{position:relative;transition:transform 0.5s cubic-bezier(0.55,0,0.45,1);will-change:transform}
+.sp-item{height:18px;display:flex;align-items:center;gap:5px;font-size:10px;line-height:18px;white-space:nowrap;overflow:hidden}
+.sp-time{font-weight:700;color:var(--accent);min-width:36px;display:inline-block;text-align:left;font-variant-numeric:tabular-nums;flex-shrink:0}
 .sp-time.off{color:#C04040}
-.sp-label{color:#555}
+.sp-label{color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .c.past .sp-time,.c.past .sp-label{color:#bbb !important}
 
 /* ═══ PANEL ═══ */
@@ -587,18 +585,21 @@ function renderExhibitBadge(d,nm,past){
 if(nm)return'';
 var st=getExhibitStatus(d);
 var colors=['#006B3C','#E84393'];
-var h='<div style="position:absolute;bottom:8px;left:0;right:0;display:flex;flex-direction:column;gap:3px;padding:0">';
+var h='<div style="position:absolute;bottom:14px;left:0;right:0;display:flex;flex-direction:column;gap:3px;padding:0">';
 for(var i=0;i<st.length;i++){
 h+='<div style="height:0;border-top:2px solid '+(past?'rgba(0,0,0,0.04)':st[i].on?colors[i]:'rgba(0,0,0,0.04)')+'"></div>';
 }
 return h+'</div>';
 }
-// 특별 일정 한 줄 마퀴 — 전시 라인 위에 표시
+// 특별 일정 세로 슬라이드 (위로 사라지는 느낌) — 영역 항상 확보
 function renderSpecialMarquee(d,nm,past){
   if(nm)return'';
   const key=dk(d);
   const items=(PROMO_SPECIAL||[]).filter(function(s){return key>=s.start&&key<=s.end;});
-  if(!items.length)return'';
+  if(!items.length){
+    // 영역만 확보 (빈 채로) — 셀 레이아웃 일관성 유지
+    return '<div class="sp-area" aria-hidden="true"></div>';
+  }
   const emoMap={'교육':'📚','휴가':'🏖️','출장':'✈️','회의':'👥','기타':'📌'};
   // 시간 있는 순 정렬 (휴무는 뒤로)
   items.sort(function(a,b){
@@ -614,9 +615,10 @@ function renderSpecialMarquee(d,nm,past){
     const emo=emoMap[it.type]||'📌';
     const label=it.label||it.type||'';
     const personStr=it.person?' ('+it.person+')':'';
-    inner+='<span class="sp-item" title="'+escapeHtml(it.type+' · '+label+personStr)+'"><span class="'+cls+'">'+escapeHtml(t)+'</span><span class="sp-label">'+emo+' '+escapeHtml(label)+escapeHtml(personStr)+'</span></span>';
+    inner+='<div class="sp-item" title="'+escapeHtml(it.type+' · '+label+personStr)+'"><span class="'+cls+'">'+escapeHtml(t)+'</span><span class="sp-label">'+emo+' '+escapeHtml(label)+escapeHtml(personStr)+'</span></div>';
   });
-  return '<div class="special-marquee" title="특별 일정 — 호버 시 정지"><span class="special-marquee-track">'+inner+'</span></div>';
+  // 항목 1개: 슬라이드 없이. 2개 이상: 글로벌 interval이 transform 변경
+  return '<div class="sp-area" title="특별 일정 — 호버 시 정지"><div class="sp-track" data-sp-count="'+items.length+'">'+inner+'</div></div>';
 }
 function getDdayText(dd){if(dd>0)return'D-'+dd;if(dd===0)return'D-Day';return'D+'+Math.abs(dd);}
 function renderPerfsHtml(perfs,td,past){
@@ -1514,7 +1516,7 @@ function renderPromoBoard(){
       if(canApprove){
         html+='<button onclick="event.stopPropagation();approvePromoFromBoard('+r._rowIndex+')" title="신청 접수 (대기 중 → 예정)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:var(--peach);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'접수\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.color=\'var(--peach)\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
       }else if(canComplete){
-        html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#0F8B4C;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'완료\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
+        html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#bbb;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'완료\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.color=\'#bbb\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
       }
       html+='</td>';
       html+='</tr>';
@@ -3854,7 +3856,7 @@ function isToday(d){return dk(d)===dk(new Date());}
 function isPast(d){const t=new Date();t.setHours(0,0,0,0);const dd=new Date(d);dd.setHours(0,0,0,0);return dd<t;}
 function getRecsForDate(d){return records.filter(r=>excelToKey(r['날짜'])===dk(d));}
 
-function calDates(y,m){const first=new Date(y,m-1,1),dow=first.getDay(),offset=(dow-2+7)%7,start=new Date(y,m-1,1-offset),out=[];for(let w=0;w<6;w++){for(let d=0;d<6;d++){const dt=new Date(start);dt.setDate(dt.getDate()+w*7+d);out.push(dt);}}return out;}
+function calDates(y,m){const first=new Date(y,m-1,1),dow=first.getDay(),offset=(dow-2+7)%7,start=new Date(y,m-1,1-offset),out=[];for(let w=0;w<5;w++){for(let d=0;d<6;d++){const dt=new Date(start);dt.setDate(dt.getDate()+w*7+d);out.push(dt);}}return out;}
 
 function render(){document.getElementById('nav-month').textContent=currentMonth;document.getElementById('nav-year').textContent=currentYear;renderChips();renderCal();}
 
@@ -4053,6 +4055,7 @@ function renderCal(){
   cal.innerHTML=h;
   setupCellOverlays();
   startTodayMarquee();
+  startSpecialSlide();
 }
 
 // 모든 .c 셀의 dn을 c 직접 자식(absolute)으로 이동 + c-inner에 fade mask 적용
@@ -4141,6 +4144,23 @@ function startTodayMarquee(){
       inner.scrollTop=0;
     });
   },650);
+}
+
+// === 특별 일정 세로 슬라이드 (글로벌 interval) — 위로 사라지는 느낌 ===
+let _spSlideIdx=0;
+let _spSlideTimer=null;
+function startSpecialSlide(){
+  if(_spSlideTimer){clearInterval(_spSlideTimer);_spSlideTimer=null;}
+  // 단일 글로벌 interval — 모든 셀의 .sp-track 동시 슬라이드 (성능 효율)
+  _spSlideTimer=setInterval(function(){
+    _spSlideIdx++;
+    document.querySelectorAll('.sp-track').forEach(function(tr){
+      const cnt=Number(tr.dataset.spCount)||1;
+      if(cnt<=1)return;  // 항목 1개는 슬라이드 X
+      const idx=_spSlideIdx%cnt;
+      tr.style.transform='translateY('+(-idx*18)+'px)';
+    });
+  },2800);  // 2.8초마다 다음 항목
 }
 
 // === 캘린더 셀 우클릭 컨텍스트 메뉴 ===
