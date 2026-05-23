@@ -237,6 +237,35 @@ button{font-family:inherit;cursor:pointer}
   .confirm{padding:20px 22px 18px !important;border-radius:16px}
   .confirm-acts{flex-wrap:wrap;gap:8px}
   .confirm-acts .m-btn{flex:1 1 calc(50% - 4px);min-width:auto}
+  /* === 홍보 신청 위저드 === */
+  .pw-modal{
+    max-width:none !important;
+    width:96vw !important;
+    padding:18px !important;
+    border-radius:14px !important;
+  }
+  .pw-question{font-size:16px;margin:14px 0 6px}
+  .pw-hint{font-size:11px;margin-bottom:10px}
+  .pw-acts{flex-wrap:wrap;gap:8px;justify-content:stretch;padding-top:14px;margin-top:18px}
+  .pw-acts .m-btn{flex:1 1 calc(50% - 4px);min-width:auto;padding:11px 12px !important;font-size:13px}
+  .pw-prog-list{max-height:260px}
+  .pw-prog-row{height:44px;font-size:13px}
+  /* === 관리자 패널 모달 === */
+  .admin-modal{
+    max-width:none !important;
+    width:96vw !important;
+    padding:18px !important;
+    border-radius:14px !important;
+  }
+  .admin-modal-grid{
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  .admin-item{padding:12px !important}
+  /* === 우클릭/길게 누르기 컨텍스트 메뉴 — 터치 영역 확대 === */
+  #cell-context-menu{min-width:170px !important;padding:5px !important}
+  .ccm-item{padding:12px 14px !important;font-size:14px}
+  .ccm-item .emo{font-size:16px}
 }
 @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
 
@@ -1388,7 +1417,7 @@ function openAdminPanel(){
     {id:'users',label:'사용자 관리',desc:'담당자 + 여부 필터'},
     {id:'programs',label:'프로그램 관리',desc:'프로그램 등록·수정·삭제'}
   ];
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:520px"><h3 style="margin:0 0 4px">관리자 패널</h3><div style="font-size:12px;color:var(--dim);margin-bottom:18px">관리할 항목을 골라 주세요</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div><div style="margin-top:18px;text-align:right"><button onclick="closeAdminPanel()" style="padding:8px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal admin-modal" style="width:520px"><h3 style="margin:0 0 4px">관리자 패널</h3><div style="font-size:12px;color:var(--dim);margin-bottom:18px">관리할 항목을 골라 주세요</div><div class="admin-modal-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div><div style="margin-top:18px;text-align:right"><button onclick="closeAdminPanel()" style="padding:8px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
