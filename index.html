@@ -170,7 +170,7 @@ button{font-family:inherit;cursor:pointer}
 .c.today .c-inner{scrollbar-color:rgba(80,100,140,0.22) transparent}
 .c.today .c-inner::-webkit-scrollbar-thumb{background:rgba(80,100,140,0.22);border-radius:2px}
 .c.today .c-inner::-webkit-scrollbar-track{background:transparent;margin-top:24px;margin-bottom:8px}
-.c{height:140px;padding:7px 8px 42px 8px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,0.3)}
+.c{height:140px;padding:7px 8px 30px 8px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,0.3)}
 .c:last-child{border-right:none}
 .c.nm{background:var(--nm-bg)}
 .c.past{background:var(--past-bg)}
@@ -207,13 +207,34 @@ button{font-family:inherit;cursor:pointer}
 }
 .diag{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.02) 4px,rgba(0,0,0,0.02) 5px);pointer-events:none}
 /* 특별 일정 세로 슬라이드 (전광판) — 한 줄 영역 항상 확보, 위로 사라지는 느낌 */
-.sp-area{position:absolute;bottom:24px;left:6px;right:6px;height:18px;overflow:hidden;pointer-events:auto}
+.sp-area{position:absolute;bottom:12px;left:6px;right:6px;height:14px;overflow:hidden;pointer-events:auto}
 .sp-track{position:relative;transition:transform 0.5s cubic-bezier(0.55,0,0.45,1);will-change:transform}
-.sp-item{height:18px;display:flex;align-items:center;gap:5px;font-size:10px;line-height:18px;white-space:nowrap;overflow:hidden}
-.sp-time{font-weight:700;color:var(--accent);min-width:36px;display:inline-block;text-align:left;font-variant-numeric:tabular-nums;flex-shrink:0}
+.sp-item{height:14px;display:flex;align-items:center;gap:5px;font-size:10px;line-height:14px;white-space:nowrap;overflow:hidden}
+.sp-time{font-weight:700;color:var(--accent);min-width:34px;display:inline-block;text-align:left;font-variant-numeric:tabular-nums;flex-shrink:0}
 .sp-time.off{color:#C04040}
 .sp-label{color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .c.past .sp-time,.c.past .sp-label{color:#bbb !important}
+
+/* 접힌 주차 — 저저번 주 이상 과거 자동 접힘 */
+.week-collapsed{
+  display:flex;align-items:center;gap:14px;padding:7px 16px;
+  cursor:pointer;border-bottom:1px solid var(--border);
+  font-size:11.5px;color:#888;background:rgba(0,0,0,0.018);
+  transition:background 0.18s;
+  user-select:none;
+}
+.week-collapsed:hover{background:rgba(74,77,231,0.05)}
+.wc-arrow{color:#bbb;font-size:9px;transition:transform 0.18s,color 0.18s}
+.week-collapsed:hover .wc-arrow{color:var(--accent);transform:translateX(2px)}
+.wc-range{color:#666;font-weight:500;font-variant-numeric:tabular-nums}
+.wc-count{margin-left:auto;color:var(--accent);font-weight:600;font-size:11px}
+/* 펼침 애니메이션 — 위에서 샤라락 슬라이드 다운 */
+.week.just-opened{animation:wk-slide-down 0.38s cubic-bezier(0.4,0,0.2,1);transform-origin:top}
+@keyframes wk-slide-down{
+  0%{opacity:0;transform:scaleY(0.6);max-height:0}
+  60%{opacity:1}
+  100%{opacity:1;transform:scaleY(1);max-height:200px}
+}
 
 /* ═══ PANEL ═══ */
 .panel{position:fixed;top:56px;right:0;width:360px;height:calc(100vh - 56px);background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-left:1px solid var(--glass-border);box-shadow:-8px 0 32px rgba(74,77,231,0.06);z-index:10;display:flex;flex-direction:column;animation:slideIn .25s ease}
@@ -585,7 +606,7 @@ function renderExhibitBadge(d,nm,past){
 if(nm)return'';
 var st=getExhibitStatus(d);
 var colors=['#006B3C','#E84393'];
-var h='<div style="position:absolute;bottom:14px;left:0;right:0;display:flex;flex-direction:column;gap:3px;padding:0">';
+var h='<div style="position:absolute;bottom:4px;left:0;right:0;display:flex;flex-direction:column;gap:3px;padding:0">';
 for(var i=0;i<st.length;i++){
 h+='<div style="height:0;border-top:2px solid '+(past?'rgba(0,0,0,0.04)':st[i].on?colors[i]:'rgba(0,0,0,0.04)')+'"></div>';
 }
@@ -634,6 +655,14 @@ else out+='<span style="display:inline-flex;align-items:center;margin-left:6px">
 }return out;
 }
 let password='',userRole='user',records=[],currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth()+1;
+// === 주차 접힘 상태 — 저저번 주차 이상 자동 접힘 ===
+let _weekState={};  // {wi: 'expanded'} — 사용자가 명시적으로 펼친 주
+let _justExpandedWeek=null;  // 펼친 직후 1회 — 애니메이션용
+function toggleWeek(wi){
+  if(_weekState[wi]==='expanded'){delete _weekState[wi];}
+  else{_weekState[wi]='expanded';_justExpandedWeek=wi;}
+  renderCal();
+}
 // === 특별 일정 (교육/휴가/출장/회의) — SharePoint PromoSpecial 시트 연동 ===
 let PROMO_SPECIAL=[];
 async function loadPromoSpecial(){
@@ -4012,7 +4041,22 @@ function renderCal(){
   document.getElementById('cal-head-wrap').innerHTML='<div class="cal-head">'+DAYS.map((d,i)=>{var cls='dh';if(i===4)cls+=' sat';if(i===5)cls+=' sun';var st=i<5?'border-right:1px solid var(--border);':'';if(i===_todayDi&&_todayDi<6)st+='background:var(--accent);color:#fff;';return'<div class="'+cls+'" style="'+st+'">'+d+'</div>';}).join('')+'</div>';let h='';
   weeks.forEach((week,wi)=>{
     const isTW=wi===twIdx;
-    h+=`<div class="week${isTW?' tw':''}" style="${wi<weeks.length-1?'':'border-bottom:none'}">`;
+    // 자동 접힘: 이번 달이고 현재 주차 -2 이상 과거 + 사용자가 펼치지 않은 경우
+    const isAutoCollapsed=isThisMonth&&twIdx>=0&&wi<twIdx-1&&_weekState[wi]!=='expanded';
+    if(isAutoCollapsed){
+      // 접힌 한 줄 — 클릭 시 펼침
+      const start=week[0],end=week[week.length-1];
+      let evCount=0;
+      week.forEach(function(d){if(d.getMonth()+1===currentMonth)evCount+=getRecsForDate(d).length;});
+      h+='<div class="week-collapsed" onclick="toggleWeek('+wi+')" title="클릭해서 펼치기">';
+      h+='<span class="wc-arrow">▶</span>';
+      h+='<span class="wc-range">'+(start.getMonth()+1)+'/'+start.getDate()+' ~ '+(end.getMonth()+1)+'/'+end.getDate()+'</span>';
+      h+='<span class="wc-count">'+(evCount>0?evCount+'개 일정':'일정 없음')+'</span>';
+      h+='</div>';
+      return;
+    }
+    const justOpened=_justExpandedWeek===wi;
+    h+=`<div class="week${isTW?' tw':''}${justOpened?' just-opened':''}" style="${wi<weeks.length-1?'':'border-bottom:none'}">`;
     week.forEach((d,di)=>{
       const key=dk(d),nm=d.getMonth()+1!==currentMonth,td=isToday(d),past=isThisMonth&&isPast(d)&&!td,isSat=di===4,isSun=di===5,isSel=selected===key,recs=nm?[]:getRecsForDate(d);
       let bg='rgba(255,255,255,0.3)';
@@ -4057,6 +4101,7 @@ function renderCal(){
   setupCellOverlays();
   startTodayMarquee();
   startSpecialSlide();
+  if(_justExpandedWeek!==null){setTimeout(function(){_justExpandedWeek=null;},500);}
 }
 
 // 모든 .c 셀의 dn을 c 직접 자식(absolute)으로 이동 + c-inner에 fade mask 적용
@@ -4159,7 +4204,7 @@ function startSpecialSlide(){
       const cnt=Number(tr.dataset.spCount)||1;
       if(cnt<=1)return;  // 항목 1개는 슬라이드 X
       const idx=_spSlideIdx%cnt;
-      tr.style.transform='translateY('+(-idx*18)+'px)';
+      tr.style.transform='translateY('+(-idx*14)+'px)';
     });
   },2800);  // 2.8초마다 다음 항목
 }
@@ -4304,7 +4349,7 @@ function togglePanelPrograms(){
   arrow.classList.toggle('open',_panelProgramsOpen);
 }
 function closePanel(){panelOpen=false;selected=null;document.getElementById('panel').style.display='none';document.getElementById('main-area').style.marginRight='0';render();}
-function changeMonth(delta){currentMonth+=delta;if(currentMonth<1){currentMonth=12;currentYear--;}if(currentMonth>12){currentMonth=1;currentYear++;}closePanel();render();}
+function changeMonth(delta){currentMonth+=delta;if(currentMonth<1){currentMonth=12;currentYear--;}if(currentMonth>12){currentMonth=1;currentYear++;}closePanel();_weekState={};render();}
 
 function onPlatChange(){
   const p=document.getElementById('f-plat').value;
