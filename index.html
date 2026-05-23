@@ -187,7 +187,7 @@ button{font-family:inherit;cursor:pointer}
 
 .c.sel{box-shadow:inset 0 0 0 2px var(--accent);background:rgba(74,77,231,0.04)}
 .perf-tag{font-size:9px;font-weight:600;color:#333;background:#F0C4B8;padding:2px 7px;border-radius:6px;margin-left:6px;white-space:nowrap;letter-spacing:0.3px;vertical-align:middle;line-height:1}
-.dn{font-size:13px;font-weight:600;margin-bottom:2px;color:var(--text);display:flex;align-items:center;flex-wrap:wrap}
+.dn{font-size:13px;font-weight:600;margin-bottom:2px;color:var(--text);display:flex;align-items:center;flex-wrap:nowrap;min-width:0}
 .dn.nm{color:rgba(0,0,0,0.1)}
 .dn.past{color:rgba(0,0,0,0.15)}
 .dn.sat{color:#3B7DD8}
@@ -209,16 +209,17 @@ button{font-family:inherit;cursor:pointer}
 .dn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dn .pf{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
 .dn .ps{display:none}
-@container (max-width:135px){
+/* Stage 2: 셀 ≤140px → 풀이름 → 줄임말 */
+@container (max-width:140px){
   .dn .pf{display:none}
   .dn .ps{display:inline;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
 }
-/* 더 좁아지면 D-day 숨김 — 동그라미 + 줄임말만 */
-@container (max-width:110px){
+/* Stage 3: 셀 ≤120px → D-day 숨김 (동그라미 + 이름) */
+@container (max-width:120px){
   .dn .pday{display:none !important}
 }
-/* 매우 좁으면 이름까지 숨김 — 동그라미 라벨(공/전/교/대)만 */
-@container (max-width:90px){
+/* Stage 4: 셀 ≤100px → 이름까지 숨김, 동그라미 라벨(공/전/교/대)만 */
+@container (max-width:100px){
   .dn .pname{display:none !important}
 }
 .diag{position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.02) 4px,rgba(0,0,0,0.02) 5px);pointer-events:none}
