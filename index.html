@@ -582,7 +582,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 <div class="confirm-bg" id="confirm-modal">
   <div class="confirm">
     <div class="confirm-title" id="confirm-title">예울마루 알림</div>
-    <div class="confirm-msg" id="confirm-msg">정말로 삭제할래요?</div>
+    <div class="confirm-msg" id="confirm-msg">정말로 삭제할까요?</div>
     <div class="confirm-acts" id="confirm-acts">
       <button class="c-btn no" onclick="confirmResolve(false)">취소</button>
       <button class="c-btn yes" onclick="confirmResolve(true)">확인</button>
@@ -1133,7 +1133,7 @@ function updateRoleTag(){
 }
 async function switchRole(){
   if(userRole==='admin'){
-    if(await showConfirm('일반 모드로 전환할래요?')){
+    if(await showConfirm('일반 모드로 전환할까요?')){
       userRole='user';
       password='0510';
       sessionStorage.setItem('pw','0510');
@@ -1203,7 +1203,7 @@ async function submitRolePrompt(){
   }
 }
 async function logout(){
-  const ok=await showConfirm('로그아웃할래요?');
+  const ok=await showConfirm('로그아웃할까요?');
   if(!ok)return;
   sessionStorage.removeItem('pw');
   sessionStorage.removeItem('role');
@@ -1317,7 +1317,7 @@ async function completePromoRequest(rowIndex){
   const status=r['진행 상태']||'';
   if(status!=='예정'){showToast('예정 상태의 신청만 완료 처리할 수 있어요','error');return;}
   const title=r['콘텐츠 제목']||'(제목 없음)';
-  const ok=await showConfirm('"'+title+'"\n\n게시 완료 처리할래요?');
+  const ok=await showConfirm('"'+title+'"\n\n게시 완료 처리할까요?');
   if(!ok)return;
   showOverlayLoad();
   try{
@@ -1355,7 +1355,7 @@ async function cancelPromoRequest(rowIndex){
   if(status==='취소'){showToast('이미 취소된 신청이에요','error');return;}
   // 확인
   const title=r['콘텐츠 제목']||'(제목 없음)';
-  const ok=await showConfirm('"'+title+'"\n\n이 홍보 신청을 취소할래요?');
+  const ok=await showConfirm('"'+title+'"\n\n이 홍보 신청을 취소할까요?');
   if(!ok)return;
   // PATCH — 전체 row의 진행 상태만 '취소'로 변경 (다른 필드 유지)
   showOverlayLoad();
@@ -1815,7 +1815,7 @@ async function saveSpecialEntry(){
 // 삭제
 async function deleteSpecialEntry(rowIndex){
   if(userRole!=='admin'){showToast('관리자만 할 수 있어요','error');return;}
-  if(!await showConfirm('이 담당자 일정을 삭제할래요?',{title:'담당자 일정 삭제',okText:'삭제',danger:true}))return;
+  if(!await showConfirm('이 담당자 일정을 삭제할까요?',{title:'담당자 일정 삭제',okText:'삭제',danger:true}))return;
   showOverlayLoad();
   try{
     await api('DELETE','/api/sheet/special/'+rowIndex);
@@ -2416,7 +2416,7 @@ async function closePromoWizard(force){
     return;
   }
   // 진행 중 → confirm
-  const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을래요?');
+  const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을까요?');
   if(ok)document.getElementById('promo-wizard').classList.remove('show');
 }
 function renderPwStep(){
@@ -4427,7 +4427,7 @@ async function saveSheetRow(slug,rowIndex){
 }
 
 async function deleteSheetRow(slug,rowIndex){
-  if(!await showConfirm('정말 삭제할래요?',{title:'행 삭제',okText:'삭제',danger:true}))return;
+  if(!await showConfirm('정말 삭제할까요?',{title:'행 삭제',okText:'삭제',danger:true}))return;
   showOverlayLoad('\uC0AD\uC81C \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('DELETE','/api/sheet/'+slug+'/'+rowIndex);
@@ -4561,7 +4561,7 @@ async function saveProgram(rowIndex){
 async function deleteProgram(rowIndex){
   const p=_programsCache.find(pp=>pp._rowIndex===rowIndex);
   if(!p)return;
-  if(!await showConfirm('정말 삭제할래요?\n\n['+(p['풀네임']||'')+']',{title:'프로그램 삭제',okText:'삭제',danger:true}))return;
+  if(!await showConfirm('정말 삭제할까요?\n\n['+(p['풀네임']||'')+']',{title:'프로그램 삭제',okText:'삭제',danger:true}))return;
   showOverlayLoad('\uC0AD\uC81C \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('DELETE','/api/sheet/program/'+rowIndex);
@@ -5545,7 +5545,7 @@ function showConfirm(msg, opts){
   return new Promise(function(resolve){
     _confirmResolve=resolve;
     document.getElementById('confirm-title').textContent=opts.title||'예울마루 알림';
-    document.getElementById('confirm-msg').textContent=msg||'정말로 진행할래요?';
+    document.getElementById('confirm-msg').textContent=msg||'정말로 진행할까요?';
     const acts=document.getElementById('confirm-acts');
     const okCls=opts.danger?'danger':'yes';
     acts.innerHTML=
@@ -5697,7 +5697,7 @@ async function saveEntry(){
 async function delEntry(){
   if(!editing?.existing)return;
   const dateKey=editing.dateKey;const ri=editing.existing._rowIndex;
-  const ok=await showConfirm('정말로 삭제할래요?');if(!ok)return;
+  const ok=await showConfirm('정말로 삭제할까요?');if(!ok)return;
   showOverlayLoad();
   try{await api('DELETE','/api/records/'+ri);closeModal();await syncReload(-1);closePanel();showToast('삭제됐어요');}catch(e){showToast('삭제 실패: '+e.message,'error');}
   finally{hideOverlayLoad();}
@@ -5706,7 +5706,7 @@ async function delEntry(){
 async function approvePromo(){
   if(!editing?.existing)return;
   if(userRole!=='admin'){showToast('관리자만 할 수 있어요','error');return;}
-  const ok=await showConfirm('이 홍보 신청을 승인할래요?');if(!ok)return;
+  const ok=await showConfirm('이 홍보 신청을 승인할까요?');if(!ok)return;
   showOverlayLoad();
   try{
     // 진행 상태 = "예정"으로 변경 + 시간/날짜 등은 modal 폼에서 현재 값으로
@@ -5722,7 +5722,7 @@ async function approvePromo(){
 async function rejectPromo(){
   if(!editing?.existing)return;
   if(userRole!=='admin'){showToast('관리자만 할 수 있어요','error');return;}
-  const ok=await showConfirm('이 홍보 신청을 거절할래요? 삭제돼요.');if(!ok)return;
+  const ok=await showConfirm('이 홍보 신청을 거절할까요? 삭제돼요.');if(!ok)return;
   showOverlayLoad();
   try{
     const ri=editing.existing._rowIndex;
@@ -5737,7 +5737,7 @@ async function rejectPromo(){
 
 async function deleteRec(rowIndex,dateKey){
   if(userRole!=='admin'){showToast('관리자만 삭제할 수 있어요','error');return;}
-  const ok=await showConfirm('정말로 삭제할래요?');
+  const ok=await showConfirm('정말로 삭제할까요?');
   if(!ok)return;
   showOverlayLoad();
   try{
@@ -5782,7 +5782,7 @@ async function onCellDrop(ev,toKey){
   if(drag.sp){
     const it=PROMO_SPECIAL.find(function(s){return s._rowIndex===drag.rowIndex;});
     if(!it){showToast('담당자 일정을 찾을 수 없어요','error');return;}
-    const ok=await showConfirm('담당자 일정을 '+toKey+'(으)로 이동할래요?');
+    const ok=await showConfirm('담당자 일정을 '+toKey+'(으)로 이동할까요?');
     if(!ok)return;
     // delta 계산 (drag fromKey가 정확한 출발 셀)
     const fp=drag.fromKey.split('-').map(Number);
@@ -5820,7 +5820,7 @@ async function onCellDrop(ev,toKey){
     return;
   }
   // === 기존 콘텐츠 이동 ===
-  const ok=await showConfirm('정말로 일정을 이동할래요?');
+  const ok=await showConfirm('정말로 일정을 이동할까요?');
   if(!ok)return;
   const rec=records.find(function(r){return r._rowIndex===drag.rowIndex;});
   if(!rec){showToast('레코드를 찾을 수 없어요','error');return;}
