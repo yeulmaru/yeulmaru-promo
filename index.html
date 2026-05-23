@@ -2352,7 +2352,7 @@ function renderPromoBoard(){
   const ctrlStyle='display:inline-flex;align-items:center;padding:6px 14px;height:32px;box-sizing:border-box;border-radius:16px;font-size:12px;line-height:1;cursor:pointer;font-family:inherit';
   tabs.forEach(function(t){
     const on=_promoFilter.status===t.k;
-    html+='<button onclick="_promoFilter.status=\''+t.k+'\';renderPromoBoard()" style="'+ctrlStyle+';border:1.5px solid '+(on?'transparent':'#ddd')+';background:'+(on?'rgba(74,77,231,0.85)':'#fff')+';color:'+(on?'#fff':'#666')+';font-weight:'+(on?'600':'500')+'">'+t.l+'</button>';
+    html+='<button onclick="_promoFilter.status=\''+t.k+'\';_promoFilter.specialMode=\'mix\';renderPromoBoard()" style="'+ctrlStyle+';border:1.5px solid '+(on?'transparent':'#ddd')+';background:'+(on?'rgba(74,77,231,0.85)':'#fff')+';color:'+(on?'#fff':'#666')+';font-weight:'+(on?'600':'500')+'">'+t.l+'</button>';
   });
   // 구분자
   html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
@@ -2362,9 +2362,9 @@ function renderPromoBoard(){
   const _segBtn='padding:0 11px;height:28px;line-height:28px;font-size:11.5px;border:none;background:transparent;color:#666;cursor:pointer;font-family:inherit;white-space:nowrap;border-radius:6px;transition:all .12s';
   const _segActive=';background:#fff;color:var(--accent);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08)';
   html+='<div style="'+_segCss+'">';
-  html+='<button onclick="_promoFilter.specialMode=\'mix\';renderPromoBoard()" style="'+_segBtn+(spm==='mix'?_segActive:'')+'">전체</button>';
-  html+='<button onclick="_promoFilter.specialMode=\'hide\';renderPromoBoard()" style="'+_segBtn+(spm==='hide'?_segActive:'')+'">콘텐츠만</button>';
-  html+='<button onclick="_promoFilter.specialMode=\'only\';renderPromoBoard()" style="'+_segBtn+(spm==='only'?_segActive:'')+'">담당자만</button>';
+  html+='<button onclick="_promoFilter.specialMode=\'mix\';_promoFilter.status=\'all\';renderPromoBoard()" style="'+_segBtn+(spm==='mix'?_segActive:'')+'">전체</button>';
+  html+='<button onclick="_promoFilter.specialMode=\'hide\';_promoFilter.status=\'all\';renderPromoBoard()" style="'+_segBtn+(spm==='hide'?_segActive:'')+'">콘텐츠만</button>';
+  html+='<button onclick="_promoFilter.specialMode=\'only\';_promoFilter.status=\'all\';renderPromoBoard()" style="'+_segBtn+(spm==='only'?_segActive:'')+'">담당자만</button>';
   html+='</div>';
   // === 본인/전체 토글 (admin은 본인 개념 없어서 숨김) ===
   if(!isAdmin&&myApplicant){
