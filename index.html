@@ -249,6 +249,28 @@ button{font-family:inherit;cursor:pointer}
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
 
+/* 캘린더 우상단 로딩 인디케이터 — 캘린더 보이는 채로 데이터 fetch 표시 */
+.cal-loading{
+  position:absolute;top:10px;right:10px;
+  background:rgba(74,77,231,0.92);color:#fff;
+  padding:6px 12px 6px 10px;border-radius:14px;
+  font-size:11.5px;font-weight:500;letter-spacing:0.3px;
+  z-index:25;
+  box-shadow:0 2px 8px rgba(74,77,231,0.25);
+  display:flex;align-items:center;gap:7px;
+  pointer-events:none;
+  animation:fadeIn 0.2s ease;
+}
+.cal-loading::before{
+  content:'';
+  width:10px;height:10px;
+  border:2px solid rgba(255,255,255,0.35);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:cal-spin 0.8s linear infinite;
+}
+@keyframes cal-spin{to{transform:rotate(360deg)}}
+
 /* 똑딱이 리모콘 — 캘린더 가운데 floating, 원형 위/아래 분할 */
 .cal-remote{
   position:absolute;
@@ -514,6 +536,8 @@ button{font-family:inherit;cursor:pointer}
       <div class="cal-head-wrap" id="cal-head-wrap"></div>
         <div class="cal-wrap" style="position:relative">
           <div class="cal" id="cal"></div>
+          <!-- 작은 로딩 인디케이터 (캘린더 우상단, 캘린더 안 가림) -->
+          <div class="cal-loading" id="cal-loading" style="display:none">데이터 불러오는 중</div>
           <!-- 똑딱이 리모콘 — 캘린더 정중앙 floating -->
           <div class="cal-remote" id="cal-remote" title="위: 한 주 접기 / 아래: 한 주 펼치기">
             <div class="cal-remote-half up" onclick="remoteCollapse()" title="한 주 접기">▲</div>
@@ -1102,13 +1126,25 @@ function updatePerfOpen(){
     p.o=(now>=ss&&now<=se)?1:0;
   });
 }
+function showCalLoading(text){
+  const el=document.getElementById('cal-loading');
+  if(el){if(text)el.textContent=text;el.style.display='flex';}
+}
+function hideCalLoading(){
+  const el=document.getElementById('cal-loading');
+  if(el)el.style.display='none';
+}
 async function initApp(){
   buildNav();startClock();updateRoleTag();
+  // 캘린더 구조 먼저 그림 (빈 데이터로) — 사용자가 즉시 캘린더 봄
+  try{render();}catch(e){console.warn('[initApp render]',e);}
+  // 우상단 작은 인디케이터로 fetch 중 표시 (캘린더 안 가림)
+  showCalLoading('데이터 불러오는 중');
   try{await loadPrograms();}catch(e){console.warn('[initApp loadPrograms]',e);}
   try{await loadAllMasters();}catch(e){console.warn('[initApp loadAllMasters]',e);}
   try{await loadPromoSpecial();}catch(e){console.warn('[initApp loadPromoSpecial]',e);}
   updatePerfOpen();
-  loadData();
+  loadData(false);  // 메시지 없이 records fetch (initApp의 인디케이터가 대신함)
 }
 
 function updateRoleTag(){
@@ -4009,13 +4045,15 @@ function _typeLoop(elId,text,speed){
   setTimeout(tick,100);
 }
 async function loadData(showLoading){
-  var cal=document.getElementById('cal');
-  const _sl=showLoading!==false;  // 기본 true, 명시 false만 숨김
-  if(_sl&&cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중입니다... \uD83D\uDE09',65);}
-  try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);_typingId++;if(cal&&_sl)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
+  // showLoading: 명시 false면 인디케이터 안 띄움 (호출자가 이미 띄웠음)
+  const _sl=showLoading!==false;
+  if(_sl)showCalLoading('데이터 불러오는 중');
+  try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);showCalLoading('데이터 로드 실패 ✕');setTimeout(hideCalLoading,2000);return;}
   // 특별 일정 — 실패해도 records 렌더는 진행
   try{await loadPromoSpecial();}catch(e){console.warn('[loadData] promoSpecial',e);}
-  _typingId++;render();}
+  render();
+  hideCalLoading();
+}
 
 // SharePoint Graph API 일관성 지연 회피용 - 변경 후 row 수 검증 + 자동 재시도
 async function syncReload(expectedDelta){
