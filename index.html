@@ -175,6 +175,13 @@ button{font-family:inherit;cursor:pointer}
 .c.nm{background:var(--nm-bg)}
 .c.past{background:var(--past-bg)}
 .c.past:hover{background:rgba(0,0,0,0.055)}
+/* 복사 직후 셀 점등 — 2.4s 후 자동 페이드 */
+.c.just-copied-cell{animation:copy-cell-flash 2.4s ease-out}
+@keyframes copy-cell-flash{
+  0%{box-shadow:inset 0 0 0 3px rgba(74,77,231,0.55),0 0 16px rgba(74,77,231,0.3)}
+  20%{box-shadow:inset 0 0 0 3px rgba(74,77,231,0.55),0 0 24px rgba(74,77,231,0.45)}
+  100%{box-shadow:inset 0 0 0 0 transparent,0 0 0 transparent}
+}
 .c.today{background:var(--today-bg)}
 
 
@@ -1611,6 +1618,8 @@ function closeSpecialEntry(){
   if(el)el.innerHTML='';
   _editingSpecial=null;
   _spEndManuallyChanged=false;
+  // 일정 확인 페이지에서 진입했으면 그쪽으로 복귀
+  if(_schedReturnFlag){_schedReturnFlag=false;setTimeout(function(){openPromoBoard();},50);}
 }
 async function saveSpecialEntry(){
   if(userRole!=='admin'){showToast('관리자만 등록 가능','error');return;}
@@ -2009,7 +2018,7 @@ function renderPromoBoard(){
         const labelStr=it.label||typeStr;
         const noVal=r['#']||'SP';
         const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
-        const clickAttr=userRole==='admin'?' onclick="closePromoBoard();openSpecialEntry(null,'+r._rowIndex+')"':'';
+        const clickAttr=userRole==='admin'?' onclick="_schedReturnFlag=true;closePromoBoard();setTimeout(function(){openSpecialEntry(null,'+r._rowIndex+');},50)"':'';
         html+='<tr class="promo-row"'+clickAttr+' style="border-bottom:1px solid #f0f0f0;cursor:'+(userRole==='admin'?'pointer':'default')+';'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
         html+='<td style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:12px">'+escapeHtml(String(noVal))+'</td>';
         // 상태: 예정 (콘텐츠 예정과 동일)
@@ -4597,7 +4606,7 @@ function renderCal(){
       let bg='rgba(255,255,255,0.3)';
       if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
-      h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}" data-cell data-key="${key}" onclick="clickDate('${key}')"${nm?'':` oncontextmenu="onCellContextMenu(event,'${key}')" ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
+      h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}${_justCopiedDateKey===key?' just-copied-cell':''}" data-cell data-key="${key}" onclick="clickDate('${key}')"${nm?'':` oncontextmenu="onCellContextMenu(event,'${key}')" ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
       var perfs=nm?[]:getPerfs(d);var filteredRecs=recs;if(activeFilters.length>0){var allGroups=[{label:'카카오',match:['카카오']},{label:'인스타',match:['인스타']},{label:'블로그·맘카페',match:['블로그','맘카페']},{label:'B2B',match:['B2B']},{label:'문자',match:['문자']}];var activeMatches=[];activeFilters.forEach(function(af){allGroups.forEach(function(g){if(g.label===af)activeMatches=activeMatches.concat(g.match);});});filteredRecs=filteredRecs.filter(function(r){var p=r['플랫폼 1']||'';return activeMatches.some(function(m){return p.indexOf(m)>-1;});});}if(activePrograms.length>0){filteredRecs=filteredRecs.filter(function(r){var prog=r['프로그램']||'';return activePrograms.indexOf(prog)>-1;});}
       // 시간순 정렬 (입력시간 HH:MM 기준)
       filteredRecs=filteredRecs.slice().sort(function(a,b){
@@ -5217,25 +5226,70 @@ function editRec(rowIndex,dateKey,ev,forceReadOnly){
   if(!rec)return;
   openModal(dateKey,rec,{readOnly:!!forceReadOnly});
 }
+// 복사 직후 점등 효과용 — 셀 dateKey 저장
+let _justCopiedDateKey=null;
+// 복사할 날짜·시간 묻는 모달 (원본 일정 prefill)
+function _askCopyDate(originalRec){
+  return new Promise(function(resolve){
+    const origDate=(originalRec['연도']||'')+'-'+String(originalRec['월']||'').padStart(2,'0')+'-'+String(originalRec['일']||'').padStart(2,'0');
+    let origTime='10:00';
+    const ts=originalRec['입력시간(KST)'];
+    if(typeof ts==='string'&&ts.indexOf(' ')>-1)origTime=ts.split(' ')[1].substr(0,5);
+    else if(typeof ts==='number'){const tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;origTime=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+    const origTitle=originalRec['콘텐츠 제목']||'(제목 없음)';
+    const inpSt='width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit';
+    const lbSt='display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px';
+    const html='<div class="modal-bg show" style="z-index:99999" onclick="if(event.target===this)_resolveCopyAsk(null)"><div class="modal" style="width:96vw;max-width:380px;padding:24px;text-align:left;position:relative"><button class="modal-x" onclick="_resolveCopyAsk(null)" title="닫기">✕</button>'+
+      '<h3 style="margin:0 0 4px">복사할 날짜·시간 선택</h3>'+
+      '<div style="font-size:11px;color:#888;margin-bottom:8px">원본 일정 기준으로 미리 입력됨</div>'+
+      '<div style="font-size:12px;color:#444;padding:8px 12px;background:rgba(74,77,231,0.06);border-radius:8px;margin-bottom:4px"><span style="color:#888;font-size:10.5px">원본:</span> '+escapeHtml(origTitle)+' <span style="color:#aaa;font-size:11px">('+origDate+' '+origTime+')</span></div>'+
+      '<label style="'+lbSt+'">새 날짜<span style="color:var(--peach);margin-left:3px">*</span></label>'+
+      '<input id="cp-date" type="date" value="'+origDate+'" style="'+inpSt+'">'+
+      '<label style="'+lbSt+'">새 시간<span style="color:var(--peach);margin-left:3px">*</span></label>'+
+      '<input id="cp-time" type="time" step="600" value="'+origTime+'" style="'+inpSt+'">'+
+      '<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">'+
+      '<button onclick="_resolveCopyAsk(null)" class="m-btn cancel">취소</button>'+
+      '<button onclick="_resolveCopyAskOk()" class="m-btn save">복사</button>'+
+      '</div></div></div>';
+    let el=document.getElementById('copy-ask-modal');
+    if(!el){el=document.createElement('div');el.id='copy-ask-modal';document.body.appendChild(el);}
+    el.innerHTML=html;
+    window._copyAskResolver=resolve;
+    setTimeout(function(){const cd=document.getElementById('cp-date');if(cd)cd.focus();},80);
+  });
+}
+function _resolveCopyAsk(val){
+  const el=document.getElementById('copy-ask-modal');
+  if(el)el.innerHTML='';
+  if(window._copyAskResolver){const r=window._copyAskResolver;window._copyAskResolver=null;r(val);}
+}
+function _resolveCopyAskOk(){
+  const d=document.getElementById('cp-date').value;
+  const t=document.getElementById('cp-time').value;
+  if(!d){showFieldError('cp-date','날짜를 입력해주세요');return;}
+  if(!t){showFieldError('cp-time','시간을 입력해주세요');return;}
+  _resolveCopyAsk({date:d,time:t});
+}
 async function copyRec(rowIndex,dateKey){
   const rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec)return;
-  const ok=await showConfirm('정말 일정을 복사하시겠습니까?');
-  if(!ok)return;
+  // 복사할 날짜·시간 묻기
+  const newDt=await _askCopyDate(rec);
+  if(!newDt)return;
   showOverlayLoad();
   try{
-    // 현재 KST 시각
-    const now=new Date();
-    const ts=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-    // 17개 컬럼 순서 — NO와 입력시간만 새로, 나머지는 그대로
+    const [y,m,d]=newDt.date.split('-').map(Number);
+    const dn=DAY_NAMES[new Date(y,m-1,d).getDay()]+'요일';
+    const ts=newDt.date+' '+newDt.time;
+    // 17개 컬럼 — NO, 입력시간, 연도/월/일/요일은 새로, 나머지 그대로
     const row=[
       records.length+1,
       ts,
-      rec['날짜']||'',
-      rec['연도']||'',
-      rec['월']||'',
-      rec['일']||'',
-      rec['요일']||'',
+      newDt.date,
+      y,
+      m,
+      d,
+      dn,
       rec['플랫폼 1']||'',
       rec['플랫폼 2']||'-',
       rec['콘텐츠 구분']||'',
@@ -5249,9 +5303,16 @@ async function copyRec(rowIndex,dateKey){
       rec['비고']||''
     ];
     await api('POST','/api/records',{values:row});
+    // 점등 효과 — 새 날짜 셀
+    _justCopiedDateKey=newDt.date;
     await syncReload();
-    clickDate(dateKey);
-    showToast('복사되었습니다');
+    showToast('복사되었습니다 → '+newDt.date+' '+newDt.time);
+    // 2.5초 후 클래스 제거 (다음 render에서 빠짐)
+    setTimeout(function(){
+      _justCopiedDateKey=null;
+      // 현재 보여진 셀에서도 클래스 제거 (재렌더 없이)
+      document.querySelectorAll('.c.just-copied-cell').forEach(function(c){c.classList.remove('just-copied-cell');});
+    },2500);
   }catch(e){
     showToast('복사 실패: '+e.message,'error');
   }finally{
