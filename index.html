@@ -174,6 +174,7 @@ button{font-family:inherit;cursor:pointer}
 .c:last-child{border-right:none}
 .c.nm{background:var(--nm-bg)}
 .c.past{background:var(--past-bg)}
+.c.past:hover{background:rgba(0,0,0,0.055)}
 .c.today{background:var(--today-bg)}
 
 
@@ -688,8 +689,8 @@ function renderSpecialMarquee(d,nm,past){
     const tipParts=[typeStr];
     if(it.person)tipParts.push(it.person);
     if(it.label)tipParts.push(it.label);
-    const ctxAttr=userRole==='admin'?' oncontextmenu="onSpContextMenu(event,'+it._rowIndex+');return false;" style="cursor:context-menu"':'';
-    inner+='<div class="sp-item"'+ctxAttr+' title="'+escapeHtml(tipParts.join(' · '))+(userRole==='admin'?' (우클릭: 수정/삭제)':'')+'">'+
+    const ctxAttr=userRole==='admin'?' oncontextmenu="event.stopPropagation();event.preventDefault();onSpContextMenu(event,'+it._rowIndex+');return false;" style="cursor:context-menu"':'';
+    inner+='<div class="sp-item"'+ctxAttr+' data-sp-row="'+it._rowIndex+'" title="'+escapeHtml(tipParts.join(' · '))+(userRole==='admin'?' (우클릭: 수정/삭제)':'')+'">'+
       '<span class="ev-time" style="color:'+timeCol+';font-weight:600">'+escapeHtml(startT)+'</span>'+
       '<span class="ev-plat" style="color:'+timeCol+';font-weight:600">'+escapeHtml(endStr)+'</span>'+
       '<span class="ev-title">'+
@@ -699,7 +700,32 @@ function renderSpecialMarquee(d,nm,past){
       '</div>';
   });
   // 항목 1개: 슬라이드 없이. 2개 이상: 글로벌 interval이 transform 변경
-  return '<div class="sp-area" title="특별 일정 — 호버 시 정지"><div class="sp-track" data-sp-count="'+items.length+'">'+inner+'</div></div>';
+  const areaCtx=userRole==='admin'?' oncontextmenu="onSpAreaContextMenu(event);return false;"':'';
+  return '<div class="sp-area"'+areaCtx+' title="특별 일정'+(userRole==='admin'?' — 우클릭: 수정/삭제':'')+'"><div class="sp-track" data-sp-count="'+items.length+'">'+inner+'</div></div>';
+}
+// .sp-area fallback — 마퀴 transform 적용된 상태에서도 현재 보이는 아이템 찾기
+function onSpAreaContextMenu(event){
+  if(userRole!=='admin')return;
+  let item=event.target.closest('.sp-item');
+  if(!item){
+    // 직접 .sp-item에서 못 잡았으면 마퀴 offset으로 현재 보이는 아이템 추정
+    const area=event.currentTarget;
+    const track=area.querySelector('.sp-track');
+    if(track){
+      const tr=track.style.transform||'';
+      const m=tr.match(/translateY\(-?(\d+(?:\.\d+)?)px\)/);
+      const offset=m?parseFloat(m[1]):0;
+      const idx=Math.round(offset/19);
+      const items=track.querySelectorAll('.sp-item');
+      item=items[idx]||items[0];
+    }
+  }
+  if(!item)return;
+  const rowIndex=parseInt(item.dataset.spRow);
+  if(isNaN(rowIndex))return;
+  event.preventDefault();
+  event.stopPropagation();
+  onSpContextMenu(event,rowIndex);
 }
 function getDdayText(dd){if(dd>0)return'D-'+dd;if(dd===0)return'D-Day';return'D+'+Math.abs(dd);}
 function renderPerfsHtml(perfs,td,past){
