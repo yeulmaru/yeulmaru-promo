@@ -314,9 +314,9 @@ button{font-family:inherit;cursor:pointer}
 /* 컬럼 리사이즈 핸들 — 평소엔 안 보이고 호버 시 살짝 */
 table.promo-board-table{table-layout:fixed}
 table.promo-board-table th{position:relative;overflow:hidden}
-.col-resize-handle{position:absolute;top:25%;right:-3px;width:6px;height:50%;cursor:col-resize;background:transparent;border-radius:3px;transition:background 0.18s;z-index:5}
-.col-resize-handle:hover{background:rgba(255,255,255,0.45)}
-.col-resize-handle.dragging{background:#fff;height:80%;top:10%}
+.col-resize-handle{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;background:transparent;transition:background 0.18s;z-index:5}
+.col-resize-handle:hover{background:rgba(255,255,255,0.35)}
+.col-resize-handle.dragging{background:rgba(255,255,255,0.65)}
 table.promo-board-table th:last-child .col-resize-handle{display:none}
 .p-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .2s;cursor:pointer}
 .p-card:hover{box-shadow:0 4px 16px rgba(74,77,231,0.1);transform:translateY(-1px);border-color:rgba(74,77,231,0.2)}
@@ -1820,9 +1820,19 @@ function onSpContextMenu(event,rowIndex){
 
 // === 홍보 신청 검토 페이지 ===
 let _promoFilter={status:'all',q:'',hidePast:true,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
-// 컬럼 너비 localStorage 로드
+// 컬럼 너비 localStorage 로드 (v2 — 시간 컬럼 기본값 변경 반영)
 let _colWidths={};
-try{const _s=localStorage.getItem('promoBoardColWidths');if(_s)_colWidths=JSON.parse(_s)||{};}catch(e){}
+try{
+  const _s=localStorage.getItem('promoBoardColWidths_v2');
+  if(_s)_colWidths=JSON.parse(_s)||{};
+  // v1 → v2 마이그레이션 (시간 컬럼만 강제 리셋, 나머지 보존)
+  if(!_s){
+    const _s1=localStorage.getItem('promoBoardColWidths');
+    if(_s1){
+      try{_colWidths=JSON.parse(_s1)||{};delete _colWidths.time;}catch(e){}
+    }
+  }
+}catch(e){}
 // 컬럼 리사이즈 핸들러 — 인접 컬럼 폭 조정 (전체 테이블 폭 유지)
 let _colResizeState=null;
 function _onColResizeStart(e,th){
@@ -1872,7 +1882,7 @@ function _onColResizeEnd(){
   document.querySelectorAll('table.promo-board-table th[data-col]').forEach(function(t){
     widths[t.dataset.col]=t.offsetWidth;
   });
-  try{localStorage.setItem('promoBoardColWidths',JSON.stringify(widths));}catch(e){}
+  try{localStorage.setItem('promoBoardColWidths_v2',JSON.stringify(widths));}catch(e){}
   _colWidths=widths;
   document.removeEventListener('mousemove',_onColResizeMove);
   document.removeEventListener('mouseup',_onColResizeEnd);
@@ -2146,7 +2156,7 @@ function renderPromoBoard(){
     html+=_sh('no','NO',60);
     html+=_sh('status','상태',80);
     html+=_sh('date','날짜',90);
-    html+=_sh('time','시간',70);
+    html+=_sh('time','시간',110);
     html+=_sh('platform','플랫폼',125);
     html+=_sh('category','구분',70);
     html+=_sh('content','콘텐츠',null);
