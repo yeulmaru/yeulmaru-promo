@@ -1028,7 +1028,7 @@ function modalBgClick(e,closeFn){
 }
 
 // === 홍보 신청 검토 페이지 ===
-let _promoFilter={status:'all',q:'',hidePast:true,applicant:''};
+let _promoFilter={status:'all',q:'',hidePast:true,applicant:'',viewMode:'mine'};
 function openPromoBoard(){
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePromoBoard)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closePromoBoard()" title="닫기" aria-label="닫기">✕</button><div id="promo-board-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('promo-board');
@@ -1048,8 +1048,9 @@ function renderPromoBoard(){
   let myApplicant='';
   try{myApplicant=localStorage.getItem('myApplicant')||'';}catch(e){}
   let rows=records.slice();
-  // user는 본인 신청만 (적용 후 admin도 필터로 특정 신청자 보기 가능)
-  if(!isAdmin&&myApplicant){
+  // viewMode 'mine' — 본인 신청만 (myApplicant 있을 때). admin도 동일하게 본인 우선
+  const showOnlyMine=_promoFilter.viewMode==='mine'&&myApplicant;
+  if(showOnlyMine){
     rows=rows.filter(function(r){return(r['게시 담당자']||'')===myApplicant;});
   }else if(isAdmin&&_promoFilter.applicant){
     rows=rows.filter(function(r){return(r['게시 담당자']||'')===_promoFilter.applicant;});
@@ -1132,23 +1133,40 @@ function renderPromoBoard(){
   const tabs=[{k:'all',l:'전체'},{k:'pending',l:'대기 중'},{k:'approved',l:'예정'},{k:'done',l:'완료'}];
   tabs.forEach(function(t){
     const on=_promoFilter.status===t.k;
-    html+='<button onclick="_promoFilter.status=\''+t.k+'\';renderPromoBoard()" style="padding:6px 14px;border-radius:16px;border:1.5px solid '+(on?'var(--accent)':'#ddd')+';background:'+(on?'rgba(74,77,231,0.08)':'#fff')+';color:'+(on?'var(--accent)':'#666')+';font-size:12px;font-weight:'+(on?'600':'500')+';cursor:pointer">'+t.l+'</button>';
+    html+='<button onclick="_promoFilter.status=\''+t.k+'\';renderPromoBoard()" style="padding:6px 14px;border-radius:16px;border:1.5px solid '+(on?'var(--accent)':'#ddd')+';background:'+(on?'rgba(74,77,231,0.08)':'#fff')+';color:'+(on?'var(--accent)':'#666')+';font-size:12px;font-weight:'+(on?'600':'500')+';cursor:pointer;height:30px;line-height:1">'+t.l+'</button>';
   });
-  html+='<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;margin-left:8px;cursor:pointer;user-select:none"><input type="checkbox"'+(_promoFilter.hidePast?' checked':'')+' onchange="_promoFilter.hidePast=this.checked;renderPromoBoard()" style="cursor:pointer">지난 일정 감추기</label>';
-  if(isAdmin){
-    html+='<select onchange="_promoFilter.applicant=this.value;renderPromoBoard()" style="padding:5px 10px;border-radius:8px;border:1.5px solid #eee;font-size:12px;outline:none;background:#fff;font-family:inherit"><option value="">전체 신청자</option>';
+  html+='<label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#666;margin-left:8px;cursor:pointer;user-select:none;height:30px;line-height:1"><input type="checkbox"'+(_promoFilter.hidePast?' checked':'')+' onchange="_promoFilter.hidePast=this.checked;renderPromoBoard()" style="cursor:pointer;margin:0">지난 일정 감추기</label>';
+  // === 본인/전체 토글 (구분선 + 토글 버튼) ===
+  if(myApplicant){
+    html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
+    const showAll=_promoFilter.viewMode==='all';
+    html+='<button onclick="_promoFilter.viewMode=\''+(showAll?'mine':'all')+'\';renderPromoBoard()" style="padding:6px 14px;border-radius:16px;border:1.5px solid '+(showAll?'var(--accent)':'#ddd')+';background:'+(showAll?'rgba(74,77,231,0.08)':'#fff')+';color:'+(showAll?'var(--accent)':'#666')+';font-size:12px;font-weight:'+(showAll?'600':'500')+';cursor:pointer;height:30px;line-height:1" title="'+(showAll?'클릭하면 내 신청만 보기':'클릭하면 다른 사람 신청도 보기')+'">👥 '+(showAll?'전체 보기':'내 신청만')+'</button>';
+  }
+  if(isAdmin&&_promoFilter.viewMode==='all'){
+    html+='<select onchange="_promoFilter.applicant=this.value;renderPromoBoard()" style="padding:5px 10px;border-radius:8px;border:1.5px solid #eee;font-size:12px;outline:none;background:#fff;font-family:inherit;height:30px"><option value="">전체 신청자</option>';
     PR_MANAGERS.forEach(function(m){const n=m['담당자'];html+='<option value="'+escapeHtml(n)+'"'+(_promoFilter.applicant===n?' selected':'')+'>'+escapeHtml(n)+'</option>';});
     html+='</select>';
   }
-  html+='<input type="text" placeholder="검색..." value="'+escapeHtml(_promoFilter.q)+'" oninput="onPromoSearch(this.value)" style="margin-left:auto;padding:6px 12px;border-radius:8px;border:1.5px solid #eee;font-size:12px;outline:none;width:200px;text-align:left">';
+  html+='<input type="text" placeholder="검색..." value="'+escapeHtml(_promoFilter.q)+'" oninput="onPromoSearch(this.value)" style="margin-left:auto;padding:6px 12px;border-radius:8px;border:1.5px solid #eee;font-size:12px;outline:none;width:200px;text-align:left;height:30px;box-sizing:border-box">';
   html+='</div>';
-  // user면서 신청자 미설정 안내
-  if(!isAdmin&&!myApplicant){
+  // === 빈 상태 처리 ===
+  // 본인 신청 한 적 없는 user
+  if(!myApplicant){
     html+='<div style="background:#FFF4DC;color:#C97A11;padding:10px 14px;border-radius:10px;font-size:12px;margin-bottom:10px;text-align:left">아직 본인 신청 내역이 없어요. 새 신청을 작성하면 이후 본인 신청만 표시됩니다.</div>';
   }
   // === 리스트 ===
   if(rows.length===0){
-    html+='<div style="text-align:left;padding:60px 20px;color:#aaa;font-size:13px">신청 내역이 없습니다</div>';
+    // 본인 신청 보기 모드에서 0건이면 전체 보기 버튼 강조
+    const canShowAll=myApplicant&&_promoFilter.viewMode==='mine';
+    html+='<div style="text-align:center;padding:60px 20px;color:#aaa;font-size:13px">';
+    if(canShowAll){
+      html+='<div style="font-size:32px;margin-bottom:10px">📭</div>';
+      html+='<div style="margin-bottom:14px;color:#666;font-weight:500">아직 본인 신청한 일정이 없어요</div>';
+      html+='<button onclick="_promoFilter.viewMode=\'all\';renderPromoBoard()" style="padding:8px 18px;border-radius:10px;border:1.5px solid var(--accent);background:#fff;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">👥 다른 사람 신청 보기</button>';
+    }else{
+      html+='신청 내역이 없습니다';
+    }
+    html+='</div>';
   }else{
     html+='<table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left"><thead><tr style="background:#fafafa;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
     html+='<th style="padding:10px 12px;text-align:left;width:40px">#</th>';
