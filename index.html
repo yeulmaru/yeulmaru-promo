@@ -2820,12 +2820,13 @@ function renderPwStep(){
   back.style.display=_pwStep===1?'none':'';
   if(_pwMode==='admin'){return renderAwStep(body,next,bar);}
   if(_pwStep===1){
-    // 어떤 프로그램? — 판매 종료 안 된 것만 (오늘 ≤ 판매종료일)
-    const _todayKey=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    // 어떤 프로그램? — 판매 종료 안 된 것만 (신청 일자 ≤ 판매종료일)
+    // 우클릭 진입 시 그 날짜 기준, 일반 진입은 today fallback
+    const _refKey=_pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
     const activePerfs=PERFS.filter(function(p){
       if(p.o!==1)return false;
       // 판매종료일 있는 경우만 체크 (없으면 표시)
-      if(p.se&&p.se<_todayKey)return false;
+      if(p.se&&p.se<_refKey)return false;
       return true;
     });
     const groups=[
@@ -3057,6 +3058,11 @@ function validatePwStep(){
   }else if(_pwStep===3){
     if(!_pwData.date){showFieldError('pw-date','날짜를 골라 주세요');return false;}
     if(!_pwData.time){showFieldError('pw-time','시간을 골라 주세요');return false;}
+    // 모든 담당자 시간 충돌 검증 — 자동_휴무 옵션 ON일 때
+    if(APPLY_SETTINGS['자동_휴무']&&allManagersConflict(_pwData.date,_pwData.time)){
+      showFieldError('pw-time','해당 일시는 모든 담당자가 일정 중이라 신청 불가');
+      return false;
+    }
     // 판매기간 검증은 경고만, 진행은 허용
   }else if(_pwStep===4){
     return validatePwSubStep();
@@ -3801,7 +3807,18 @@ function renderPwSubAuthor(body,next){
   html+='<select id="pw-applicant" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">';
   // "상관 없음"이 항상 첫 옵션
   html+='<option value="상관 없음"'+(_pwData.applicant==='상관 없음'?' selected':'')+'>상관 없음</option>';
-  PR_MANAGERS.forEach(function(m){const n=m['담당자'];html+='<option value="'+escapeHtml(n)+'"'+(_pwData.applicant===n?' selected':'')+'>'+escapeHtml(n)+'</option>';});
+  // 담당자별 일정 충돌 체크 — 충돌이면 option disabled + 안내
+  PR_MANAGERS.forEach(function(m){
+    const n=m['담당자'];
+    const conflict=personHasConflict(n,_pwData.date,_pwData.time);
+    if(conflict){
+      // 현재 선택된 게 충돌이면 → "상관 없음"으로 자동 변경
+      if(_pwData.applicant===n)_pwData.applicant='상관 없음';
+      html+='<option value="'+escapeHtml(n)+'" disabled style="color:#bbb">'+escapeHtml(n)+' (해당 일시 일정 중)</option>';
+    }else{
+      html+='<option value="'+escapeHtml(n)+'"'+(_pwData.applicant===n?' selected':'')+'>'+escapeHtml(n)+'</option>';
+    }
+  });
   html+='</select>';
   body.innerHTML=html;
   next.textContent='다음';
@@ -4749,6 +4766,32 @@ async function saveApplySettings(){
 }
 
 // === 신청 가능 여부 검증 ===
+// 특정 담당자가 dateKey/time에 일정 충돌 있는지 체크
+// time이 빈 문자열이면 그날 종일 일정(휴무·출장 등)만 충돌로 판정
+function personHasConflict(person, dateKey, time){
+  if(!person||person==='상관 없음')return false;
+  if(typeof PROMO_SPECIAL==='undefined')return false;
+  for(const ps of PROMO_SPECIAL){
+    if(ps.person!==person)continue;
+    if(!ps.start||!ps.end)continue;
+    if(dateKey<ps.start||dateKey>ps.end)continue;
+    const parsed=_parseSpTime(ps.time||'');
+    // 종일 일정 (시간 정보 없음) — 무조건 충돌
+    if(!parsed.s||!parsed.e)return true;
+    // time이 빈 문자열이면 시간 정보 알 수 없음 — 종일 일정 외에는 충돌로 보지 않음
+    if(!time)continue;
+    // 시간대 일정 — start 이상 ~ end 미만 (end 시점은 가능, 다른 검증과 일관)
+    if(time>=parsed.s&&time<parsed.e)return true;
+  }
+  return false;
+}
+
+// 모든 홍보 담당자가 dateKey/time에 일정 충돌인지
+function allManagersConflict(dateKey, time){
+  if(typeof PR_MANAGERS==='undefined'||!PR_MANAGERS||!PR_MANAGERS.length)return false;
+  return PR_MANAGERS.every(function(m){return personHasConflict(m['담당자'], dateKey, time);});
+}
+
 function canApplyOnDate(dateKey){
   // dateKey = "YYYY-MM-DD"
   if(!APPLY_SETTINGS.접수ON)return{ok:false,reason:'접수가 닫혀있습니다'};
@@ -4760,15 +4803,10 @@ function canApplyOnDate(dateKey){
     const dow=d.getDay();
     if(dow===0||dow===1)return{ok:false,reason:'일요일 신청 불가 상태'};
   }
-  // 자동_휴무 — 담당자 휴무일 차단 (PROMO_SPECIAL type==='휴무')
-  if(APPLY_SETTINGS['자동_휴무']&&typeof PROMO_SPECIAL!=='undefined'){
-    for(const ps of PROMO_SPECIAL){
-      if(ps.type==='휴무'&&ps.start&&ps.end){
-        if(dateKey>=ps.start&&dateKey<=ps.end){
-          return{ok:false,reason:'담당자 휴무 기간'};
-        }
-      }
-    }
+  // 자동_휴무 — 모든 홍보 담당자가 종일 일정(휴무·출장 등) 충돌 시에만 그 날 전체 차단
+  // (개별 담당자 일정 충돌은 위저드 게시자 선택에서 disabled 처리)
+  if(APPLY_SETTINGS['자동_휴무']&&allManagersConflict(dateKey,'')){
+    return{ok:false,reason:'담당자 휴무 기간'};
   }
   // 제외 항목 — 일자 only (그날 전체) 체크
   for(const ex of APPLY_EXCLUSIONS){
@@ -4815,6 +4853,10 @@ function canApplyOnDateTime(dateKey,time){
         }
       }
     }
+  }
+  // 모든 홍보 담당자 시간 충돌 — 신청 자체 차단
+  if(APPLY_SETTINGS['자동_휴무']&&time&&allManagersConflict(dateKey,time)){
+    return{ok:false,reason:'해당 시간은 모든 담당자가 일정 중'};
   }
   return{ok:true};
 }
