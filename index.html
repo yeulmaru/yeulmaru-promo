@@ -4408,7 +4408,7 @@ function renderApplySettings(loadOk){
     html+='<label style="font-size:11px;color:#666;font-weight:600;letter-spacing:0.5px;white-space:nowrap;min-width:64px;padding-left:8px">공통</label>';
     html+='<div style="display:flex;align-items:center;gap:14px;font-size:12px;color:#555">';
     html+='<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none"><input type="checkbox" '+(APPLY_SETTINGS['자동_낮에만']?'checked':'')+' onchange="setApplyAuto(\'자동_낮에만\',this.checked)" style="margin:0;cursor:pointer;accent-color:var(--accent)">낮에만</label>';
-    html+='<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none"><input type="checkbox" '+(APPLY_SETTINGS['자동_일요일']?'checked':'')+' onchange="setApplyAuto(\'자동_일요일\',this.checked)" style="margin:0;cursor:pointer;accent-color:var(--accent)">일</label>';
+    html+='<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none"><input type="checkbox" '+(APPLY_SETTINGS['자동_일요일']?'checked':'')+' onchange="setApplyAuto(\'자동_일요일\',this.checked)" style="margin:0;cursor:pointer;accent-color:var(--accent)">화-토</label>';
     html+='<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none"><input type="checkbox" '+(APPLY_SETTINGS['자동_휴무']?'checked':'')+' onchange="setApplyAuto(\'자동_휴무\',this.checked)" style="margin:0;cursor:pointer;accent-color:var(--accent)">휴무</label>';
     html+='</div>';
     html+='</div>';
@@ -4756,10 +4756,11 @@ function canApplyOnDate(dateKey){
   if(!ym)return{ok:false,reason:'접수월이 설정되지 않았습니다'};
   const dateYm=dateKey.substring(0,7);
   if(dateYm!==ym)return{ok:false,reason:'신청 가능한 월: '+ym};
-  // 자동_일요일 — 일요일 차단
+  // 자동_일요일 — 라벨 "화-토" (시트 키는 호환을 위해 자동_일요일 유지). 일(0)·월(1) 차단
   if(APPLY_SETTINGS['자동_일요일']){
     const d=new Date(dateKey+'T00:00:00');
-    if(d.getDay()===0)return{ok:false,reason:'일요일은 신청 불가'};
+    const dow=d.getDay();
+    if(dow===0||dow===1)return{ok:false,reason:'화-토만 신청 가능 (일·월 제외)'};
   }
   // 자동_휴무 — 담당자 휴무일 차단 (PROMO_SPECIAL type==='휴무')
   if(APPLY_SETTINGS['자동_휴무']&&typeof PROMO_SPECIAL!=='undefined'){
