@@ -1496,7 +1496,7 @@ function openAdminPanel(){
     {id:'users',label:'사용자 관리',desc:'담당자 + 여부 필터'},
     {id:'programs',label:'프로그램 관리',desc:'프로그램 등록·수정·삭제'}
   ];
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal admin-modal" style="width:520px"><h3 style="margin:0 0 4px">관리자 패널</h3><div style="font-size:12px;color:var(--dim);margin-bottom:18px">관리할 항목을 골라 주세요</div><div class="admin-modal-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div><div style="margin-top:18px;text-align:right"><button onclick="closeAdminPanel()" style="padding:8px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">닫기</button></div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal admin-modal" style="width:520px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">관리자 패널</h3></div><div style="font-size:12px;color:#888;margin-bottom:14px">관리할 항목을 골라 주세요</div><div class="admin-modal-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -4311,11 +4311,11 @@ function buildScheduleListHtml(rows){
   const pageNonToday=nonTodayRows.slice(pageStart,pageStart+remainPerPage);
   const displayRows=[...todayRows,...pageNonToday];
   
-  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
-  if(isAdmin)html+='<button onclick="addScheduleFromList()" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
-  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px;white-space:nowrap">내역받기</button>';
-  if(isAdmin)html+='<button onclick="backToAdminMenu()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
-  html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:13px">닫기</button></div>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
+  if(isAdmin)html+='<button onclick="addScheduleFromList()" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
+  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap">내역받기</button>';
+  if(isAdmin)html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='</div>';
   
   // 요약 문장 (숫자만 컬러 볼드)
   let summary='';
@@ -4497,7 +4497,7 @@ let _logsFilter={action:'all',sheet:'all',role:'all',q:''};
 let _logsQTimer=null;
 
 async function openLogsAdmin(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px"><div id="logs-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="logs-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -4537,11 +4537,11 @@ function buildLogsListHtml(){
   const allSheets=[...new Set(_logsCache.map(r=>r['대상 시트']||''))].filter(Boolean);
   const allRoles=[...new Set(_logsCache.map(r=>r['권한']||''))].filter(Boolean);
   
-  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px"><h3 style="margin:0;flex:1">로그 조회 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개 / 전체 '+_logsCache.length+')</span></h3>';
-  html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:12px;white-space:nowrap">내역받기</button>';
-  html+='<button onclick="renderLogsList()" title="새로고침" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻</button>';
-  html+='<button onclick="backToAdminMenu()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
-  html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:13px">닫기</button></div>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">로그 조회 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개 / 전체 '+_logsCache.length+')</span></h3>';
+  html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap">내역받기</button>';
+  html+='<button onclick="renderLogsList()" title="새로고침" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻</button>';
+  html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='</div>';
   
   html+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">';
   html+='<input id="logs-q" type="text" placeholder="🔍 변경 내용/시트 검색 (엔터 즉시)" value="'+escapeHtml(_logsFilter.q)+'" oninput="setLogsQuery(this.value)" onkeydown="handleLogsQueryKey(event)" style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;background:#fff;min-width:220px;flex:0 1 280px">';
@@ -4663,7 +4663,7 @@ function exportLogsCsv(){
 async function openSheetAdmin(slug){
   const cfg=SHEET_CONFIG[slug];
   if(!cfg){showToast('알 수 없는 시트예요: '+slug,'error');return;}
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px"><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -4684,13 +4684,12 @@ async function renderSheetList(slug){
 
 function buildSheetListHtml(slug,rows){
   const cfg=SHEET_CONFIG[slug];
-  let html='<div style="display:flex;align-items:flex-start;margin-bottom:16px;gap:8px">';
-  html+='<div style="flex:1"><h3 style="margin:0">'+escapeHtml(cfg.title)+' <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개)</span></h3>';
-  if(cfg.inlineEdit)html+='<div style="font-size:11px;color:#888;margin-top:4px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
+  html+='<h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+' <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개)</span></h3>';
+  html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
+  html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
   html+='</div>';
-  html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
-  html+='<button onclick="backToAdminMenu()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
-  html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:13px">닫기</button></div>';
+  if(cfg.inlineEdit)html+='<div style="font-size:12px;color:#888;margin-bottom:14px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
   if(cfg.note)html+='<div style="font-size:11px;color:#888;margin-bottom:10px;padding:8px 12px;background:#fafafa;border-radius:8px">'+escapeHtml(cfg.note)+'</div>';
   html+='<table class="adm-tbl"><thead><tr>';
   cfg.columns.forEach(c=>{html+='<th>'+escapeHtml(c.label)+'</th>';});
@@ -4765,7 +4764,7 @@ async function saveInlineRow(slug,rowIndex){
 function openSheetForm(slug,rowIndex){
   const cfg=SHEET_CONFIG[slug];
   const existing=rowIndex?_sheetCache[slug].find(r=>r._rowIndex===rowIndex):null;
-  let html='<div style="display:flex;align-items:center;margin-bottom:16px;gap:8px"><h3 style="margin:0;flex:1">'+escapeHtml(cfg.title)+' '+(existing?'수정':'등록')+'</h3><button onclick="renderSheetList(\''+slug+'\')" style="padding:6px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← 목록</button></div>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+' '+(existing?'수정':'등록')+'</h3><button onclick="renderSheetList(\''+slug+'\')" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">← 목록</button></div>';
   html+='<form id="sheet-form" onsubmit="event.preventDefault();saveSheetRow(\''+slug+'\','+(rowIndex||'null')+')" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
   cfg.columns.forEach(c=>{
     const v=existing?existing[c.key]:'';
@@ -4828,7 +4827,7 @@ async function deleteSheetRow(slug,rowIndex){
 
 // === 프로그램 관리 ===
 async function openProgramAdmin(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px"><div id="prog-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="prog-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -4848,10 +4847,10 @@ async function renderProgramList(){
 }
 
 function buildProgramListHtml(programs){
-  let html='<div style="display:flex;align-items:center;margin-bottom:16px;gap:8px"><h3 style="margin:0;flex:1">프로그램 관리 <span style="font-size:12px;color:#888;font-weight:400">('+programs.length+'개)</span></h3>';
-  html+='<button onclick="openProgramForm(null)" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
-  html+='<button onclick="backToAdminMenu()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
-  html+='<button onclick="closeAdminPanel()" style="padding:8px 14px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#f5f5f5;cursor:pointer;font-size:13px">닫기</button></div>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">프로그램 관리 <span style="font-size:12px;color:#888;font-weight:400">('+programs.length+'개)</span></h3>';
+  html+='<button onclick="openProgramForm(null)" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
+  html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='</div>';
   html+='<table class="adm-tbl"><thead><tr><th>NO</th><th>구분</th><th>풀네임</th><th>줄임말</th><th>판매</th><th>진행</th><th>담당</th><th>장소</th><th></th></tr></thead><tbody>';
   programs.forEach(p=>{
     html+='<tr>';
@@ -4887,7 +4886,7 @@ function openProgramForm(rowIndex){
     담당자:existing?existing['담당자']:'',
     장소:existing?existing['장소']:'대극장'
   };
-  let html='<div style="display:flex;align-items:center;margin-bottom:16px;gap:8px"><h3 style="margin:0;flex:1">'+(existing?'프로그램 수정':'프로그램 등록')+'</h3><button onclick="renderProgramList()" style="padding:6px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:8px;background:#fff;cursor:pointer;font-size:12px">← 목록</button></div>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">'+(existing?'프로그램 수정':'프로그램 등록')+'</h3><button onclick="renderProgramList()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">← 목록</button></div>';
   html+='<form id="prog-form" onsubmit="event.preventDefault();saveProgram('+(rowIndex||'null')+')" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
   html+='<div><label>NO</label><input name="NO" type="number" value="'+v.NO+'" readonly></div>';
   html+='<div><label>콘텐츠구분<span class="req">*</span></label><select name="콘텐츠구분" required onchange="refreshManagerOptions(this.value)">'+CONTENT_TYPES.map(t=>'<option value="'+escapeHtml(t)+'" '+(t===v.구분?'selected':'')+'>'+escapeHtml(t)+'</option>').join('')+'</select></div>';
