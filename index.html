@@ -4324,6 +4324,34 @@ async function saveApplySettings(){
   }
 }
 
+// === 신청 가능 여부 검증 ===
+function canApplyOnDate(dateKey){
+  // dateKey = "YYYY-MM-DD"
+  const ym=String(APPLY_SETTINGS.접수월||'').trim();
+  if(!ym)return{ok:false,reason:'관리자가 접수월을 설정하지 않았어'};
+  const dateYm=dateKey.substring(0,7);
+  if(dateYm!==ym)return{ok:false,reason:'신청 가능한 월: '+ym};
+  const exDates=String(APPLY_SETTINGS.제외일자||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(exDates.includes(dateKey))return{ok:false,reason:'이 날짜는 신청 불가능한 날이야'};
+  return{ok:true};
+}
+
+function canApplyAtTime(time){
+  // time = "HH:MM"
+  if(!time)return{ok:true};
+  const exTimes=String(APPLY_SETTINGS.제외시간||'').split(',').map(s=>s.trim()).filter(Boolean);
+  for(const t of exTimes){
+    if(t.indexOf('-')>=0){
+      // 범위 시간 예: "12:00-13:00" — start 이상, end 미만
+      const parts=t.split('-').map(x=>x.trim());
+      if(parts.length===2&&time>=parts[0]&&time<parts[1])return{ok:false,reason:'제외 시간대 ('+t+')'};
+    }else{
+      if(time===t)return{ok:false,reason:'제외 시간 ('+t+')'};
+    }
+  }
+  return{ok:true};
+}
+
 // === 일정 관리 리스트뷰 (Phase 3D) ===
 let _schedFilter={month:'all',cat:'all',status:'all',q:'',hidePast:true};
 let _schedReturnFlag=false;
@@ -5513,7 +5541,13 @@ function onCellContextMenu(event,key){
     menu.innerHTML='<div class="ccm-item" onclick="closeCellContextMenu();openAdminWizard(\''+key+'\')"><span class="emo">📝</span>새 콘텐츠 등록</div>'+
       '<div class="ccm-item" onclick="closeCellContextMenu();openSpecialEntry(\''+key+'\')"><span class="emo">📌</span>담당자 일정 추가</div>';
   }else{
-    menu.innerHTML='<div class="ccm-item" onclick="closeCellContextMenu();openPromoWizard(\''+key+'\')"><span class="emo">📨</span>홍보 신청</div>';
+    // 사용자 — 신청 가능 여부 체크
+    const check=canApplyOnDate(key);
+    if(check.ok){
+      menu.innerHTML='<div class="ccm-item" onclick="closeCellContextMenu();openPromoWizard(\''+key+'\')"><span class="emo">📨</span>홍보 신청</div>';
+    }else{
+      menu.innerHTML='<div style="padding:10px 14px;color:#b35a30;font-size:12px;line-height:1.4;background:#fff8f3;border-radius:8px;margin:2px">⚠️ 신청 불가<br><span style="color:#888;font-size:11px">'+escapeHtml(check.reason)+'</span></div>';
+    }
   }
   // 위치 — viewport 경계 보정
   const mx=event.clientX,my=event.clientY;
