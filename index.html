@@ -4253,7 +4253,13 @@ function collectAwStep(){
 }
 function validateAwStep(){
   if(_pwStep===1){if(!_pwData.author){showToast('담당자를 골라 주세요','error');return false;}}
-  else if(_pwStep===2){if(!_pwData.date){showToast('날짜를 골라 주세요','error');return false;}}
+  else if(_pwStep===2){
+    if(!_pwData.date){showToast('날짜를 골라 주세요','error');return false;}
+    if(!_pwData.time){showToast('시간을 골라 주세요','error');return false;}
+    // 통합 검증 — 자동(낮에만/일요일/휴무) + 공통/개별 제외 + 모든 담당자 충돌
+    const chk=canApplyOnDateTime(_pwData.date,_pwData.time);
+    if(!chk.ok){showToast('등록 불가: '+chk.reason,'error');return false;}
+  }
   else if(_pwStep===3){
     if(!_pwData.plat1){showToast('플랫폼을 골라 주세요','error');return false;}
     const plat2s=PLATFORMS.filter(function(p){return p['플랫폼1']===_pwData.plat1&&p['플랫폼2']&&p['플랫폼2']!=='-';});
@@ -4263,6 +4269,9 @@ function validateAwStep(){
   return true;
 }
 async function submitAdminEntry(){
+  // 마지막 안전망 — 통합 검증 (자동/공통제외/개별제외/담당자 충돌)
+  const chk=canApplyOnDateTime(_pwData.date,_pwData.time);
+  if(!chk.ok){showToast('등록 불가: '+chk.reason,'error');return;}
   showOverlayLoad();
   try{
     const[y,m,d]=_pwData.date.split('-').map(Number);
