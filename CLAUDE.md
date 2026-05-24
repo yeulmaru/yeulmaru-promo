@@ -1,625 +1,342 @@
-# 예울마루 홍보 계획표 (yeulmaru-promo)
+# yeulmaru-promo — CLAUDE.md
 
-## 프로젝트 개요
-GS칼텍스 예울마루(GS칼텍스재단) 홍보 계획표 웹앱. 엑셀 매크로(VBA)에서 웹으로 전환한 프로젝트.
-공연/전시 일정 + 홍보 콘텐츠 캘린더를 한 화면에서 관리.
+> **예울마루 홍보 계획표 웹앱**  
+> GS칼텍스 예울마루 직원이 홍보 콘텐츠 신청·관리를 위해 사용하는 단일파일 웹앱.  
+> 기존 엑셀+VBA 매크로 워크플로우를 대체.  
+>   
+> **Last updated**: 2026-05-25 (KST)
 
-## 아키텍처
+> ⚠️ **대화 시작 시 첨부 룰**: yeulmaru-promo 작업할 때 이 파일을 채팅창에 첨부하면 매번 설명 안 해도 됨. 노뮤트 프로젝트와 동일 패턴.
+
+---
+
+## 1. 프로젝트 개요
+
+- **레포**: [`yeulmaru/yeulmaru-promo`](https://github.com/yeulmaru/yeulmaru-promo) (Public, GitHub Pages)
+- **사이트**: https://yeulmaru.github.io/yeulmaru-promo/
+- **사용자**: GS칼텍스 예울마루 직원
+- **인증**: PIN 4자리 (admin / user 2개 role)
+- **메인 파일**: `index.html` (Vanilla JS 단일파일, ~7,100 lines, ~450KB)
+
+## 2. 아키텍처
+
 ```
-GitHub Pages (index.html)
-  → 4자리 PIN 인증
-  → Cloudflare Worker (API 프록시)
-  → Azure AD Client Credentials
-  → Graph API
-  → SharePoint 엑셀 (통합 문서1.xlsm)
+Client (index.html, GitHub Pages)
+  ↓ fetch
+Cloudflare Worker  (proxy)
+  ↓ Graph API (Azure AD service account)
+SharePoint Excel (통합 문서1.xlsm)
 ```
 
-## 리소스
-| 항목 | 값 |
+- **Frontend**: 단일 HTML, 외부 라이브러리 X, 모든 로직 inline
+- **Backend**: Cloudflare Worker — Graph API 토큰 흐름 + SHEET_MAP slug 매핑
+- **Storage**: SharePoint Excel (`통합 문서1.xlsm`)
+- **Auth (Worker→Graph)**: Azure AD 앱 (service account)
+
+### Worker API 패턴
+```
+GET    /api/sheet/<slug>             → 시트 row 전체
+POST   /api/sheet/<slug>             → row 추가 (body.values)
+PATCH  /api/sheet/<slug>/<rowIndex>  → row 갱신
+DELETE /api/sheet/<slug>/<rowIndex>  → row 제거
+POST   /api/login                    → PIN 검증 → {ok, role}
+POST   /api/records                  → records 시트 전용 (위 sheet/records와 별도)
+```
+
+### SHEET_MAP slug
+- `applysettings` → `홍보접수설정`
+- `records` → 신청 내역
+- `programs` → 프로그램
+- `platforms` → 플랫폼
+- `contents` → 콘텐츠 형식
+- `managers` → 담당자
+- `special` → PromoSpecial (담당자 특별 일정)
+- `logs` → 로그
+
+## 3. 로컬 환경
+
+- **회사 PC**: `C:\Users\황세웅\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang\yeulmaru-promo`
+- **집 PC**: `C:\Users\Hwang\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang\yeulmaru-promo`
+- **회사/집 동일 환경** — `$env:USERNAME` 자동 감지
+
+### PowerShell 단축어
+```powershell
+클코프로모  # cd 프로젝트 + claude --dangerously-skip-permissions --remote-control
+```
+
+### Git 명령 (Windows)
+```powershell
+& "C:\Program Files\Git\bin\git.exe" -c user.name=yeulmaru -c user.email=yeulmarulicense@gmail.com commit -m "..."
+```
+- 작업 전 의무: `git fetch origin && git status`
+- 한글 commit msg는 OneDrive 외부 파일에 utf8 저장 후 `-F`로 전달
+
+## 4. GitHub 인증
+
+- **계정**: `yeulmarulicense@gmail.com`
+- **Classic PAT**: 7일 단위 재사용 OK (repo scope, yeulmaru 레포 한정)
+- **Fine-grained**: Contents Read and write 권한 명시 필수 (없으면 PUT 막힘)
+- **토큰 발급 URL**: https://github.com/settings/tokens/new?scopes=repo
+- **바이브코딩 용도** — 매 turn revoke 잔소리 X, 만료/노출/오용 시점에만
+
+## 5. 데이터 모델
+
+### `APPLY_SETTINGS` (홍보접수설정 시트, 키-값 row)
+```js
+{
+  접수ON: boolean,
+  접수월: ['2026-06', '2026-07'],   // 배열, 최대 2개
+  자동_낮에만: true,                  // 17:00~22:00 차단
+  자동_일요일: true,                  // 일·월 차단 (시트 키 호환)
+  자동_휴무: false                    // 모든 담당자 종일 충돌 시 차단
+}
+```
+- 접수월은 시트에 **다중 row 허용** (같은 키 '접수월'로 row 2개)
+- 헬퍼: `getApplyMonths()` / `getApplyMonthRows()` 로 배열/단수 둘 다 정규화
+
+### `APPLY_EXCLUSIONS` (제외 일정, 같은 시트의 '제외' 키 row들)
+```js
+[
+  {rowIndex, date: '', start: '18:00', end: '09:00'},   // 공통 시간 (모든 날)
+  {rowIndex, date: '2026-06-17', start: '09:00', end: '14:00'},  // 개별
+  {rowIndex, date: '2026-06-20', start: '', end: ''}    // 일자 차단 (그 날 전체)
+]
+```
+시트 row 값 포맷: `"YYYY-MM-DD|HH:MM|HH:MM"` (date|start|end). 빈 값은 빈 문자열.
+
+### `records` (신청 내역)
+컬럼 순서:  
+NO, 입력시간(KST), 날짜, 연도, 월, 일, 요일, 플랫폼1, 플랫폼2, 콘텐츠구분, 프로그램, 담당부서, 콘텐츠제목, 콘텐츠형식, 콘텐츠내용, 게시담당자, 진행상태, 비고
+
+### `PROMO_SPECIAL` (담당자 특별 일정)
+```js
+{
+  _rowIndex, id, sheetNo,
+  type: '휴무' | '출장' | '교육' | '회의' | '기타',
+  label: string,            // 사용자 자유 입력
+  start: 'YYYY-MM-DD',
+  end: 'YYYY-MM-DD',
+  time: 'HH:MM-HH:MM' | '',  // 빈값이면 종일
+  person: string,            // 담당자
+  author, kstStr
+}
+```
+
+### `MANAGERS` / `PR_MANAGERS`
+- `MANAGERS`: 전체 담당자 (휴직 X)
+- `PR_MANAGERS = MANAGERS.filter(m => isFlagOn(m['홍보여부']))` — 홍보 담당자만
+
+## 6. 인증 / 권한
+
+### 로그인
+- PIN 4자리 → Worker `/api/login` → `{ok, role: 'admin'|'user'}`
+- `sessionStorage.pw`, `sessionStorage.role`
+- 현재 **공유 PIN 방식** (모두 같은 PIN). 개별 user PIN 없음.
+
+### 본인 식별
+- `localStorage.myApplicant` (게시자명 string)
+- 현재 자유 입력 — 검증 없음 (개선 여지)
+
+## 7. 핵심 함수
+
+### 검증 (`canApply*`)
+- `canApplyOnDate(dateKey)`: 일자 — 접수ON, 접수월, 자동_일요일, 자동_휴무(`allManagersConflict`), APPLY_EXCLUSIONS 일자
+- `canApplyAtTime(time)`: 공통 시간 — 자동_낮에만, APPLY_EXCLUSIONS 공통
+- `canApplyOnDateTime(dateKey, time)`: **통합 검증** — 위 둘 + 개별 제외 + 모든 담당자 시간 충돌
+
+> **시간 정책**: `start ≤ time < end` (end 시점은 신청 가능)
+
+### 충돌
+- `personHasConflict(person, date, time)`: boolean
+- `personConflictInfo(person, date, time)`: `{type, label}` | null
+- `allManagersConflict(date, time)`: PR_MANAGERS 전원 충돌 여부
+
+### 헬퍼
+- `getApplyMonths()` / `getApplyMonthRows()`: 접수월 배열 정규화
+
+## 8. UI 흐름
+
+### 위저드 — User 신청
+```
+openPromoWizard(prefillDate?)
+  → Step 1: 프로그램 (판매종료 ≥ _pwData.date)
+  → Step 2: 콘텐츠 제목
+  → Step 3: 일자 + 시간  (canApplyOnDateTime 검증)
+  → Step 4: sub-steps (플랫폼, 게시자, 메시지 등)
+  → Step 5: 확인
+  → submitPromoRequest  (마지막 안전망 canApplyOnDateTime)
+```
+
+### 위저드 — Admin 직접 등록
+```
+openAdminWizard(prefillDate?)
+  → Step 1: 담당자
+  → Step 2: 일자 + 시간  (canApplyOnDateTime 검증)
+  → Step 3: 플랫폼
+  → Step 4: 콘텐츠 제목
+  → submitAdminEntry  (마지막 안전망 canApplyOnDateTime)
+```
+
+### 우클릭 라우팅
+
+| 우클릭 위치 | user | admin |
+|---|---|---|
+| 빈 셀 (당월) | 홍보 신청 / 신청 불가 안내 | 새 콘텐츠 등록 / 담당자 일정 추가 |
+| 빈 셀 (비당월 빗금) | "이번 달이 아닙니다" | 동일 |
+| 콘텐츠 row — 남 신청 | 살구색 "수정 불가 / OOO 님이 신청" | 수정/복사/삭제 |
+| 콘텐츠 row — 본인 + '신청 중' | 살구색 "신청 대기 중" + 수정/취소 | 수정/복사/삭제 |
+| 콘텐츠 row — 본인 + 그 외 | 수정/취소 | 수정/복사/삭제 |
+| 특별 일정 항목 | 옅은 하늘색 "📌 홍보 담당자 일정 / OOO · 회의" | 수정/삭제 |
+
+### 모달 헤더 표준
+- X 닫기 버튼: `top:14px; right:14px`
+- 뒤로 (`<`) 버튼: `top:14px; right:54px` (X 옆), 32×32 동그라미, SVG chevron
+- 인라인 텍스트 "뒤로" 버튼은 모두 제거됨
+
+### Step 4 게시자 자동 fallback (user)
+- PR_MANAGERS 중 충돌 있는 사람은 select option `disabled` + `(해당 일시 {type} 중)` 표시
+- 차단된 담당자가 있고 사용 가능한 1명만 남으면 자동 선택 + 살구색 말풍선
+- 사용자가 명시적으로 선택한 경우 말풍선 안 뜸
+
+## 9. 자동 옵션 의미
+
+| 옵션 | 동작 |
 |---|---|
-| GitHub 레포 | `yeulmaru/yeulmaru-promo` |
-| 배포 URL | `https://yeulmaru.github.io/yeulmaru-promo/` |
-| Worker URL | `https://yeulmaru-promo-api.yeulmarumaster.workers.dev` |
-| Worker PIN | `<<PIN>>` |
-| GitHub 토큰 (muteno, 8/12 만료) | `<<GITHUB_TOKEN>>` |
-| Azure 클라이언트 ID | `<<AZURE_CLIENT_ID>>` |
-| Azure 테넌트 ID | `<<AZURE_TENANT_ID>>` |
-| SharePoint 사이트 | `gscaltexyeulmaru.sharepoint.com/sites/daxteam` |
-| 연간 캘린더 | `https://yeulmaru.github.io/yeulmaru-calandar-2026/` |
+| **자동_낮에만** | 17:00 ~ 22:00 시간대 신청 차단 (라벨 "낮에만" = 저녁·심야 차단 의미) |
+| **자동_일요일** | 일(0) + 월(1) 차단. 화-토만 가능. (시트 키는 호환 위해 자동_일요일 유지) |
+| **자동_휴무** | 모든 PR_MANAGERS가 종일 일정(휴무/출장 등) 충돌일 때 해당 날 전체 차단 |
 
-## 배포 워크플로우
-Claude가 GitHub API로 직접 커밋:
-```bash
-SHA=$(curl -s -H "Authorization: token $TOKEN" \
-  "https://api.github.com/repos/yeulmaru/yeulmaru-promo/contents/index.html" \
-  | python3 -c "import json,sys;print(json.load(sys.stdin)['sha'])")
-CONTENT=$(base64 -w0 파일명.html)
-curl -s -X PUT -H "Authorization: token $TOKEN" \
-  "https://api.github.com/repos/yeulmaru/yeulmaru-promo/contents/index.html" \
-  -d "{\"message\":\"커밋메시지\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}"
+## 10. 개발 워크플로우
+
+### A. claude.ai 채팅 (모바일/웹/데스크탑) — 빠른 patch
+1. Python 패치 작성
+2. GitHub API `PUT /repos/yeulmaru/yeulmaru-promo/contents/index.html` 으로 직접 push
+3. base SHA matching → 새 commit 생성
+
+### B. PC 동기화
+```powershell
+cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang\yeulmaru-promo"
+& "C:\Program Files\Git\bin\git.exe" pull origin main
 ```
+
+### C. Claude Code (`클코프로모`) — 토큰 노출 X
+- 로컬 git 직접 작업, credential은 Windows Credential Manager
+- 큰 변경/장기 작업에 적합
 
 ---
 
-## 디자인 시스템
+## 🚧 추후 추가 예정 (캘린더 기능 완료 후)
 
-### 색상 팔레트
+### 1️⃣ 이메일 알림 (Microsoft Graph API `sendMail`) — **A안 확정**
 
-#### 기본 색상
-| 변수 | 값 | 용도 |
-|---|---|---|
-| `--accent` | `#4A4DE7` | 강조색 (블루-퍼플). 오늘 일자, 선택, 버튼, 네비 pill, 공연 뱃지 |
-| `--accent-light` | `#E8E8FD` | 강조색 밝은 버전 |
-| `--accent-glow` | `rgba(74,77,231,0.15)` | 포커스 글로우 |
-| `--peach` | `#F0C4B8` | 살구색. 전시 ON 표시, 사이드패널 전시 배경 |
-| `--peach-light` | `#FBF0EC` | 살구 밝은 버전 |
-| `--text` | `#1A1A2E` | 기본 텍스트 |
-| `--dim` | `#888` | 보조 텍스트 |
-| `--muted` | `#bbb` | 비활성 텍스트 |
-| `--past-text` | `#aaa` | 지난 일 텍스트 |
-| `--green` | `#1A6B3C` | YEULMARU 로고용 (미사용, 현재 accent로 변경됨) |
+**목적**: 신청 등록/확정/취소 시 신청자·admin에게 알림 메일 자동 발신
 
-#### 배경
-| 변수 | 값 | 용도 |
-|---|---|---|
-| `--bg` | `linear-gradient(135deg, #FDF6F3 0%, #F0EBF5 50%, #EBF0F8 100%)` | 전체 배경 (살구→라벤더→스카이) |
-| `--surface` | `rgba(255,255,255,0.72)` | 반투명 표면 |
-| `--glass` | `rgba(255,255,255,0.55)` | 글래스모피즘 배경 |
-| `--glass-border` | `rgba(255,255,255,0.6)` | 글래스 테두리 |
-| `--glass-shadow` | `0 8px 32px rgba(74,77,231,0.08), 0 2px 8px rgba(0,0,0,0.04)` | 글래스 그림자 |
-| `--past-bg` | `rgba(0,0,0,0.02)` | 지난 일 셀 배경 |
-| `--nm-bg` | `rgba(0,0,0,0.03)` | 비당월 셀 배경 |
-| `--today-bg` | `rgba(74,77,231,0.06)` | 오늘 셀 배경 |
-| `--border` | `rgba(0,0,0,0.09)` | 셀 구분선 |
-| `--border2` | `rgba(0,0,0,0.12)` | 강한 구분선 |
+**발신 계정**: 회사 M365 라이선스 1개 (남는 라이선스 활용, 공용 발신 계정으로 운용)
 
-#### 플랫폼 색상
-| 플랫폼 | 색상 |
+**구현 방식**:
+1. 기존 Azure AD 앱(Worker가 사용 중)에 **`Mail.Send` 권한 추가** (Application permission)
+2. Tenant admin consent
+3. Worker에 `/api/notify/mail` 엔드포인트 추가
+4. Graph API 호출: `POST https://graph.microsoft.com/v1.0/users/{발신계정}/sendMail`
+5. 페이로드: `{message: {subject, body, toRecipients: [...]}}`
+
+**트리거 시점**:
+- user 신청 등록 → 신청자 본인 + admin(들)
+- admin 확정 → 신청자
+- admin 거절/취소 → 신청자
+- user 자체 취소 → admin
+
+**이점**:
+- 기존 인프라 그대로 (Worker + Azure AD)
+- 새 비용 0
+- 발신 한도: 분당 ~30건, 일 ~10,000건 (Graph API 기본 한도)
+
+**구현 시 확인 사항**:
+- 발신 계정 실제 이메일 주소 (도메인 포함)
+- 권한 추가 시 admin consent 필요 여부
+- 발신자명 / 서명 포맷
+
+---
+
+### 2️⃣ Teams 알림 (보너스, 이메일 다음 단계)
+
+**현재 환경 (2026-05-25 기준)**:
+- ⚠️ **Incoming Webhook (Office 365 Connectors)는 2026-04-30 deprecated** — 신규 사용 불가
+- ✅ **Power Automate Workflows** — 새 표준
+- ✅ **Graph API `chatMessage`** — 코드 베이스 통합
+
+**구현 옵션**:
+
+**A. Power Automate Workflows** (가장 단순)
+- Teams 채널 → "..." → Workflows → "Send webhook alerts to a channel" 템플릿
+- 발급된 HTTP 트리거 URL을 Worker에서 POST
+- Adaptive Card JSON 페이로드
+- 단점: 채널 단위, 개인 DM 어려움
+
+**B. Graph API `chatMessage`** (강력)
+- 동일 Azure AD 앱에 권한 추가:
+  - 채널 메시지 → `ChannelMessage.Send` (Application)
+  - 개인 DM → `Chat.ReadWrite.All` (Application은 제한, Delegated 필요할 수도)
+- 코드: `POST /teams/{teamId}/channels/{channelId}/messages`
+- 단점: 개인 DM의 Application permission 정책 변동 가능 (구현 시 재확인)
+
+**C. Adaptive Card 양방향** (최종 형태)
+- 알림 카드에 "확정 / 거절" 버튼
+- admin이 Teams 안에서 바로 처리 → Bot Framework 또는 Workflow 응답 처리
+- 구현 복잡, 다만 UX 최고
+
+**추천 순서**: 1차 **A (Workflows)** → 필요시 2차 **B (chatMessage)** → 향후 **C**
+
+---
+
+### 3️⃣ 그 외 검토 후보
+- **사용자별 PIN / 본인 식별 강화** (현재 공유 PIN + 자유 myApplicant)
+- **신청 상태 변경 admin 워크플로우 (대량 처리, 일괄 확정 등)**
+- **모바일 반응형 추가 점검**
+
+---
+
+## 변경 이력
+
+### 2026-05-24 ~ 25 (세션 10~11)
+| commit | 내용 |
 |---|---|
-| 카카오/카카오톡 | `#C8900A` |
-| 인스타/인스타그램 | `#C02872` |
-| 유튜브 | `#B71C1C` |
-| 블로그 | `#1B7A34` |
-| 기타/B2B | `#2D5F8A` |
-
-#### 전시선 색상
-| 전시 | ON 색상 | OFF 색상 |
-|---|---|---|
-| 7층 (우리 SUM) | `#006B3C` (초록) | `rgba(0,0,0,0.04)` |
-| 장도 (섬냥이) | `#E84393` (핑크) | `rgba(0,0,0,0.04)` |
-
-### 모서리 반경
-| 변수 | 값 | 용도 |
-|---|---|---|
-| `--radius` | `16px` | 칩, 카드 |
-| `--radius-lg` | `20px` | 중간 요소 |
-| `--radius-xl` | `24px` | 캘린더, 로그인 카드, 모달 |
-
-### 폰트
-- **기본**: `'Pretendard', -apple-system, sans-serif` (CDN: orioncactus/pretendard)
-- **로그인 타이틀**: `'ClassyVogue', serif` (base64 인라인, 33KB TTF)
+| `7ff80fe` | 신청 불가 메시지 우선순위 + 사유별 표현 개선 |
+| `14d3bed` | UX 4건 — `.dn` 간격, 비당월 우클릭, 알림 타이틀 숨김, 뒤로 아이콘 통일 |
+| `91066b7` | 담당자별 일정 충돌 + 판매종료 기준 변경 |
+| `ad8a50a` + `2a08b0c` | 접수월 복수 (최대 2개) — 데이터 모델 + 헬퍼 함수 마무리 |
+| `0a2fb9a` | Step 3 시간 검증 통합 (낮에만/공통제외/개별제외 모두 차단) |
+| `3578c76` | Step 4 게시자 — 충돌 type 표시 + 자동 fallback + 말풍선 |
+| `d646eec` | 콘텐츠 우클릭 4가지 케이스 분기 (admin/남신청/본인신청중/본인기타) |
+| `e235cb6` | admin 직접 등록 흐름(`validateAwStep` Step 2 + `submitAdminEntry`) 검증 누락 fix |
+| `46f7098` | 담당자 일정 우클릭 user 안내 ("📌 홍보 담당자 일정") |
 
 ---
 
-## 로그인 화면
-
-### 레이아웃
-- 전체 흰색 배경 (`#fff`)
-- 세로 중앙 정렬 (`flex, center`)
-- `fadeUp` 애니메이션 (0.5s)
-
-### YEULMARU 타이틀
-- 폰트: ClassyVogue, 42px, font-weight:400
-- 색상: `var(--accent)` (#4A4DE7)
-- letter-spacing: 4px
-- margin-bottom: 24px
-
-### PIN 입력
-- 4칸, 각 42×48px, border-radius:12px
-- 배경: `#F5F4F8`, 테두리: 없음
-- 포커스 시: `box-shadow: 0 0 0 3px var(--accent-glow)`, 배경 #fff
-- `-webkit-text-security: disc` (마스킹)
-- `type="text"`, `inputmode="numeric"`, `autocomplete="off"`
-- 자동 이동: input + keyup 이벤트로 다음 칸 포커스
-- 4자리 입력 완료 시 자동 로그인
-- 에러 시: `.pin.err` border-color:#E24B4A, background:#FFF5F5
-
-### 로딩 메시지
-- PIN 인증 후 데이터 로드 중: 타이핑 효과
-- 메시지: `데이터를 불러오는 중입니다... 😉`
-- 속도: 65ms/글자, 끝나면 30프레임 멈추고 반복
-- 데이터 로드 완료 시 자동 중지
-
----
-
-## 네비게이션 바
-
-### 구조
-```
-[YEULMARU 홍보 계획표]  [캘린더|플랫폼 현황|홍보 해줘|연간 일정|설정]  [HH:MM:SS KST] [↻]
-```
-
-### 스타일
-- 높이: 56px, sticky top:0, z-index:20
-- 배경: 글래스모피즘 (`backdrop-filter:blur(20px)`)
-- 하단 border: 1px solid var(--glass-border)
-
-### 로고
-- "YEULMARU": font-size:14px, font-weight:800, color:`var(--accent)`, letter-spacing:2px
-- "홍보 계획표": font-size:13px, color:`var(--dim)`
-
-### 슬라이딩 Pill 메뉴
-- 버튼: padding:9px 18px, font-size:13px, font-weight:500, border-radius:20px
-- 비활성: color:#777
-- 활성: color:#fff
-- 호버: color:#fff (pill이 따라옴)
-- Pill: background:`var(--accent)`, border-radius:20px, box-shadow:0 4px 12px rgba(74,77,231,0.25)
-- 애니메이션: `transition:all .35s cubic-bezier(.4,0,.2,1)`
-- 초기화: `document.fonts.ready.then(...)` (폰트 로드 후 정확한 위치)
-- mouseleave 시 활성 버튼으로 복귀
-
-### 메뉴 항목
-1. **캘린더** (cal) — 기본 선택
-2. **플랫폼 현황** (platform) — 미구현
-3. **홍보 해줘** (promo) — 미구현
-4. **연간 일정** (annual) — 새 창으로 `yeulmaru.github.io/yeulmaru-calandar-2026/`
-5. **설정** (settings) — 미구현
-
-### KST 시계
-- font-size:12px, font-variant-numeric:tabular-nums
-- 1초마다 갱신
-
----
-
-## 캘린더 헤더
-
-### 월 표시
-```
-‹  5 2026  ›
-```
-- 월 숫자: font-size:32px, font-weight:800, color:`var(--accent)`
-- 연도: font-size:17px, color:`var(--dim)`, margin-left:8px
-- 화살표: 38×38px 원형, 글래스 배경, 호버 시 accent-light
-
-### 칩 (우측)
-```
-● 카카오 2  ● 인스타 3  ● 블로그·맘카페 0  ● B2B 0
-```
-- 4개 고정 그룹
-- 글래스 배경, border-radius:16px, font-size:12px
-- 각 플랫폼 색상 dot (8×8px 원형)
-- 숫자: DB 레코드 수 집계
-
----
-
-## 캘린더 본체
-
-### 구조
-- **화~일 6일** (월요일 없음 — 예울마루 휴관일)
-- 6주 표시 (36셀)
-- 날짜 생성: 7일 단위로 건너뛰며 월요일 skip
-  ```js
-  for(w=0;w<6;w++) for(d=0;d<6;d++) start + w*7 + d
-  ```
-
-### 셀 (`.c`)
-- **고정 높이**: 110px
-- **패딩**: 7px 8px 20px 8px (하단 20px = 전시선 공간)
-- **border-right**: 1px solid var(--border)
-- **overflow**: hidden (기본) → hover 시 `overflow-y:auto` (`.c-inner`에 적용)
-- **호버**: background `rgba(255,255,255,0.6) !important`, box-shadow
-
-### 셀 내부 구조
-```html
-<div class="c">
-  <div class="c-inner">     ← 스크롤 영역 (height: calc(100% - 14px))
-    <div class="dn">         ← 날짜 + 공연 태그 (flex, wrap)
-      19                     ← 날짜 숫자
-      [공연 태그들]           ← inline-flex span
-    </div>
-    <div class="ev">...</div> ← 홍보 콘텐츠 행들
-  </div>
-  [전시선]                    ← position:absolute, 스크롤 밖 고정
-</div>
-```
-
-### 셀 상태별 배경
-| 상태 | 배경 | 날짜 색상 |
-|---|---|---|
-| 일반 (미래) | `rgba(255,255,255,0.3)` | `var(--text)` |
-| 오늘 | `var(--today-bg)` | `var(--accent)` + font-weight:700 |
-| 지난 일 (당월) | `var(--past-bg)` | `rgba(0,0,0,0.15)` |
-| 비당월 | `var(--nm-bg)` + 대각선 빗금 | `rgba(0,0,0,0.1)` |
-| 토요일 | 일반 | `#3B7DD8` |
-| 일요일 | 일반 | `#D64545` |
-| 선택됨 | `rgba(74,77,231,0.04)` | 일반 + inset box-shadow 2px accent |
-
-### past 판정 규칙
-- **당월에서만** past 처리 (다른 달은 전부 일반)
-- **이번 주 소속** 셀은 past 아님 (오늘이 속한 화~일 주)
-- 비당월(nm) 셀: past 대신 nm 처리
-
-### 요일 헤더 (`.dh`)
-- padding:14px 8px, font-size:14px, font-weight:700
-- 배경: `rgba(255,255,255,0.5)`
-- 토: `#3B7DD8`, 일: `#D64545`, 나머지: `#666`
-
----
-
-## 공연 일정 표시
-
-### PERFS 상수 (25개 공연 + 2개 전시)
-
-#### 공연 (t:'c')
-| # | 줄임말 (n) | 풀네임 (f) | 기간 |
-|---|---|---|---|
-| 1 | 신년음악회 | 신년음악회 | 1.9 |
-| 2 | 다웃파이어 | 미세스 다웃파이어 | 1.24~25 |
-| 3 | 브런치 Ⅰ | 브런치 콘서트 Ⅰ | 4.9 |
-| 4 | 실내악 | 실내악페스티벌 | 4.16~19 |
-| 5 | 김영욱 | 김영욱 × 콜레기움 무지쿰 서울 | 5.7 |
-| 6 | 백층집 | 100층짜리 집 | 5.14~16 |
-| 7 | 편한음악 | 한국페스티발앙상블 | 5.23 |
-| 8 | 국심오케 | 국립심포니오케스트라 | 5.30 |
-| 9 | 브런치 Ⅱ | 브런치 콘서트 Ⅱ | 6.4 |
-| 10 | 노인의 꿈 | 노인의 꿈 | 6.13 |
-| 11 | 헬로!오페라 | 헬로!오페라 세비야의 이발사 | 6.19~20 |
-| 12 | 브런치 Ⅲ | 브런치 콘서트 Ⅲ | 9.3 |
-| 13 | 섬 박람회 | 여수세계섬박람회 기념 음악회 | 9.10 |
-| 14 | 조재혁 | 조재혁 리사이틀 | 9.12 |
-| 15 | 그날들 | 그날들 | 9.18~20 |
-| 16 | 달샤베트 | 달샤베트 | 10.1~3 |
-| 17 | 춘자씨 | 이상한 나라의 춘자씨 | 10.9~10 |
-| 18 | 트리플 빌 | 국립현대무용단 트리플 빌 | 10.14 |
-| 19 | 피아노×2 | 다비드 바뱅 & 아드리앙 몽도 | 10.27 |
-| 20 | 그때도 오늘 | 그때도 오늘 | 11.6~7 |
-| 21 | 헬로!오페라 | 헬로!오페라 마술피리 | 11.20~21 |
-| 22 | 러커스 | 러커스더스쿨 | 11.26~28 |
-| 23 | 브런치 Ⅳ | 브런치 콘서트 Ⅳ | 12.3 |
-| 24 | 쉬어매드 | 쉬어매드니스 | 12.15~20 |
-| 25 | 성탄 발레 | 호두까기인형 | 12.24~25 |
-
-#### 전시 (t:'e')
-| 전시명 | 줄임말 | 장소 | 기간 | 선 색상 |
-|---|---|---|---|---|
-| 어린이미술전 <우리 SUM 타볼래?> | 우리 SUM | 7층 전시실 | 2.27~6.28 | `#006B3C` 초록 |
-| 기획전시 '섬냥이 in 장도' | 섬냥이 | 장도 전시실 | 3.27~6.21 | `#E84393` 핑크 |
-
-### 캘린더 셀 내 공연 태그
-
-#### 3가지 상태
-**일반 (미래):**
-```
-14  [accent원형:공]  풀네임(볼드)  D-7
-```
-- 원형 뱃지: 16×16px, border-radius:50%, background:var(--accent), color:#fff, font-size:8px
-- 공연명: font-size:9px, font-weight:700, color:var(--text)
-- D-day: font-size:9px, color:var(--dim)
-
-**오늘:**
-```
-19  [흰원형:공]  풀네임(볼드검정)
-```
-- 원형 뱃지: background:rgba(255,255,255,0.85), color:#111
-- D-Day: 표시 안 함 (dday===0)
-
-**지난 일:**
-```
-7  [연회색원형:공]  풀네임(연하게)
-```
-- 원형 뱃지: background:rgba(0,0,0,0.05), color:rgba(0,0,0,0.22)
-- D-day: 없음
-
-### 반응형 줄임말 전환
-- CSS 미디어 쿼리: `@media(max-width:1200px)`
-- 넓은 화면: `.pf` (풀네임) 표시
-- 좁은 화면: `.ps` (줄임말) 표시
-
-### D-day 계산
-- 오늘 기준 (각 셀 날짜가 아님)
-- 공연 시작일까지 남은 일수
-- 기간 중 (dday===0): D-day 표시 안 함
-- 이미 종료 (종료일 < 오늘): dday=null, D-day 표시 안 함
-
----
-
-## 전시 인디케이터 (하단 선)
-
-### 위치
-- `position:absolute; bottom:8px; left:0; right:0`
-- 셀 좌우 벽까지 이어짐
-- `.c-inner` 밖에 위치 → 스크롤 시에도 고정
-
-### 선 사양
-- 방식: `border-top:2px solid 색상` (height+background 아님 — 서브픽셀 일관성)
-- 간격: `gap:3px` (선끼리)
-- 위 선: 7층 (초록 `#006B3C`)
-- 아래 선: 장도 (핑크 `#E84393`)
-
-### 상태별
-| 조건 | 표시 |
-|---|---|
-| 전시 기간 중 + 오늘 이후 | ON (해당 색상) |
-| 전시 기간 중 + 지난 일 (당월) | OFF (`rgba(0,0,0,0.04)`) |
-| 전시 기간 밖 | OFF |
-| 비당월 셀 | 미표시 (`if(nm) return ''`) |
-
----
-
-## 홍보 콘텐츠 표시
-
-### 캘린더 셀 내 (`.ev`)
-```
-09:00 인스타 편한음악 카드뉴스
-```
-- font-size:10.5px, line-height:1.4
-- 시간: font-weight:600
-- 플랫폼: font-weight:600, 플랫폼 고유 색상
-- 내용: 일반
-
-### 시간 추출
-- DB `입력시간(KST)` 필드에서 추출
-- 문자열("2026-05-19 14:00"): split(' ')[1]
-- 숫자(엑셀 시리얼): `Math.round((ts%1)*1440)` → 시/분 분리
-
-### 당일 색상 규칙
-| 조건 | 시간 색상 | 플랫폼 색상 | 내용 색상 |
-|---|---|---|---|
-| 지난 일 | var(--past-text) | var(--past-text) | var(--past-text) |
-| 당일 + 시간 안 지남 | **var(--accent)** | 플랫폼 고유색 | var(--text) |
-| 당일 + 시간 지남 | **#999** | 플랫폼 고유색 | var(--text) |
-| 미래 | var(--text) | 플랫폼 고유색 | var(--text) |
-| 완료 상태 | #bbb | #bbb | #bbb + 취소선 + opacity:0.6 |
-
-### 진행 상태
-- **예정**: 기본값. 정상 표시
-- **완료**: 취소선(`text-decoration:line-through`) + 색상 #bbb + opacity:0.6
-
-### 스크롤
-- `.c-inner`: overflow:hidden (기본)
-- `.c:hover .c-inner`: overflow-y:auto
-- 스크롤바: 3px 폭, rgba(0,0,0,0.12) thumb, transparent track
-
----
-
-## 사이드 패널
-
-### 트리거
-- 캘린더 셀 클릭 → 해당 날짜의 상세 정보
-
-### 레이아웃
-- width:360px, 우측 고정
-- 글래스모피즘 배경 (blur:24px)
-- 슬라이드 인 애니메이션 (0.25s)
-
-### 구조
-```
-┌─ 헤더 ─────────────────┐
-│ 5월 23일  토요일     ✕  │
-├─ 공연/전시 섹션 ────────┤
-│ [공] 제목          D-7  │
-│      4층 대극장         │
-│ [전] 제목        87일차 │
-│      7층 전시실         │
-├─ 구분자 ────────────────┤
-│ 📭 등록된 콘텐츠 없음   │
-│ [+ 새 콘텐츠 등록]     │
-└─────────────────────────┘
-```
-
-### 공연 카드
-- 배경: `rgba(74,77,231,0.06)`, border-radius:10px
-- 3열 레이아웃: [공 뱃지(고정)] [제목+장소(flex:1)] [D-day(고정)]
-- 뱃지: 20×20px 원형, accent 배경, 흰 글씨
-- 제목: font-size:13px, font-weight:700
-- 장소: "4층 대극장", font-size:10px, color:var(--dim)
-- D-day: font-size:11px, font-weight:600, color:var(--accent)
-
-### 전시 카드
-- 배경: `rgba(240,196,184,0.15)`, border-radius:10px
-- 뱃지: 20×20px 원형, `#F0C4B8` 배경, #333 글씨
-- 장소: "7층 전시실" / "장도 전시실"
-- N일차: font-size:11px, font-weight:600, color:`#C08070`
-
-### 구분자
-- `border-top:1px solid var(--border)`, margin:12px 0
-
----
-
-## DB 구조 (SharePoint 엑셀)
-
-### 컬럼 (16개)
-| # | 컬럼명 | 설명 |
-|---|---|---|
-| 1 | No | 순번 |
-| 2 | 입력시간(KST) | 홍보 예정 시간 (엑셀 시리얼 숫자) |
-| 3 | 날짜 | 엑셀 날짜 시리얼 |
-| 4 | 연도 | 2026 등 |
-| 5 | 월 | 1~12 |
-| 6 | 일 | 1~31 |
-| 7 | 요일 | "화요일" 등 |
-| 8 | 플랫폼 1 | 카카오톡/인스타그램/유튜브/블로그/기타채널 |
-| 9 | 플랫폼 2 | 보조 플랫폼 |
-| 10 | 콘텐츠 구분 | 공연/전시/교육/기타 |
-| 11 | 담당 부서 | |
-| 12 | 콘텐츠 제목 | |
-| 13 | 콘텐츠 형식 | |
-| 14 | 게시 담당자 | |
-| 15 | 진행 상태 | 예정/진행중/완료/취소/보류 |
-| 16 | 비고 | |
-
-### API 엔드포인트
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| POST | `/api/auth` | PIN 인증 `{"password":"<<PIN>>"}` |
-| GET | `/api/records` | 전체 레코드 조회 (헤더: X-App-Password) |
-| POST | `/api/records` | 새 행 추가 `{"values":[...16개]}` |
-| DELETE | `/api/records/:rowIndex` | 행 삭제 |
-
-### 데이터 등록 예시 (curl)
-```bash
-curl -s -X POST "$API/api/records" \
-  -H "Content-Type: application/json" \
-  -H "X-App-Password: <<PIN>>" \
-  -d '{"values":[2,"2026-05-19 14:00",46161,2026,5,19,"화요일","인스타그램","","공연","","편한음악 카드뉴스","","","예정",""]}'
-```
-
----
-
-## 모달 (새 콘텐츠 등록)
-
-### 필드
-- 시간 (time input, 기본 10:00)
-- 플랫폼 (select: 카카오톡/인스타그램/유튜브/블로그/기타채널)
-- 콘텐츠 제목 (text)
-- 콘텐츠 구분 (select: 공연/전시/교육/기타)
-- 진행 상태 (select: 예정/진행중/완료/취소/보류)
-- 비고 (text)
-
-### 스타일
-- 배경 오버레이: `rgba(26,26,46,0.4)` + backdrop-filter:blur(4px)
-- 카드: 400px, border-radius:24px, box-shadow 큰 값
-- 입력 필드: background:#F8F7FC, border:1.5px solid rgba(0,0,0,0.06), border-radius:12px
-- 포커스: accent border + accent glow
-
----
-
-## 글래스모피즘 적용 요소
-| 요소 | blur | 배경 |
-|---|---|---|
-| 네비게이션 | 20px | `var(--glass)` |
-| 캘린더 전체 | 16px | `var(--glass)` |
-| 사이드 패널 | 24px | `var(--glass)` |
-| 칩 | 8px | `var(--glass)` |
-| 화살표 버튼 | 8px | `var(--glass)` |
-
----
-
-## 주의사항 / 알려진 이슈
-
-1. **월요일 없음**: 캘린더가 화~일(6일) 구조. 오늘이 월요일이면 "오늘" 표시 안 됨.
-2. **시간 변환**: 엑셀 시리얼에서 시간 추출 시 `Math.round((ts%1)*1440)` 사용 (반올림 문제 방지).
-3. **서브픽셀**: 전시선은 `border-top` 방식 사용 (height+background 아닌).
-4. **유니코드**: JS 코드에 한글 직접 삽입 (유니코드 이스케이프 \uXXXX 사용 X). 이모지는 서로게이트 쌍(\uD83D\uDE09) 유지.
-5. **폰트 로딩**: 네비 pill 초기 위치를 `document.fonts.ready` 후 설정.
-6. **GitHub Pages 캐시**: 변경 후 1~2분 소요. Ctrl+Shift+R 권장.
-7. **PERFS 배열 닫기**: `];` 누락 시 전체 JS 파싱 실패 → PIN 포함 모든 기능 작동 안 함.
-
----
-
-## 신청 일정 관리 시스템 (홍보접수설정 시트)
-
-### 개요
-관리자가 실무자(공연·전시·교육·대관 등 각 부서)에게 "이 기간에 홍보 신청하세요"라고 정해주는 수강신청형 시스템.
-관리자가 접수 기간과 제외 일정을 설정하면, 실무자는 그 기간 내 가능한 슬롯에만 캘린더 우클릭으로 신청 가능.
-
-### 데이터 모델
-SharePoint `홍보접수설정` 시트 (A: 키, B: 값). 다중 row 형식.
-
-| 키 | 값 형식 | 설명 |
-|---|---|---|
-| `접수ON` | `"true"` / `"false"` | 접수 ON/OFF 전체 토글 |
-| `접수월` | `"2026-08"` | 신청 가능한 월 (단일 row) |
-| `제외` | `"YYYY-MM-DD\|HH:MM\|HH:MM"` | 다중 row. 빈 칸 가능 |
-| `자동_낮에만` | `"true"` / `"false"` | 17:00~22:00 자동 차단 (default true) |
-| `자동_일요일` | `"true"` / `"false"` | 일·월 자동 차단 (라벨 "화-토", default true) |
-| `자동_휴무` | `"true"` / `"false"` | PROMO_SPECIAL 휴무 일정 자동 차단 (default false) |
-
-`제외` row 형식:
-- `2026-08-15||` = 그 날 전체 (개별 일자)
-- `|18:00|22:00` = 매일 그 시간대 (공통)
-- `2026-08-10|14:00|15:00` = 특정 일자 특정 시간 (개별 슬롯)
-
-### 검증 로직 (`canApplyOnDate`, `canApplyAtTime`, `canApplyOnDateTime`)
-
-#### 일자 검증 (canApplyOnDate)
-1. `접수ON` false → "접수가 닫혀있습니다"
-2. `접수월` 미설정 → "접수월이 설정되지 않았습니다"
-3. 신청 일자가 접수월 외 → "신청 가능한 월: YYYY-MM"
-4. `자동_일요일` true + 일(0) or 월(1) → "화-토만 신청 가능 (일·월 제외)"
-5. `자동_휴무` true + PROMO_SPECIAL에 type==='휴무' 일정 범위 → "담당자 휴무: ..."
-6. 제외 row에서 date만 있고 시간 없는 row → "신청 불가 일자: YYYY-MM-DD"
-
-#### 시간 검증 (canApplyAtTime)
-- 제외 범위: **start 이상 ~ end 미만** (end 시점은 신청 가능)
-- `자동_낮에만` true + 17:00 ≤ time < 22:00 → "낮에만 신청 가능 (17:00~22:00 제외)"
-- 공통 제외 row (date 없음 + 시간) 검증
-
-#### 통합 검증 (canApplyOnDateTime)
-- 일자 + 공통 시간 + 개별 슬롯 (date + 시간) 순서로 검증
-
-### UI 구성 (관리자 패널 → 신청 일정 관리)
-
-```
-신청 일정 관리                                       ‹ ✕
-─────────────────────────────────────────────
-접수 상태   [ON] [OFF]                           ← Step 1
-접수 기간   [2026 08]                            ← Step 2 (ON일 때만 활성)
-─────────────────────────────────────────────
-제외 일정                                          ← Step 3 (접수ON+기간 설정 시만)
-  공통    [☑ 낮에만] [☑ 화-토] [☐ 휴무]
-          [시작] ~ [종료]  [+ 추가]
-          [chip 1] [chip 2]
-  개별    [일자] [시작] ~ [종료]  [+ 추가]
-          2026-08-15  14:00 ~ 16:00  [삭제]
-```
-
-### UI/UX 패턴
-
-#### 토글/입력 자동화
-- **접수 ON/OFF**: chip 형태 (강조색 active)
-- **접수 기간**: `<input type="month">` + 휠 스크롤(`asYmWheel`)로 ±1월
-- **공통 자동 옵션**: 체크박스 3개 (낮에만/화-토/휴무) + `accent-color:var(--accent)`
-- **공통 시간**: default 18:00~09:00 (자정 넘는 야간 패턴). 추가 후 reset도 동일값
-- **공통 시작 시간 자동 흐름**: 종료 비어있으면 +30분 자동 + focus 이동. 시작≥종료면 focus만 이동(자정 넘는 의도 보호)
-- **개별 일자**: native picker + min/max로 접수월 제약 + 휠 스크롤 ±1일 (접수월 안에서만)
-- **개별 일자 선택 시 자동**: 시간 09:00-14:00 + 시작 input focus
-- **개별 시작 시간 자동 흐름**: 종료 ≤ 시작이면 종료 = 시작+30분 + 종료 focus
-
-#### 자정 넘는 시간 자동 분할 (공통)
-- 사용자: 18:00 ~ 09:00 한 줄 입력
-- 시스템: 두 row 자동 저장 → chip 두 개 표시
-  - `18:00 ~ 23:59`
-  - `00:00 ~ 09:00`
-
-#### Chip vs 카드
-- **공통 (시간만)**: rounded-pill chip (`#F8F7FC` 배경 + `rgba(74,77,231,0.15)` border + `#4A4DE7` 텍스트 + ✕ 인라인 삭제)
-- **개별 (일자+시간)**: 슬림 1줄 카드. 일자 굵음(`#333`), 시간 옅음(`#666`), [삭제] 버튼
-
-#### 모달 헤더 아이콘
-- **뒤로**: 동그라미 chevron SVG (X 옆 좌측 right:54px, 흰 배경 + 강조색)
-- **닫기**: `.modal-x` (X 표시, right:14px)
-
-### 클라이언트 측 최적화
-- `_applySettingsCache` 60초 — 모달 닫고 다시 열어도 캐시 hit
-- 시간 측정 로깅: `console.log('[applysettings] api GET:', ms, 'ms')`, `total load`, `cache hit`
-- 부분 갱신: `refreshCommonChips()`, `refreshIndividualList()` — 전체 렌더 X
-- mutation 후 `invalidateApplyCache()` 호출 (4곳: setApplyOpen, saveApplyMonth, addCommon/Individual, deleteExclusion)
-
-### 중복 검증
-- **공통**: 자정 넘는 입력 시 분할 전 두 range 둘 다 검사. 하나라도 중복이면 차단
-- **개별**: date + start + end 동일 row 검사
-
-### 사용자 신청 흐름 (실무자)
-1. 캘린더 우클릭 → `canApplyOnDate` 검증 → 통과 시 "홍보 신청" 메뉴 / 불가 시 살구색 경고 박스
-2. 위저드 Step 1: 프로그램 선택 (판매 종료 안 된 프로그램만 표시)
-3. Step 3: 날짜+시간 입력. 휠 스크롤로 시간 30분 단위 조정
-4. 신청 직전 `canApplyOnDateTime` 통합 재검증 + 카카오/문자 중복 검사
-5. 완료 → "신청 중" 상태로 등록. 캘린더에 점선 박스 + "신청중" 살구색 배지
-6. 관리자 접수하면 "예정"으로 전환
-
-### 본인 권한 (myApplicant)
-- localStorage `myApplicant` 키로 신청자 식별
-- 본인 + "신청 중" 상태만 [수정][삭제] 가능
-- 접수된 건은 본인이어도 수정/삭제 불가 (담당자 문의 안내)
-
-### 다이얼로그 패턴
-- `showConfirm(msg, {title:'', danger:true, html:true, okText:'삭제'})` — 옵션:
-  - `title:''` 또는 `false` → 타이틀 숨김
-  - `html:true` → msg를 innerHTML로 렌더 (강조색 라벨 등 인라인 스타일)
-  - `danger:true` → 빨강 OK 버튼 (.c-btn.danger)
-- `showOverlayLoad('변경 중입니다...')` + `hideOverlayLoad()` — finally 블록에서 호출
-
-### 메시지 톤
-- 시스템 메시지 존댓말 통일 (위저드와 일치)
-- 라벨형 단순 표기 (예: `신청 가능한 월: 2026-08`, `신청 불가 일자: 2026-08-15`)
+## 알아두면 좋은 패턴 / 트러블슈팅
+
+### 시트 키-값 다중 row
+- `홍보접수설정` 시트는 키-값 row 구조. 같은 키로 여러 row 가능 (예: 접수월 2개).
+- POST → 새 row 추가, PATCH → 특정 row 갱신, DELETE → row 제거
+
+### 셀 비당월 (nm)
+- 흐릿 + 빗금 패턴, `cursor:default`
+- 우클릭 시 `onCellContextMenu` 안에서 `event.currentTarget.classList.contains('nm')` 분기 처리
+
+### "신청 중" 상태 — 띄어쓰기 주의
+- 시트 값: 한국어 `'신청 중'` (가운데 띄어쓰기 포함)
+- 모든 비교 코드가 이 형식 사용. 띄어쓰기 빠지면 매칭 실패.
+- 신규 신청 기본값 = `'신청 중'`. admin 확정 시 `'확정'` 등으로 변경.
+
+### Cloudflare Worker 변경 시
+- `wrangler deploy` 또는 Cloudflare dashboard에서 배포
+- `SHEET_MAP` 변경 시 frontend slug와 정합성 확인
+
+### GitHub Pages 캐시
+- push 후 1~2분 대기 (Pages 빌드/배포)
+- 강제 새로고침: `Ctrl + Shift + R` (또는 시크릿창)
+- 캐시 이상 시 사용자에게 안내 필요
+
+### Untracked 로컬 파일 (현재 로컬에만 있는 것)
+- `README.md`, `_CLAUDE.md.local`, `index.js`, `index2.html`, `통합 문서1.xlsm`
+- git에 포함 안 됨 (의도된 분리). 동기화에 영향 X.
