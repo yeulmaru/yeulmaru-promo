@@ -4381,25 +4381,39 @@ function renderApplySettings(loadOk){
   html+='<input id="as-ym" type="month" value="'+escapeHtml(ym)+'" onchange="saveApplyMonth()" onwheel="asYmWheel(event)" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
   html+='<span id="as-ym-status" style="font-size:11px;color:#888"></span>';
   html+='</div>';
-  // ===== Step 3: 제외 일정 (다른 step과 동일 가로 배치) =====
+  // ===== Step 3: 제외 일정 (공통 + 개별 분리) =====
   if(isOn&&hasYm){
-    // 접수월 범위 (일자 input min/max)
+    // 접수월 범위 (개별 일자 input min/max)
     const ymParts2=ym.split('-');
     const yr=parseInt(ymParts2[0]),mo=parseInt(ymParts2[1]);
     const lastDay=new Date(yr,mo,0).getDate();
     const ymMin=ym+'-01';
     const ymMax=ym+'-'+String(lastDay).padStart(2,'0');
-    // 라벨 + 입력 (한 행, 다른 step과 동일 세로 라인)
-    html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid #eee">';
-    html+='<label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;min-width:64px">제외 일정</label>';
-    html+='<input id="ex-date-inline" type="date" min="'+ymMin+'" max="'+ymMax+'" onchange="onExDateInlineChange()" onwheel="exDateWheel(event)" style="width:160px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
-    html+='<input id="ex-start-inline" type="time" step="1800" placeholder="시작" onchange="onExStartChange()" onwheel="exTimeWheel(event,\'ex-start-inline\')" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
-    html+='<span style="color:#aaa">~</span>';
-    html+='<input id="ex-end-inline" type="time" step="1800" placeholder="종료" onwheel="exTimeWheel(event,\'ex-end-inline\')" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
-    html+='<button onclick="addExclusionInline()" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:12px">+ 추가</button>';
+    // 제외 일정 헤더 (구분선)
+    html+='<div style="margin-top:18px;padding-top:14px;border-top:1px solid #eee;margin-bottom:6px">';
+    html+='<label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">제외 일정</label>';
     html+='</div>';
-    // 목록 (풀폭, 아래)
-    html+='<div id="as-exclusion-list" style="margin-top:10px">'+buildExclusionListHtml()+'</div>';
+    // ----- 공통 (시간만, 모든 일자 적용) -----
+    html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;flex-wrap:wrap">';
+    html+='<label style="font-size:11px;color:#666;font-weight:600;letter-spacing:0.5px;white-space:nowrap;min-width:64px;padding-left:8px">공통</label>';
+    html+='<input id="cm-start" type="time" step="1800" placeholder="시작" onchange="onCommonStartChange()" onwheel="exTimeWheel(event,\'cm-start\')" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
+    html+='<span style="color:#aaa">~</span>';
+    html+='<input id="cm-end" type="time" step="1800" placeholder="종료" onwheel="exTimeWheel(event,\'cm-end\')" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
+    html+='<button onclick="addCommonExclusion()" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:12px">+ 추가</button>';
+    html+='</div>';
+    // 공통 chip 영역
+    html+='<div id="cm-chips" style="margin-left:72px;margin-bottom:14px;min-height:0">'+buildCommonChipsHtml()+'</div>';
+    // ----- 개별 (일자 + 시간) -----
+    html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;flex-wrap:wrap">';
+    html+='<label style="font-size:11px;color:#666;font-weight:600;letter-spacing:0.5px;white-space:nowrap;min-width:64px;padding-left:8px">개별</label>';
+    html+='<input id="iv-date" type="date" min="'+ymMin+'" max="'+ymMax+'" onchange="onIndividualDateChange()" onwheel="ivDateWheel(event)" style="width:160px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
+    html+='<input id="iv-start" type="time" step="1800" placeholder="시작" onchange="onIndividualStartChange()" onwheel="exTimeWheel(event,\'iv-start\')" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
+    html+='<span style="color:#aaa">~</span>';
+    html+='<input id="iv-end" type="time" step="1800" placeholder="종료" onwheel="exTimeWheel(event,\'iv-end\')" style="width:140px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
+    html+='<button onclick="addIndividualExclusion()" style="padding:8px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:12px">+ 추가</button>';
+    html+='</div>';
+    // 개별 목록 영역
+    html+='<div id="iv-list" style="margin-left:72px;margin-top:8px">'+buildIndividualListHtml()+'</div>';
   }
   body.innerHTML=html;
 }
@@ -4469,33 +4483,72 @@ function asYmWheel(ev){
 }
 
 // === 제외 일정 inline 추가 ===
-async function addExclusionInline(){
-  const date=(document.getElementById('ex-date-inline')||{}).value||'';
-  const start=(document.getElementById('ex-start-inline')||{}).value||'';
-  const end=(document.getElementById('ex-end-inline')||{}).value||'';
-  if(!date&&!start&&!end){showToast('일자 또는 시간 중 하나는 입력해야 합니다','error');return;}
-  if((start&&!end)||(!start&&end)){showToast('시작/종료 시간을 둘 다 입력해야 합니다','error');return;}
-  if(start&&end&&start>=end){showToast('종료 시간이 시작 시간보다 늦어야 합니다','error');return;}
-  // 일자 입력 시 접수월 안인지 검증
-  if(date&&APPLY_SETTINGS.접수월){
-    if(date.substring(0,7)!==APPLY_SETTINGS.접수월){
-      showToast('접수월 안의 일자만 등록 가능합니다 ('+APPLY_SETTINGS.접수월+')','error');return;
-    }
+// ===== 공통 chip 영역 (시간만, date 없는 항목) =====
+function buildCommonChipsHtml(){
+  const commons=APPLY_EXCLUSIONS.filter(function(ex){return !ex.date&&ex.start&&ex.end;});
+  if(commons.length===0){
+    return '<div style="font-size:11px;color:#bbb;padding:4px 2px">등록된 공통 시간이 없습니다</div>';
   }
-  const value=date+'|'+start+'|'+end;
-  // 인라인 disable
+  let html='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  commons.forEach(function(ex){
+    const idx=APPLY_EXCLUSIONS.indexOf(ex);
+    html+='<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#F8F7FC;border:1px solid rgba(74,77,231,0.15);border-radius:14px;font-size:12px;color:#4A4DE7;font-weight:500"><span>'+escapeHtml(ex.start+'~'+ex.end)+'</span><button onclick="deleteExclusion('+idx+')" style="padding:0;border:0;background:transparent;color:#888;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center" title="삭제">✕</button></span>';
+  });
+  html+='</div>';
+  return html;
+}
+
+// ===== 개별 목록 영역 (date + 시간 있는 항목) =====
+function buildIndividualListHtml(){
+  const indivs=APPLY_EXCLUSIONS.filter(function(ex){return ex.date&&ex.start&&ex.end;});
+  if(indivs.length===0){
+    return '<div style="font-size:11px;color:#bbb;padding:4px 2px">등록된 개별 일정이 없습니다</div>';
+  }
+  let html='<div style="display:flex;flex-direction:column;gap:4px">';
+  indivs.forEach(function(ex){
+    const idx=APPLY_EXCLUSIONS.indexOf(ex);
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#fff;border:1px solid #eee;border-radius:8px;font-size:13px">';
+    html+='<span style="color:#333;font-weight:600;min-width:90px">'+escapeHtml(ex.date)+'</span>';
+    html+='<span style="color:#666;flex:1">'+escapeHtml(ex.start+' ~ '+ex.end)+'</span>';
+    html+='<button onclick="deleteExclusion('+idx+')" style="padding:3px 9px;border:1px solid rgba(216,75,74,0.25);border-radius:6px;background:#fff;color:#E24B4A;cursor:pointer;font-size:11px">삭제</button>';
+    html+='</div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+// 부분 갱신
+function refreshCommonChips(){
+  const el=document.getElementById('cm-chips');
+  if(el)el.innerHTML=buildCommonChipsHtml();
+}
+function refreshIndividualList(){
+  const el=document.getElementById('iv-list');
+  if(el)el.innerHTML=buildIndividualListHtml();
+}
+
+// ===== 공통 추가 (시간만, 자정 넘는 경우 두 chip으로 자동 분할) =====
+async function addCommonExclusion(){
+  const start=(document.getElementById('cm-start')||{}).value||'';
+  const end=(document.getElementById('cm-end')||{}).value||'';
+  if(!start||!end){showToast('시작/종료 시간을 입력해 주세요','error');return;}
+  if(start===end){showToast('시작/종료가 같으면 등록할 수 없습니다','error');return;}
   const btn=event&&event.target;
   if(btn){btn.disabled=true;btn.style.opacity='0.5';}
   try{
-    const r=await api('POST','/api/sheet/applysettings',{values:['제외',value]});
-    const newRow=r&&r.row?r.row:0;
-    APPLY_EXCLUSIONS.push({rowIndex:newRow,date:date,start:start,end:end});
-    invalidateApplyCache();
+    if(start<end){
+      // 같은 날 범위 — 한 row
+      await _postCommonRow(start,end);
+    }else{
+      // 자정 넘는 범위 — 두 row 자동 분할 (start~23:59 + 00:00~end)
+      await _postCommonRow(start,'23:59');
+      await _postCommonRow('00:00',end);
+    }
     // 입력 비우기
-    if(document.getElementById('ex-date-inline'))document.getElementById('ex-date-inline').value='';
-    if(document.getElementById('ex-start-inline'))document.getElementById('ex-start-inline').value='';
-    if(document.getElementById('ex-end-inline'))document.getElementById('ex-end-inline').value='';
-    refreshExclusionList();
+    if(document.getElementById('cm-start'))document.getElementById('cm-start').value='';
+    if(document.getElementById('cm-end'))document.getElementById('cm-end').value='';
+    invalidateApplyCache();
+    refreshCommonChips();
     showToast('추가되었습니다','success');
   }catch(e){
     showToast('추가 실패: '+e.message,'error');
@@ -4504,30 +4557,105 @@ async function addExclusionInline(){
   }
 }
 
-function buildExclusionListHtml(){
-  if(APPLY_EXCLUSIONS.length===0){
-    return '<div style="text-align:center;padding:20px;color:#aaa;font-size:12px;background:#fafafa;border-radius:10px">등록된 제외 일정이 없습니다</div>';
+async function _postCommonRow(s,e){
+  const value=''+'|'+s+'|'+e;
+  const r=await api('POST','/api/sheet/applysettings',{values:['제외',value]});
+  const newRow=r&&r.row?r.row:0;
+  APPLY_EXCLUSIONS.push({rowIndex:newRow,date:'',start:s,end:e});
+}
+
+// ===== 개별 추가 (일자 + 시간, 같은 날 안에서만) =====
+async function addIndividualExclusion(){
+  const date=(document.getElementById('iv-date')||{}).value||'';
+  const start=(document.getElementById('iv-start')||{}).value||'';
+  const end=(document.getElementById('iv-end')||{}).value||'';
+  if(!date){showToast('일자를 선택해 주세요','error');return;}
+  if(!start||!end){showToast('시작/종료 시간을 입력해 주세요','error');return;}
+  if(start>=end){showToast('종료 시간이 시작 시간보다 늦어야 합니다 (개별은 자정 넘는 시간 불가)','error');return;}
+  if(date.substring(0,7)!==APPLY_SETTINGS.접수월){showToast('접수월 안의 일자만 등록 가능합니다','error');return;}
+  const value=date+'|'+start+'|'+end;
+  const btn=event&&event.target;
+  if(btn){btn.disabled=true;btn.style.opacity='0.5';}
+  try{
+    const r=await api('POST','/api/sheet/applysettings',{values:['제외',value]});
+    const newRow=r&&r.row?r.row:0;
+    APPLY_EXCLUSIONS.push({rowIndex:newRow,date:date,start:start,end:end});
+    invalidateApplyCache();
+    // 입력 비우기
+    if(document.getElementById('iv-date'))document.getElementById('iv-date').value='';
+    if(document.getElementById('iv-start'))document.getElementById('iv-start').value='';
+    if(document.getElementById('iv-end'))document.getElementById('iv-end').value='';
+    refreshIndividualList();
+    showToast('추가되었습니다','success');
+  }catch(e){
+    showToast('추가 실패: '+e.message,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.style.opacity='';}
   }
-  let html='<div style="display:flex;flex-direction:column;gap:6px">';
-  APPLY_EXCLUSIONS.forEach(function(ex,i){
-    const hasDate=!!ex.date,hasTime=!!(ex.start&&ex.end);
-    let label='';
-    if(hasDate&&!hasTime)label=ex.date;
-    else if(!hasDate&&hasTime)label=ex.start+'~'+ex.end;
-    else if(hasDate&&hasTime)label=ex.date+' - '+ex.start+'~'+ex.end;
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border:1px solid #eee;border-radius:8px"><div style="flex:1;font-size:13px;color:#333">'+escapeHtml(label)+'</div><button onclick="deleteExclusion('+i+')" style="padding:4px 10px;border:1px solid rgba(216,75,74,0.3);border-radius:6px;background:#fff;color:#E24B4A;cursor:pointer;font-size:11px">삭제</button></div>';
-  });
-  html+='</div>';
-  return html;
 }
 
-// 제외 일정 list 부분 갱신
-function refreshExclusionList(){
-  const el=document.getElementById('as-exclusion-list');
-  if(el)el.innerHTML=buildExclusionListHtml();
+// ===== 공통 시작 시간 변경 시 — 종료 비어있으면 자동 +30분 + focus =====
+function onCommonStartChange(){
+  const start=document.getElementById('cm-start');
+  const end=document.getElementById('cm-end');
+  if(!start||!end||!start.value)return;
+  if(!end.value){
+    const[h,m]=start.value.split(':').map(Number);
+    let total=h*60+m+30;
+    if(total>=1440)total=0;
+    const nh=Math.floor(total/60)%24,nm=total%60;
+    end.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
+    setTimeout(function(){end.focus();},0);
+  }
 }
 
-// 시간 input wheel 스크롤 30분 단위 조정 (inline 제외 입력에서 사용)
+// ===== 개별 일자 선택 → 시간 기본값(09:00-14:00) + 시작 focus =====
+function onIndividualDateChange(){
+  const dateEl=document.getElementById('iv-date');
+  const startEl=document.getElementById('iv-start');
+  const endEl=document.getElementById('iv-end');
+  if(!dateEl||!startEl||!endEl||!dateEl.value)return;
+  if(!startEl.value)startEl.value='09:00';
+  if(!endEl.value)endEl.value='14:00';
+  setTimeout(function(){startEl.focus();},0);
+}
+
+// ===== 개별 시작 시간 변경 시 — 종료 ≤ 시작이면 종료 자동 +30분 + focus =====
+function onIndividualStartChange(){
+  const startEl=document.getElementById('iv-start');
+  const endEl=document.getElementById('iv-end');
+  if(!startEl||!endEl||!startEl.value)return;
+  const needAdjust=!endEl.value||startEl.value>=endEl.value;
+  if(needAdjust){
+    const[h,m]=startEl.value.split(':').map(Number);
+    let total=h*60+m+30;
+    if(total>1440)total=1440-30;
+    const nh=Math.floor(total/60)%24,nm=total%60;
+    endEl.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
+    setTimeout(function(){endEl.focus();},0);
+  }
+}
+
+// ===== 개별 일자 휠 — 접수월 안에서만 1일 단위 ± =====
+function ivDateWheel(event){
+  event.preventDefault();
+  const el=document.getElementById('iv-date');if(!el)return;
+  let v=el.value;
+  if(!v)v=APPLY_SETTINGS.접수월+'-01';
+  const d=new Date(v+'T00:00:00');
+  d.setDate(d.getDate()+(event.deltaY>0?1:-1));
+  const newYm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  if(newYm!==APPLY_SETTINGS.접수월)return;
+  el.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  onIndividualDateChange();
+}
+
+function buildExclusionListHtml(){
+  // 호환용 stub — 새 UI는 buildCommonChipsHtml + buildIndividualListHtml 사용
+  return '';
+}
+
+// 시간 input wheel 스크롤 30분 단위 조정 (공통/개별 둘 다 사용)
 function exTimeWheel(event,id){
   event.preventDefault();
   const el=document.getElementById(id);if(!el)return;
@@ -4539,76 +4667,22 @@ function exTimeWheel(event,id){
   const nh=Math.floor(total/60),nm=total%60;
   el.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
   // 시작 시간 변경 시 자동 흐름 트리거 (휠은 onchange 발동 안 함)
-  if(id==='ex-start-inline')onExStartChange();
-}
-
-// 제외 일자 wheel — 1일 단위 ± (접수월 범위 안에서만)
-function exDateWheel(event){
-  event.preventDefault();
-  const el=document.getElementById('ex-date-inline');if(!el)return;
-  let v=el.value;
-  if(!v){
-    // 빈 값이면 접수월 1일부터
-    v=APPLY_SETTINGS.접수월+'-01';
-  }
-  const d=new Date(v+'T00:00:00');
-  d.setDate(d.getDate()+(event.deltaY>0?1:-1));
-  const newYm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  // 접수월 벗어나면 변경 안 함
-  if(newYm!==APPLY_SETTINGS.접수월)return;
-  el.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  onExDateInlineChange();
-}
-
-// 날짜 선택 → 시간 기본값(09:00-14:00) + 시작 시간 focus
-function onExDateInlineChange(){
-  const dateEl=document.getElementById('ex-date-inline');
-  const startEl=document.getElementById('ex-start-inline');
-  const endEl=document.getElementById('ex-end-inline');
-  if(!dateEl||!startEl||!endEl)return;
-  if(!dateEl.value)return;
-  // 시간이 비어있으면 기본값 채움
-  if(!startEl.value)startEl.value='09:00';
-  if(!endEl.value)endEl.value='14:00';
-  // 시작 시간으로 focus
-  setTimeout(function(){startEl.focus();},0);
-}
-
-// 시작 시간 변경 시 — 종료 ≤ 시작이면 종료 자동 +30분 + 종료 input으로 focus
-function onExStartChange(){
-  const startEl=document.getElementById('ex-start-inline');
-  const endEl=document.getElementById('ex-end-inline');
-  if(!startEl||!endEl)return;
-  if(!startEl.value)return;
-  // 종료 비어있거나 시작 >= 종료면 자동 조정 + focus
-  const needAdjust=!endEl.value||startEl.value>=endEl.value;
-  if(needAdjust){
-    const[h,m]=startEl.value.split(':').map(Number);
-    let total=h*60+m+30;
-    if(total>1440)total=1440-30;
-    const nh=Math.floor(total/60)%24,nm=total%60;
-    endEl.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
-    // 종료 input으로 focus (사용자가 휠로 조정하기 좋게)
-    setTimeout(function(){endEl.focus();},0);
-  }
+  if(id==='cm-start')onCommonStartChange();
+  else if(id==='iv-start')onIndividualStartChange();
 }
 
 async function deleteExclusion(idx){
   if(idx<0||idx>=APPLY_EXCLUSIONS.length)return;
   const ex=APPLY_EXCLUSIONS[idx];
-  const label=(ex.date||'-')+' '+(ex.start||'-')+'~'+(ex.end||'-');
-  if(!await showConfirm('이 제외 일정을 삭제할까요?\n\n'+label,{okText:'삭제',danger:true}))return;
-  showOverlayLoad('삭제 중입니다...');
   try{
     await api('DELETE','/api/sheet/applysettings/'+ex.rowIndex);
     APPLY_EXCLUSIONS.splice(idx,1);
     invalidateApplyCache();
-    refreshExclusionList();
+    refreshCommonChips();
+    refreshIndividualList();
     showToast('삭제되었습니다','success');
   }catch(e){
     showToast('삭제 실패: '+e.message,'error');
-  }finally{
-    hideOverlayLoad();
   }
 }
 
