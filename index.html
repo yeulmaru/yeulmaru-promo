@@ -77,9 +77,11 @@ button{font-family:inherit;cursor:pointer}
 .pw-sms-stack textarea[readonly]{color:#666;cursor:default;background:#F0EEFA}
 .pw-sms-stack textarea.pw-sms-content{background:#fff;resize:vertical;min-height:100px;color:#222}
 .role-shake{animation:role-shake .42s ease-in-out}
-.adm-tbl{width:100%;border-collapse:collapse;font-size:12px}
-.adm-tbl thead th{background:#f5f5f7;padding:10px 8px;text-align:left;font-weight:700;border-bottom:1px solid #ddd;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
-.adm-tbl tbody td{padding:8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:left}
+.adm-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.adm-tbl thead th{background:var(--accent);padding:11px 10px;text-align:left;font-weight:700;border-bottom:none;font-size:12px;color:#fff;letter-spacing:0.5px;white-space:nowrap}
+.adm-tbl thead th:first-child{border-radius:8px 0 0 0}
+.adm-tbl thead th:last-child{border-radius:0 8px 0 0}
+.adm-tbl tbody td{padding:10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:left}
 .adm-tbl tbody tr:hover{background:#fafafa}
 .adm-btn{padding:5px 10px;background:none;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:11px;margin-left:4px;font-family:inherit}
 .adm-btn:hover{background:#f5f5f5}
@@ -4537,10 +4539,10 @@ function buildLogsListHtml(){
   const allSheets=[...new Set(_logsCache.map(r=>r['대상 시트']||''))].filter(Boolean);
   const allRoles=[...new Set(_logsCache.map(r=>r['권한']||''))].filter(Boolean);
   
-  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">로그 조회 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개 / 전체 '+_logsCache.length+')</span></h3>';
-  html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap">내역받기</button>';
-  html+='<button onclick="renderLogsList()" title="새로고침" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻</button>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">로그 조회</h3>';
   html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='<button onclick="renderLogsList()" title="새로고침" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻</button>';
+  html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap">내역받기</button>';
   html+='</div>';
   
   html+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">';
@@ -4685,9 +4687,9 @@ async function renderSheetList(slug){
 function buildSheetListHtml(slug,rows){
   const cfg=SHEET_CONFIG[slug];
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
-  html+='<h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+' <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개)</span></h3>';
-  html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
+  html+='<h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+'</h3>';
   html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:7px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
   html+='</div>';
   if(cfg.inlineEdit)html+='<div style="font-size:12px;color:#888;margin-bottom:14px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
   if(cfg.note)html+='<div style="font-size:11px;color:#888;margin-bottom:10px;padding:8px 12px;background:#fafafa;border-radius:8px">'+escapeHtml(cfg.note)+'</div>';
@@ -4764,8 +4766,10 @@ async function saveInlineRow(slug,rowIndex){
 function openSheetForm(slug,rowIndex){
   const cfg=SHEET_CONFIG[slug];
   const existing=rowIndex?_sheetCache[slug].find(r=>r._rowIndex===rowIndex):null;
-  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+' '+(existing?'수정':'등록')+'</h3><button onclick="renderSheetList(\''+slug+'\')" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">← 목록</button></div>';
-  html+='<form id="sheet-form" onsubmit="event.preventDefault();saveSheetRow(\''+slug+'\','+(rowIndex||'null')+')" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
+  let html='<div class="modal-bg show" style="z-index:60" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeSheetForm)"><div class="modal" style="width:96vw;max-width:440px;max-height:88vh;overflow:auto;padding:24px;position:relative">';
+  html+='<button class="modal-x" onclick="closeSheetForm()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button>';
+  html+='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+' '+(existing?'수정':'등록')+'</h3></div>';
+  html+='<form id="sheet-form" onsubmit="event.preventDefault();saveSheetRow(\''+slug+'\','+(rowIndex||'null')+')" style="display:flex;flex-direction:column;gap:14px">';
   cfg.columns.forEach(c=>{
     const v=existing?existing[c.key]:'';
     if(c.type==='checkbox'){
@@ -4775,11 +4779,18 @@ function openSheetForm(slug,rowIndex){
       html+='<div><label>'+escapeHtml(c.label)+(c.required?'<span class="req">*</span>':'')+'</label><input name="'+c.key+'" type="text" value="'+escapeHtml(v||'')+'"'+(c.required?' required':'')+'></div>';
     }
   });
-  html+='<div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:8px;margin-top:8px">';
-  html+='<button type="button" onclick="renderSheetList(\''+slug+'\')" style="padding:10px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer">취소</button>';
-  html+='<button type="submit" style="padding:10px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600">저장</button>';
-  html+='</div></form>';
-  document.getElementById('sheet-admin-body').innerHTML=html;
+  html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:14px;border-top:1px solid #eee">';
+  html+='<button type="button" onclick="closeSheetForm()" style="padding:9px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">취소</button>';
+  html+='<button type="submit" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">저장</button>';
+  html+='</div></form></div></div>';
+  let el=document.getElementById('sheet-form-modal');
+  if(!el){el=document.createElement('div');el.id='sheet-form-modal';document.body.appendChild(el);}
+  el.innerHTML=html;
+}
+
+function closeSheetForm(){
+  const el=document.getElementById('sheet-form-modal');
+  if(el)el.innerHTML='';
 }
 
 async function saveSheetRow(slug,rowIndex){
@@ -4800,6 +4811,7 @@ async function saveSheetRow(slug,rowIndex){
     if(slug==='manager'){MANAGERS=[];await loadManagers();PR_MANAGERS=MANAGERS.filter(m=>isFlagOn(m['홍보여부']));populateMasterDropdowns();}
     if(slug==='platform'){await loadPlatforms();populateMasterDropdowns();}
     await renderSheetList(slug);
+    closeSheetForm();
     showToast('\uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4','success');
   }catch(e){
     showToast('\uC800\uC7A5 \uC2E4\uD328: '+e.message,'error');
@@ -4847,9 +4859,10 @@ async function renderProgramList(){
 }
 
 function buildProgramListHtml(programs){
-  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">프로그램 관리 <span style="font-size:12px;color:#888;font-weight:400">('+programs.length+'개)</span></h3>';
-  html+='<button onclick="openProgramForm(null)" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
+  let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
+  html+='<h3 style="margin:0;flex:1;text-align:left">프로그램 관리</h3>';
   html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='<button onclick="openProgramForm(null)" style="padding:7px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
   html+='</div>';
   html+='<table class="adm-tbl"><thead><tr><th>NO</th><th>구분</th><th>풀네임</th><th>줄임말</th><th>판매</th><th>진행</th><th>담당</th><th>장소</th><th></th></tr></thead><tbody>';
   programs.forEach(p=>{
@@ -4886,23 +4899,29 @@ function openProgramForm(rowIndex){
     담당자:existing?existing['담당자']:'',
     장소:existing?existing['장소']:'대극장'
   };
-  let html='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">'+(existing?'프로그램 수정':'프로그램 등록')+'</h3><button onclick="renderProgramList()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">← 목록</button></div>';
-  html+='<form id="prog-form" onsubmit="event.preventDefault();saveProgram('+(rowIndex||'null')+')" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
-  html+='<div><label>NO</label><input name="NO" type="number" value="'+v.NO+'" readonly></div>';
-  html+='<div><label>콘텐츠구분<span class="req">*</span></label><select name="콘텐츠구분" required onchange="refreshManagerOptions(this.value)">'+CONTENT_TYPES.map(t=>'<option value="'+escapeHtml(t)+'" '+(t===v.구분?'selected':'')+'>'+escapeHtml(t)+'</option>').join('')+'</select></div>';
-  html+='<div style="grid-column:span 2"><label>풀네임<span class="req">*</span></label><input name="풀네임" type="text" value="'+escapeHtml(v.풀네임)+'" required></div>';
-  html+='<div style="grid-column:span 2"><label>줄임말<span class="req">*</span></label><input name="줄임말" type="text" value="'+escapeHtml(v.줄임말)+'" required></div>';
-  html+='<div><label>판매시작일</label><input name="판매시작일" type="date" value="'+v.판매시작+'"></div>';
-  html+='<div><label>판매종료일</label><input name="판매종료일" type="date" value="'+v.판매종료+'"></div>';
-  html+='<div><label>시작일<span class="req">*</span></label><input name="시작일" type="date" value="'+v.시작+'" required></div>';
-  html+='<div><label>종료일<span class="req">*</span></label><input name="종료일" type="date" value="'+v.종료+'" required></div>';
+  let html='<div class="modal-bg show" style="z-index:60" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeProgramForm)"><div class="modal" style="width:96vw;max-width:480px;max-height:88vh;overflow:auto;padding:24px;position:relative">';
+  html+='<button class="modal-x" onclick="closeProgramForm()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button>';
+  html+='<div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">'+(existing?'프로그램 수정':'프로그램 등록')+'</h3></div>';
+  html+='<form id="prog-form" onsubmit="event.preventDefault();saveProgram('+(rowIndex||'null')+')" style="display:flex;flex-direction:column;gap:14px">';
+  html+='<div style="display:flex;gap:10px"><div style="flex:0 0 80px"><label>NO</label><input name="NO" type="number" value="'+v.NO+'" readonly></div><div style="flex:1"><label>콘텐츠구분<span class="req">*</span></label><select name="콘텐츠구분" required onchange="refreshManagerOptions(this.value)">'+CONTENT_TYPES.map(t=>'<option value="'+escapeHtml(t)+'" '+(t===v.구분?'selected':'')+'>'+escapeHtml(t)+'</option>').join('')+'</select></div></div>';
+  html+='<div><label>풀네임<span class="req">*</span></label><input name="풀네임" type="text" value="'+escapeHtml(v.풀네임)+'" required></div>';
+  html+='<div><label>줄임말<span class="req">*</span></label><input name="줄임말" type="text" value="'+escapeHtml(v.줄임말)+'" required></div>';
+  html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>판매시작일</label><input name="판매시작일" type="date" value="'+v.판매시작+'"></div><div style="flex:1"><label>판매종료일</label><input name="판매종료일" type="date" value="'+v.판매종료+'"></div></div>';
+  html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>시작일<span class="req">*</span></label><input name="시작일" type="date" value="'+v.시작+'" required></div><div style="flex:1"><label>종료일<span class="req">*</span></label><input name="종료일" type="date" value="'+v.종료+'" required></div></div>';
   html+='<div><label>담당자 <span style="font-size:10px;color:#888;font-weight:400">(콘텐츠구분 따라 필터)</span></label><select name="담당자">'+buildManagerOptions(v.구분,v.담당자)+'</select></div>';
   html+='<div><label>장소</label><input name="장소" type="text" value="'+escapeHtml(v.장소)+'"></div>';
-  html+='<div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:8px;margin-top:8px">';
-  html+='<button type="button" onclick="renderProgramList()" style="padding:10px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer">취소</button>';
-  html+='<button type="submit" style="padding:10px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600">저장</button>';
-  html+='</div></form>';
-  document.getElementById('prog-admin-body').innerHTML=html;
+  html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:14px;border-top:1px solid #eee">';
+  html+='<button type="button" onclick="closeProgramForm()" style="padding:9px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">취소</button>';
+  html+='<button type="submit" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">저장</button>';
+  html+='</div></form></div></div>';
+  let el=document.getElementById('program-form-modal');
+  if(!el){el=document.createElement('div');el.id='program-form-modal';document.body.appendChild(el);}
+  el.innerHTML=html;
+}
+
+function closeProgramForm(){
+  const el=document.getElementById('program-form-modal');
+  if(el)el.innerHTML='';
 }
 
 async function saveProgram(rowIndex){
@@ -4932,6 +4951,7 @@ async function saveProgram(rowIndex){
     updatePerfOpen();
     renderCal();
     await renderProgramList();
+    closeProgramForm();
     showToast('\uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4','success');
   }catch(e){
     showToast('\uC800\uC7A5 \uC2E4\uD328: '+e.message,'error');
