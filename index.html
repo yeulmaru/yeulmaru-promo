@@ -4681,7 +4681,8 @@ async function deleteExclusion(idx){
   if(idx<0||idx>=APPLY_EXCLUSIONS.length)return;
   const ex=APPLY_EXCLUSIONS[idx];
   const label=ex.date?(ex.date+' '+ex.start+'~'+ex.end):(ex.start+'~'+ex.end);
-  if(!await showConfirm('정말 삭제하시겠습니까?\n\n'+label,{okText:'삭제',danger:true}))return;
+  const msg='정말 삭제하시겠습니까?<div style="margin-top:14px;color:var(--accent);font-weight:700;font-size:15px">'+escapeHtml(label)+'</div>';
+  if(!await showConfirm(msg,{okText:'삭제',danger:true,title:'',html:true}))return;
   showOverlayLoad('변경 중입니다...');
   try{
     await api('DELETE','/api/sheet/applysettings/'+ex.rowIndex);
@@ -6534,12 +6535,22 @@ async function copyRec(rowIndex,dateKey){
 
 let _confirmResolve=null;
 function showConfirm(msg, opts){
-  // opts: {title, okText, cancelText, danger}
+  // opts: {title, okText, cancelText, danger, html}
+  // title: 기본 '예울마루 알림' / 빈 문자열 또는 false면 숨김
+  // html: true면 msg를 innerHTML로 렌더 (강조 등)
   opts=opts||{};
   return new Promise(function(resolve){
     _confirmResolve=resolve;
-    document.getElementById('confirm-title').textContent=opts.title||'예울마루 알림';
-    document.getElementById('confirm-msg').textContent=msg||'정말로 진행할까요?';
+    const titleEl=document.getElementById('confirm-title');
+    const msgEl=document.getElementById('confirm-msg');
+    if(opts.title===''||opts.title===false){
+      titleEl.style.display='none';
+    }else{
+      titleEl.style.display='';
+      titleEl.textContent=opts.title||'예울마루 알림';
+    }
+    if(opts.html){msgEl.innerHTML=msg||'정말로 진행할까요?';}
+    else{msgEl.textContent=msg||'정말로 진행할까요?';}
     const acts=document.getElementById('confirm-acts');
     const okCls=opts.danger?'danger':'yes';
     acts.innerHTML=
@@ -6553,8 +6564,16 @@ function showAlert(msg, opts){
   opts=opts||{};
   return new Promise(function(resolve){
     _confirmResolve=function(){resolve(true);};
-    document.getElementById('confirm-title').textContent=opts.title||'예울마루 알림';
-    document.getElementById('confirm-msg').textContent=msg||'';
+    const titleEl=document.getElementById('confirm-title');
+    const msgEl=document.getElementById('confirm-msg');
+    if(opts.title===''||opts.title===false){
+      titleEl.style.display='none';
+    }else{
+      titleEl.style.display='';
+      titleEl.textContent=opts.title||'예울마루 알림';
+    }
+    if(opts.html){msgEl.innerHTML=msg||'';}
+    else{msgEl.textContent=msg||'';}
     const acts=document.getElementById('confirm-acts');
     acts.innerHTML='<button class="c-btn yes" onclick="confirmResolve(true)">'+(opts.okText||'확인')+'</button>';
     document.getElementById('confirm-modal').classList.add('show');
