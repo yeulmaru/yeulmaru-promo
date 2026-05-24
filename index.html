@@ -417,7 +417,7 @@ button{font-family:inherit;cursor:pointer}
 
 .c.sel{box-shadow:inset 0 0 0 2px var(--accent);background:rgba(74,77,231,0.04)}
 .perf-tag{font-size:9px;font-weight:600;color:#333;background:#F0C4B8;padding:2px 7px;border-radius:6px;margin-left:6px;white-space:nowrap;letter-spacing:0.3px;vertical-align:middle;line-height:1}
-.dn{font-size:13px;font-weight:600;margin-bottom:2px;color:var(--text);display:flex;align-items:center;flex-wrap:nowrap;min-width:0}
+.dn{font-size:13px;font-weight:600;margin-bottom:2px;color:var(--text);display:flex;align-items:center;flex-wrap:nowrap;min-width:0;gap:5px}
 .dn.nm{color:rgba(0,0,0,0.1)}
 .dn.past{color:rgba(0,0,0,0.15)}
 .dn.sat{color:#3B7DD8}
@@ -827,7 +827,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 
 <div class="confirm-bg" id="confirm-modal">
   <div class="confirm">
-    <div class="confirm-title" id="confirm-title">예울마루 알림</div>
+    <div class="confirm-title" id="confirm-title" style="display:none"></div>
     <div class="confirm-msg" id="confirm-msg">정말로 삭제할까요?</div>
     <div class="confirm-acts" id="confirm-acts">
       <button class="c-btn no" onclick="confirmResolve(false)">취소</button>
@@ -4905,7 +4905,7 @@ function buildScheduleListHtml(rows){
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
   if(isAdmin)html+='<button onclick="addScheduleFromList()" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
   html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap">내역받기</button>';
-  if(isAdmin)html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  if(isAdmin)html+='';
   html+='</div>';
   
   // 요약 문장 (숫자만 컬러 볼드)
@@ -5088,7 +5088,7 @@ let _logsFilter={action:'all',sheet:'all',role:'all',q:''};
 let _logsQTimer=null;
 
 async function openLogsAdmin(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="logs-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="logs-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -5129,7 +5129,7 @@ function buildLogsListHtml(){
   const allRoles=[...new Set(_logsCache.map(r=>r['권한']||''))].filter(Boolean);
   
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">로그 조회</h3>';
-  html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='';
   html+='<button onclick="renderLogsList()" title="새로고침" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻</button>';
   html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap">내역받기</button>';
   html+='</div>';
@@ -5254,7 +5254,7 @@ function exportLogsCsv(){
 async function openSheetAdmin(slug){
   const cfg=SHEET_CONFIG[slug];
   if(!cfg){showToast('알 수 없는 시트예요: '+slug,'error');return;}
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -5277,7 +5277,7 @@ function buildSheetListHtml(slug,rows){
   const cfg=SHEET_CONFIG[slug];
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
   html+='<h3 style="margin:0;flex:1;text-align:left">'+escapeHtml(cfg.title)+'</h3>';
-  html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='';
   html+='<button onclick="openSheetForm(\''+slug+'\',null)" style="padding:7px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
   html+='</div>';
   if(cfg.inlineEdit)html+='<div style="font-size:12px;color:#888;margin-bottom:14px">💡 셀을 클릭해서 직접 수정 → 행 끝의 [저장] 버튼이 활성화되면 클릭</div>';
@@ -5428,7 +5428,7 @@ async function deleteSheetRow(slug,rowIndex){
 
 // === 프로그램 관리 ===
 async function openProgramAdmin(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="prog-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="prog-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -5450,7 +5450,7 @@ async function renderProgramList(){
 function buildProgramListHtml(programs){
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
   html+='<h3 style="margin:0;flex:1;text-align:left">프로그램 관리</h3>';
-  html+='<button onclick="backToAdminMenu()" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">뒤로</button>';
+  html+='';
   html+='<button onclick="openProgramForm(null)" style="padding:7px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
   html+='</div>';
   html+='<table class="adm-tbl"><thead><tr><th>NO</th><th>구분</th><th>풀네임</th><th>줄임말</th><th>판매</th><th>진행</th><th>담당</th><th>장소</th><th></th></tr></thead><tbody>';
@@ -5839,7 +5839,7 @@ function renderCal(){
       let bg='rgba(255,255,255,0.3)';
       if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
-      h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}${_justCopiedDateKey===key?' just-copied-cell':''}" data-cell data-key="${key}" onclick="clickDate('${key}')"${nm?'':` oncontextmenu="onCellContextMenu(event,'${key}')" ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
+      h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}${_justCopiedDateKey===key?' just-copied-cell':''}" data-cell data-key="${key}" onclick="clickDate('${key}')" oncontextmenu="onCellContextMenu(event,'${key}')"${nm?'':` ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
       var perfs=nm?[]:getPerfs(d);var filteredRecs=recs;if(activeFilters.length>0){var allGroups=[{label:'카카오',match:['카카오']},{label:'인스타',match:['인스타']},{label:'블로그·맘카페',match:['블로그','맘카페']},{label:'B2B',match:['B2B']},{label:'문자',match:['문자']}];var activeMatches=[];activeFilters.forEach(function(af){allGroups.forEach(function(g){if(g.label===af)activeMatches=activeMatches.concat(g.match);});});filteredRecs=filteredRecs.filter(function(r){var p=r['플랫폼 1']||'';return activeMatches.some(function(m){return p.indexOf(m)>-1;});});}if(activePrograms.length>0){filteredRecs=filteredRecs.filter(function(r){var prog=r['프로그램']||'';return activePrograms.indexOf(prog)>-1;});}
       // 시간순 정렬 (입력시간 HH:MM 기준)
       filteredRecs=filteredRecs.slice().sort(function(a,b){
@@ -6013,7 +6013,10 @@ function onCellContextMenu(event,key){
   closeCellContextMenu();
   const menu=document.createElement('div');
   menu.id='cell-context-menu';
-  if(userRole==='admin'){
+  // 비당월(nm) — 우클릭 시 안내만
+  if(event.currentTarget.classList.contains('nm')){
+    menu.innerHTML='<div style="padding:10px 14px;color:#b35a30;font-size:12px;line-height:1.4;background:#fff8f3;border-radius:8px;margin:2px">⚠️ 신청 불가<br><span style="color:#888;font-size:11px">이번 달이 아닙니다</span></div>';
+  }else if(userRole==='admin'){
     menu.innerHTML='<div class="ccm-item" onclick="closeCellContextMenu();openAdminWizard(\''+key+'\')"><span class="emo">📝</span>새 콘텐츠 등록</div>'+
       '<div class="ccm-item" onclick="closeCellContextMenu();openSpecialEntry(\''+key+'\')"><span class="emo">📌</span>담당자 일정 추가</div>';
   }else{
@@ -6610,11 +6613,11 @@ function showConfirm(msg, opts){
     _confirmResolve=resolve;
     const titleEl=document.getElementById('confirm-title');
     const msgEl=document.getElementById('confirm-msg');
-    if(opts.title===''||opts.title===false){
-      titleEl.style.display='none';
-    }else{
+    if(opts.title){
       titleEl.style.display='';
-      titleEl.textContent=opts.title||'예울마루 알림';
+      titleEl.textContent=opts.title;
+    }else{
+      titleEl.style.display='none';
     }
     if(opts.html){msgEl.innerHTML=msg||'정말로 진행할까요?';}
     else{msgEl.textContent=msg||'정말로 진행할까요?';}
@@ -6633,11 +6636,11 @@ function showAlert(msg, opts){
     _confirmResolve=function(){resolve(true);};
     const titleEl=document.getElementById('confirm-title');
     const msgEl=document.getElementById('confirm-msg');
-    if(opts.title===''||opts.title===false){
-      titleEl.style.display='none';
-    }else{
+    if(opts.title){
       titleEl.style.display='';
-      titleEl.textContent=opts.title||'예울마루 알림';
+      titleEl.textContent=opts.title;
+    }else{
+      titleEl.style.display='none';
     }
     if(opts.html){msgEl.innerHTML=msg||'';}
     else{msgEl.textContent=msg||'';}
