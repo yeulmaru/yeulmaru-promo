@@ -1660,7 +1660,8 @@ async function approvePromoFromBoard(rowIndex){
   if(userRole!=='admin'){showToast('관리자만 접수할 수 있어요','error');return;}
   const r=records.find(function(x){return x._rowIndex===rowIndex;});
   if(!r){showToast('신청을 찾을 수 없어요','error');return;}
-  if((r['진행 상태']||'')!=='대기 중'){showToast('대기 중 상태만 접수할 수 있어요','error');return;}
+  const _st=r['진행 상태']||'';
+  if(_st!=='대기 중'&&_st!=='신청 중'){showToast('대기 중 또는 신청 중 상태만 접수할 수 있어요','error');return;}
   const title=r['콘텐츠 제목']||'(제목 없음)';
   const ok=await showConfirm('"'+title+'"\n\n이 신청을 접수(예정)할까요?');
   if(!ok)return;
@@ -2406,7 +2407,7 @@ function renderPromoBoard(){
   // 상태 필터 (특수일정은 status='all'일 때만 포함, 대기/예정/완료 탭에선 제외)
   if(_promoFilter.status!=='all'){
     rows=rows.filter(function(r){return!r._isSpecial;});
-    if(_promoFilter.status==='pending')rows=rows.filter(function(r){return r['진행 상태']==='대기 중';});
+    if(_promoFilter.status==='pending')rows=rows.filter(function(r){const s=r['진행 상태']||'';return s==='대기 중'||s==='신청 중';});
     else if(_promoFilter.status==='approved')rows=rows.filter(function(r){return r['진행 상태']==='예정';});
     else if(_promoFilter.status==='done')rows=rows.filter(function(r){return r['진행 상태']==='완료';});
   }
@@ -2643,9 +2644,12 @@ function renderPromoBoard(){
       }
       // === 콘텐츠 row (기존) ===
       const status=r['진행 상태']||'-';
-      // 상태별 색상: 대기 중=살구 / 예정=초록 / 완료=파랑 / 취소=회색
-      const sColor=status==='완료'?'#2563EB':status==='취소'?'#888':status==='예정'?'#0F8B4C':status==='대기 중'?'var(--peach-text)':'#888';
-      const sBg=status==='완료'?'#DBEAFE':status==='취소'?'#f0f0f0':status==='예정'?'#E8F5EC':status==='대기 중'?'var(--peach-light)':'#f5f5f5';
+      const isApplying=status==='신청 중';
+      const isWaiting=status==='대기 중';
+      const isPendingLike=isApplying||isWaiting;
+      // 상태별 색상: 신청 중=살구(점선), 대기 중=살구, 예정=초록, 완료=파랑, 취소=회색
+      const sColor=status==='완료'?'#2563EB':status==='취소'?'#888':status==='예정'?'#0F8B4C':isPendingLike?'var(--peach-text)':'#888';
+      const sBg=status==='완료'?'#DBEAFE':status==='취소'?'#f0f0f0':status==='예정'?'#E8F5EC':isPendingLike?'var(--peach-light)':'#f5f5f5';
       const m2=String(r['월']||'').padStart(2,'0'),d2=String(r['일']||'').padStart(2,'0');
       let timeStr='';
       const ts=r['입력시간(KST)'];
@@ -2659,13 +2663,13 @@ function renderPromoBoard(){
       const isToday=dateKey===todayKey;
       const isFuture=dateKey>todayKey;
       const isPast=dateKey<todayKey;
-      const isPending=status==='대기 중';
-      // 행 배경: 대기 중(살구) → 오늘(강조색1) → 본인 미래(옅은 강조색1) → 홀수행 zebra → 기본
+      const isPending=isPendingLike;
+      // 행 배경: 신청/대기(살구) → 오늘(강조색1) → 본인 미래(옅은 강조색1) → 홀수행 zebra → 기본
       let trBg='',trBorder='border-left:3px solid transparent';
       if(isPending){trBg='background:var(--peach-bg)';trBorder='border-left:3px solid var(--peach)';}
       else if(isToday){trBg='background:rgba(74,77,231,0.05)';trBorder='border-left:3px solid var(--accent)';}
       else if(isMine&&isFuture){trBg='background:rgba(74,77,231,0.02)';trBorder='border-left:3px solid rgba(74,77,231,0.35)';}
-      else if(idx%2===0){trBg='background:rgba(0,0,0,0.018)';}  // 홀수행(1,3,5...) zebra
+      else if(idx%2===0){trBg='background:rgba(0,0,0,0.018)';}
       const hoverBg=isPending?'var(--peach-light)':isToday?'rgba(74,77,231,0.1)':'#f5f5f5';
       const baseBg=trBg.replace('background:','')||'transparent';
       // 오늘 배지 (강조색1)
@@ -2689,7 +2693,7 @@ function renderPromoBoard(){
       html+='<td style="padding:10px 12px;text-align:left;color:#222;font-weight:500">'+escapeHtml(title)+'<div style="font-size:11px;color:#888;font-weight:400;margin-top:2px">'+escapeHtml(prog)+'</div></td>';
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+'">'+escapeHtml(r['게시 담당자']||'-')+(isMine?' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:6px;margin-left:2px">나</span>':'')+'</td>';
       // 액션 — 대기 중(admin만 접수) / 예정(본인·admin 완료) — 평소 ✓, hover 시 텍스트(초록)
-      const canApprove=isAdmin&&status==='대기 중';
+      const canApprove=isAdmin&&(status==='대기 중'||status==='신청 중');
       const canComplete=(isMine||isAdmin)&&status==='예정';
       html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
       if(canApprove){
@@ -3140,7 +3144,7 @@ async function submitPromoRequest(){
       format,
       content,
       _pwData.applicant,
-      '대기 중',
+      '신청 중',
       _pwData.memo||''
     ];
     await api('POST','/api/records',{values:row});
@@ -5388,6 +5392,7 @@ function renderCal(){
       filteredRecs.forEach(r=>{
         var p=r['플랫폼 1']||'',p2=r['플랫폼 2']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
         var done=st==='완료';
+        var applying=st==='신청 중';
         var ts=r['입력시간(KST)'],hhmm='';
         if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1];
         else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
@@ -5397,7 +5402,10 @@ function renderCal(){
         var platCol=done?'#bbb':past?'var(--past-text)':td?col:col;
         var titleCol=done?'#bbb':past?'var(--past-text)':'var(--text)';
         var deco=done?'text-decoration:line-through;':'';
-        h+='<div class="ev'+(td&&evPast?' ev-past':'')+'" '+(userRole==='admin'?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+(userRole==='admin'?' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"':'')+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+'opacity:'+(done?'0.6':'1')+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600" title="'+(p2&&p2!=='-'?p2:p)+'">'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+title+'</span></div>';
+        var applyingBadge=applying?'<span style="display:inline-block;background:#fff8f3;color:#b35a30;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-right:3px;border:1px solid rgba(216,132,85,0.3);letter-spacing:0">신청중</span>':'';
+        var rowOpacity=applying?'0.85':(done?'0.6':'1');
+        var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':'';
+        h+='<div class="ev'+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'" '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+(userRole==='admin'?' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"':'')+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600" title="'+(p2&&p2!=='-'?p2:p)+'">'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
