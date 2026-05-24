@@ -4383,7 +4383,7 @@ function renderApplySettings(loadOk){
     html+='<label style="display:block;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">제외 일정</label>';
     // inline 입력 영역
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">';
-    html+='<input id="ex-date-inline" type="date" style="width:160px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
+    html+='<input id="ex-date-inline" type="date" onchange="onExDateInlineChange()" onwheel="exDateWheel(event)" style="width:160px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
     html+='<input id="ex-start-inline" type="time" step="1800" placeholder="시작" onwheel="exTimeWheel(event,\'ex-start-inline\')" style="width:110px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
     html+='<span style="color:#aaa">~</span>';
     html+='<input id="ex-end-inline" type="time" step="1800" placeholder="종료" onwheel="exTimeWheel(event,\'ex-end-inline\')" style="width:110px;padding:8px 12px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:13px;outline:none;font-family:inherit">';
@@ -4524,6 +4524,36 @@ function exTimeWheel(event,id){
   if(total<0)total=0;if(total>1410)total=1410;
   const nh=Math.floor(total/60),nm=total%60;
   el.value=String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0');
+}
+
+// 제외 일자 wheel — 1일 단위 ±
+function exDateWheel(event){
+  event.preventDefault();
+  const el=document.getElementById('ex-date-inline');if(!el)return;
+  let v=el.value;
+  if(!v){
+    const d=new Date();
+    v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  const d=new Date(v+'T00:00:00');
+  d.setDate(d.getDate()+(event.deltaY>0?1:-1));
+  el.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  // onchange는 휠로 안 발동되니까 수동 호출
+  onExDateInlineChange();
+}
+
+// 날짜 선택 → 시간 기본값(09:00-14:00) + 시작 시간 focus
+function onExDateInlineChange(){
+  const dateEl=document.getElementById('ex-date-inline');
+  const startEl=document.getElementById('ex-start-inline');
+  const endEl=document.getElementById('ex-end-inline');
+  if(!dateEl||!startEl||!endEl)return;
+  if(!dateEl.value)return;
+  // 시간이 비어있으면 기본값 채움
+  if(!startEl.value)startEl.value='09:00';
+  if(!endEl.value)endEl.value='14:00';
+  // 시작 시간으로 focus
+  setTimeout(function(){startEl.focus();},0);
 }
 
 async function deleteExclusion(idx){
