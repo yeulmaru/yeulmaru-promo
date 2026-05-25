@@ -2472,12 +2472,24 @@ function closePromoBoard(){
   if(el)el.innerHTML='';
 }
 // === isMine 매핑 (전역) — 순수 신청자 기준 ===
-// 기존 row (신청자 빈값)는 본인 아님 처리. 새 row만 신청자 매칭으로 본인 판정.
 function _isMineRec(rec, myAppl){
   if(!myAppl||!rec) return false;
   const applicant = (rec['신청자']||'').toString().trim();
   return applicant === myAppl;
 }
+// === admin 섹션 분류 헬퍼 (전역) ===
+// 0=신청 대기, 1=오늘, 2=미래 예정, 3=지난 일정, 4=취소
+function _getAdminSection(rec, todayKey){
+  const st = (rec['진행 상태']||'').toString();
+  if(st==='신청 중') return 0;
+  if(st==='취소') return 4;
+  const dk = (rec['연도']||'')+'-'+String(rec['월']||'').padStart(2,'0')+'-'+String(rec['일']||'').padStart(2,'0');
+  if(dk===todayKey) return 1;
+  if(dk>todayKey) return 2;
+  return 3;
+}
+// admin 신청 대기 목록 펼침 상태 (알림 배지 클릭으로 토글)
+let _showApplyList = false;
 function renderPromoBoard(){
   const body=document.getElementById('promo-board-body');
   if(!body)return;
@@ -2565,23 +2577,37 @@ function renderPromoBoard(){
       if(dk>todayKey)return 1;
       return 2;
     }
-    rows.sort(function(a,b){
-      // 1차: 본인 우선 (체크 OFF에서도 본인 row가 위에)
-      const am=_isMineRec(a,myApplicant)?0:1;
-      const bm=_isMineRec(b,myApplicant)?0:1;
-      if(am!==bm)return am-bm;
-      // 2차: 신청 중 우선 (그룹 내에서)
-      const ap=a['진행 상태']==='신청 중'?0:1;
-      const bp=b['진행 상태']==='신청 중'?0:1;
-      if(ap!==bp)return ap-bp;
-      // 3차: 오늘 → 미래(가까운) → 과거(최근)
-      const ab=rowBucket(a),bb=rowBucket(b);
-      if(ab!==bb)return ab-bb;
-      const ad=getRecDateKey(a),bd=getRecDateKey(b);
-      if(ab===2){if(ad!==bd)return bd.localeCompare(ad);}
-      else{if(ad!==bd)return ad.localeCompare(bd);}
-      return rowTimeStr(a).localeCompare(rowTimeStr(b));
-    });
+    if(isAdmin){
+      // === admin: 섹션별 정렬 (신청 대기 → 오늘 → 미래 → 과거 → 취소) ===
+      rows.sort(function(a,b){
+        const sa=_getAdminSection(a,todayKey);
+        const sb=_getAdminSection(b,todayKey);
+        if(sa!==sb)return sa-sb;
+        // 같은 섹션 내 시간순
+        const ad=getRecDateKey(a),bd=getRecDateKey(b);
+        if(sa===3){if(ad!==bd)return bd.localeCompare(ad);}  // 과거: 최근 먼저
+        else{if(ad!==bd)return ad.localeCompare(bd);}       // 그 외: 가까운 먼저
+        return rowTimeStr(a).localeCompare(rowTimeStr(b));
+      });
+    }else{
+      rows.sort(function(a,b){
+        // 1차: 본인 우선
+        const am=_isMineRec(a,myApplicant)?0:1;
+        const bm=_isMineRec(b,myApplicant)?0:1;
+        if(am!==bm)return am-bm;
+        // 2차: 신청 중 우선
+        const ap=a['진행 상태']==='신청 중'?0:1;
+        const bp=b['진행 상태']==='신청 중'?0:1;
+        if(ap!==bp)return ap-bp;
+        // 3차: 오늘 → 미래(가까운) → 과거(최근)
+        const ab=rowBucket(a),bb=rowBucket(b);
+        if(ab!==bb)return ab-bb;
+        const ad=getRecDateKey(a),bd=getRecDateKey(b);
+        if(ab===2){if(ad!==bd)return bd.localeCompare(ad);}
+        else{if(ad!==bd)return ad.localeCompare(bd);}
+        return rowTimeStr(a).localeCompare(rowTimeStr(b));
+      });
+    }
   }
   // === 요약 카운트 (myApplicant 기준 또는 admin은 전체) ===
   function recIsMine(r){return _isMineRec(r,myApplicant);}
@@ -2602,6 +2628,16 @@ function renderPromoBoard(){
   }
   html+='</h3>';
   if(!isAdmin)html+='<button class="m-btn save" onclick="openPromoWizardFromBoard()" style="padding:7px 14px">+ 새 신청</button>';
+  // === admin 새 신청 알림 배지 ===
+  if(isAdmin){
+    const _applyPendingCnt=(records||[]).filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
+    if(_applyPendingCnt>0){
+      const _onIcon=_showApplyList?'▾':'▸';
+      const _bgColor=_showApplyList?'var(--peach)':'var(--peach-light)';
+      const _txtColor=_showApplyList?'#fff':'var(--peach-text)';
+      html+='<button onclick="_showApplyList=!_showApplyList;renderPromoBoard()" title="'+(_showApplyList?'닫기':'펼치기')+'" style="padding:7px 14px;border-radius:10px;border:1.5px solid var(--peach);background:'+_bgColor+';color:'+_txtColor+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;margin-right:8px;transition:all .15s">'+_onIcon+' 🔔 새 신청 '+_applyPendingCnt+'건</button>';
+    }
+  }
   html+='</div>';
   // === 오늘 요약 한 줄 박스 ===
   const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소';}).length;
@@ -2711,8 +2747,24 @@ function renderPromoBoard(){
     const actW=(_colWidths&&_colWidths.action)||110;
     html+='<th data-col="action" style="padding:10px 4px;text-align:center;width:'+actW+'px;color:#fff">변경</th>';
     html+='</tr></thead><tbody>';
+    let _adminLastSection=-1;
+    const _adminSectionLabels={0:'🔔 신청 대기 중',1:'🎯 오늘 일정',2:'📅 예정된 일정',3:'🗂️ 지난 일정',4:'🚫 취소된 일정'};
+    const _adminSectionDescs={0:'체크하면 일괄 처리 가능',1:'오늘 진행할 홍보',2:'다가오는 홍보',3:'과거 기록',4:'취소된 신청'};
     rows.forEach(function(r,idx){
       const _animDelay=Math.min(idx*25,600)+'ms';
+      // === admin 섹션 헤더 row + 신청 대기 숨김 처리 ===
+      if(isAdmin){
+        const _sec=_getAdminSection(r,todayKey);
+        // 신청 대기 영역: 알림 배지 클릭 후에만 펼침
+        if(_sec===0 && !_showApplyList) return;
+        if(_sec!==_adminLastSection){
+          const _sCount=rows.filter(function(rr){return _getAdminSection(rr,todayKey)===_sec;}).length;
+          const _sBg=_sec===0?'rgba(216,132,85,0.08)':_sec===1?'rgba(74,77,231,0.06)':_sec===2?'#fafafa':'#f5f5f5';
+          const _sBorder=_sec===0?'border-top:2px solid var(--peach);border-bottom:1px solid rgba(216,132,85,0.2)':_sec===1?'border-top:2px solid var(--accent);border-bottom:1px solid rgba(74,77,231,0.15)':'border-top:1px solid #eee;border-bottom:1px solid #eee';
+          html+='<tr style="background:'+_sBg+';'+_sBorder+'"><td colspan="10" style="padding:10px 14px"><div style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#333;letter-spacing:0.3px">'+_adminSectionLabels[_sec]+' <span style="color:#888;font-size:11px;font-weight:500">('+_sCount+'건)</span><span style="color:#aaa;font-size:11px;font-weight:400;margin-left:6px">'+_adminSectionDescs[_sec]+'</span></div></td></tr>';
+          _adminLastSection=_sec;
+        }
+      }
       // === 특수일정 row ===
       if(r._isSpecial){
         const it=r._spItem;
