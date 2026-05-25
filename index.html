@@ -1196,9 +1196,28 @@ async function tryLogin(){
     // 0510으로 임시 인증해서 담당자 시트 로드
     password='0510';userRole='user';
     if(!MANAGERS||!MANAGERS.length) await loadManagers();
-    const matched=(MANAGERS||[]).find(function(m){return (m['PIN']||'').toString().trim()===pin;});
+    // 컬럼 이름 fallback — 시트 헤더가 PIN/Pin/PIN(4자리)/pin 등 어떤 변형이든 매칭
+    function _getCol(rec, candidates){
+      for(let i=0;i<candidates.length;i++){
+        const k=candidates[i];
+        if(rec[k]!==undefined && rec[k]!==null && rec[k]!=='') return rec[k];
+      }
+      // case-insensitive 매칭
+      const keys=Object.keys(rec);
+      for(let i=0;i<candidates.length;i++){
+        const c=candidates[i].toLowerCase();
+        for(let j=0;j<keys.length;j++){
+          if(keys[j].toLowerCase().replace(/[\s\(\)0-9]/g,'')===c.replace(/[\s\(\)0-9]/g,'')) return rec[keys[j]];
+        }
+      }
+      return '';
+    }
+    const PIN_KEYS=['PIN','Pin','pin','PIN(4자리)','PIN 4자리','핀'];
+    const PWD_KEYS=['비밀번호','password','Password','PASSWORD','pwd','PWD','패스워드'];
+    const STATUS_KEYS=['계정여부','계정상태','status','Status','계정','활성여부'];
+    const matched=(MANAGERS||[]).find(function(m){return _getCol(m,PIN_KEYS).toString().trim()===pin;});
     if(matched){
-      const accountStatus=(matched['계정여부']||'').toString().trim();
+      const accountStatus=_getCol(matched,STATUS_KEYS).toString().trim();
       if(accountStatus==='비활성'){
         password='';sessionStorage.removeItem('pw');
         document.getElementById('login-load').textContent='';
@@ -1209,7 +1228,7 @@ async function tryLogin(){
       // 매칭 성공 — 비밀번호 검증/설정 단계
       const userName=matched['담당자']||'';
       const userDept=matched['담당부서']||'';
-      const storedPwd=(matched['비밀번호']||'').toString();
+      const storedPwd=_getCol(matched,PWD_KEYS).toString();
       document.getElementById('login-load').textContent='';
       let pwdOk=false;
       if(!storedPwd){
