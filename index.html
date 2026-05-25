@@ -1105,23 +1105,46 @@ pins.forEach((el,i)=>{
   el.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,4);t.split('').forEach((c,j)=>{if(pins[j])pins[j].value=c;});if(t.length===4)tryLogin();});
 });
 // === 비밀번호 입력/설정 모달 (Promise 기반) ===
+function _togglePwdVisibility(inputId, btn){
+  const inp = document.getElementById(inputId);
+  if(!inp) return;
+  if(inp.type === 'password'){
+    inp.type = 'text';
+    inp.style.letterSpacing = 'normal';
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    btn.title = '비밀번호 숨기기';
+  } else {
+    inp.type = 'password';
+    inp.style.letterSpacing = '2px';
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    btn.title = '비밀번호 보기';
+  }
+}
 function _promptPasswordSetup(userName){
   // 중복 호출 방어 — 이미 떠있으면 같은 promise 반환
   if(document.getElementById('pwd-setup-modal') && window._pwdSetupPromise){
     return window._pwdSetupPromise;
   }
   const p = new Promise(function(resolve){
-    const inpSt='width:100%;padding:11px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;letter-spacing:2px;text-align:center;transition:border-color .15s';
+    const inpSt='width:100%;padding:11px 44px 11px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;letter-spacing:2px;text-align:center;transition:border-color .15s';
+    const eyeSt='position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;color:#888;padding:6px;line-height:1;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:color .12s';
+    const eyeIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
     const html='<div class="modal-bg show" id="pwd-setup-modal" style="z-index:99999" onclick="if(event.target===this)_resolvePwdSetup(null)"><div class="modal" style="max-width:400px;padding:24px;text-align:left;position:relative"><button class="modal-x" onclick="_resolvePwdSetup(null)" title="닫기">✕</button>'+
       '<h3 style="margin:0 0 4px">'+escapeHtml(userName)+' 님</h3>'+
       '<div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.5">사용할 비밀번호를 설정해 주세요.</div>'+
       // 새 비밀번호
       '<label style="display:block;font-size:11px;color:#888;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">새 비밀번호 (4~20자)<span style="color:var(--peach);margin-left:3px">*</span></label>'+
+      '<div style="position:relative">'+
       '<input id="pwd-new" type="password" autocomplete="new-password" maxlength="20" oninput="_checkPwdMatch()" style="'+inpSt+'">'+
+      '<button type="button" onclick="_togglePwdVisibility(\'pwd-new\', this)" title="비밀번호 보기" style="'+eyeSt+'" onmouseover="this.style.color=\'var(--accent)\'" onmouseout="this.style.color=\'#888\'">'+eyeIcon+'</button>'+
+      '</div>'+
       '<div id="pwd-len-hint" style="font-size:11px;color:#bbb;margin-top:5px;min-height:14px;font-weight:500"></div>'+
       // 비밀번호 확인
       '<label style="display:block;font-size:11px;color:#888;margin:12px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">비밀번호 확인<span style="color:var(--peach);margin-left:3px">*</span></label>'+
+      '<div style="position:relative">'+
       '<input id="pwd-confirm" type="password" autocomplete="new-password" maxlength="20" oninput="_checkPwdMatch()" style="'+inpSt+'">'+
+      '<button type="button" onclick="_togglePwdVisibility(\'pwd-confirm\', this)" title="비밀번호 보기" style="'+eyeSt+'" onmouseover="this.style.color=\'var(--accent)\'" onmouseout="this.style.color=\'#888\'">'+eyeIcon+'</button>'+
+      '</div>'+
       '<div id="pwd-match-hint" style="font-size:11px;color:#bbb;margin-top:5px;min-height:14px;font-weight:500"></div>'+
       '<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">'+
       '<button onclick="_resolvePwdSetup(null)" class="m-btn cancel">취소</button>'+
@@ -1132,7 +1155,7 @@ function _promptPasswordSetup(userName){
     document.body.insertAdjacentHTML('beforeend',html);
     window._pwdSetupResolver=resolve;
     setTimeout(function(){const i=document.getElementById('pwd-new');if(i)i.focus();},80);
-    // Enter 키 = 확인 (조건 충족 시만)
+    // Enter 키 동선: 첫 칸 → 두 번째 칸 → 설정 완료
     document.getElementById('pwd-new').addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();document.getElementById('pwd-confirm').focus();}});
     document.getElementById('pwd-confirm').addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();_resolvePwdSetupOk();}});
   });
@@ -1178,7 +1201,7 @@ function _checkPwdMatch(){
     b.style.borderColor = '#0F8B4C';
     matchOk = true;
   } else {
-    matchHint.textContent = '✕ 일치하지 않아요';
+    matchHint.textContent = '⚠ 비밀번호가 달라요. 다시 확인해 주세요';
     matchHint.style.color = '#E24B4A';
     b.style.borderColor = '#E24B4A';
   }
@@ -1198,13 +1221,24 @@ function _resolvePwdSetup(val){
   if(el)el.remove();
   if(window._pwdSetupResolver){window._pwdSetupResolver(val);window._pwdSetupResolver=null;}
 }
-function _resolvePwdSetupOk(){
+async function _resolvePwdSetupOk(){
   const a=document.getElementById('pwd-new');
   const b=document.getElementById('pwd-confirm');
   if(!a||!b) return;
   const av=a.value, bv=b.value;
-  // 조건 미충족 시 무시 (버튼 disabled 상태인데 Enter로 호출 시 방어)
+  // 조건 미충족 시 무시 (버튼 disabled인데 Enter로 호출 시 방어)
   if(av.length<4 || av.length>20 || av!==bv) return;
+  // 한 번 더 확인 — 초기 설정이라 신중하게
+  // confirm 모달이 비번 설정 모달(z-index 99999) 위에 뜨도록 임시 상향
+  const cm = document.getElementById('confirm-modal');
+  if(cm) cm.style.zIndex = '1000000';
+  let ok = false;
+  try{
+    ok = await showConfirm('이 비밀번호로 설정할까요?<br><br><span style="color:#888;font-size:12px">설정 후 다음 접속부터 사용합니다.</span>', {title:'🔐 비밀번호 확인', html:true, okText:'설정', cancelText:'다시 입력'});
+  } finally {
+    if(cm) cm.style.zIndex = '';
+  }
+  if(!ok) return;
   _resolvePwdSetup(av);
 }
 function _promptPasswordInput(userName){
@@ -1212,11 +1246,16 @@ function _promptPasswordInput(userName){
     return window._pwdInputPromise;
   }
   const p = new Promise(function(resolve){
-    const inpSt='width:100%;padding:11px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;letter-spacing:2px;text-align:center';
+    const inpSt='width:100%;padding:11px 44px 11px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;letter-spacing:2px;text-align:center';
+    const eyeSt='position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;color:#888;padding:6px;line-height:1;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:color .12s';
+    const eyeIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
     const html='<div class="modal-bg show" id="pwd-input-modal" style="z-index:99999" onclick="if(event.target===this)_resolvePwdInput(null)"><div class="modal" style="max-width:360px;padding:24px;text-align:left;position:relative"><button class="modal-x" onclick="_resolvePwdInput(null)" title="닫기">✕</button>'+
       '<h3 style="margin:0 0 4px">'+escapeHtml(userName)+' 님</h3>'+
       '<div style="font-size:12px;color:#888;margin-bottom:14px">비밀번호를 입력해 주세요.</div>'+
+      '<div style="position:relative">'+
       '<input id="pwd-in" type="password" autocomplete="current-password" maxlength="20" style="'+inpSt+'">'+
+      '<button type="button" onclick="_togglePwdVisibility(\'pwd-in\', this)" title="비밀번호 보기" style="'+eyeSt+'" onmouseover="this.style.color=\'var(--accent)\'" onmouseout="this.style.color=\'#888\'">'+eyeIcon+'</button>'+
+      '</div>'+
       '<div id="pwd-in-msg" style="font-size:11px;color:#E24B4A;margin-top:8px;min-height:14px"></div>'+
       '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">'+
       '<button onclick="_resolvePwdInput(null)" class="m-btn cancel">취소</button>'+
