@@ -582,7 +582,10 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .panel-prog-body.open{max-height:2000px;opacity:1;padding-top:8px;transition:max-height .45s cubic-bezier(0.4,0,0.2,1),opacity .3s ease .05s,padding-top .3s ease}
 @keyframes panel-perf-flash{0%{box-shadow:0 0 0 0 rgba(74,77,231,0);transform:scale(1)}15%{box-shadow:0 0 0 4px rgba(74,77,231,0.35);transform:scale(1.02)}30%{box-shadow:0 0 0 0 rgba(74,77,231,0);transform:scale(1)}45%{box-shadow:0 0 0 4px rgba(74,77,231,0.35);transform:scale(1.02)}60%{box-shadow:0 0 0 0 rgba(74,77,231,0);transform:scale(1)}100%{box-shadow:0 0 0 0 rgba(74,77,231,0);transform:scale(1)}}
 .panel-perf-flash{animation:panel-perf-flash 2s ease-out}
-/* 프로그램 row — URL 있으면 호버 강조 */
+/* 프로그램 row — flex layout 강제 (외부 override 차단) */
+.panel-perf-row{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;align-items:center !important;width:100%;box-sizing:border-box}
+.panel-perf-row > div{min-width:0}
+/* URL 있으면 호버 강조 */
 .panel-perf-row[onclick]:hover{background:rgba(74,77,231,0.18) !important;transform:translateX(2px)}
 /* 캘린더 셀 안 프로그램 뱃지 — URL 있으면 호버 강조 */
 .perf-badge[onclick]:hover{filter:brightness(1.1);transform:translateY(-1px);transition:all .12s ease}
