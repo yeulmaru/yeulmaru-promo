@@ -1234,8 +1234,9 @@ async function tryLogin(){
     const STATUS_KEYS=['계정여부','계정상태','status','Status','계정','활성여부'];
     const matched=(MANAGERS||[]).find(function(m){return _getCol(m,PIN_KEYS).toString().trim()===pin;});
     if(matched){
-      const accountStatus=_getCol(matched,STATUS_KEYS).toString().trim();
-      if(accountStatus==='비활성'){
+      // 계정여부 — checkbox(체크박스) 토글로 관리. OFF면 비활성 처리.
+      const accountActive=isFlagOn(_getCol(matched,STATUS_KEYS));
+      if(!accountActive){
         password='';sessionStorage.removeItem('pw');
         document.getElementById('login-load').textContent='';
         document.getElementById('login-msg').textContent='비활성 계정입니다. 관리자에게 문의해 주세요.';
@@ -1245,28 +1246,32 @@ async function tryLogin(){
       // 매칭 성공 — 비밀번호 검증/설정 단계
       const userName=matched['담당자']||'';
       const userDept=matched['담당부서']||'';
-      const storedPwd=_getCol(matched,PWD_KEYS).toString();
+      // 비밀번호 처리 — String 강제 + trim + 한글 NFC 정규화 (저장/로드 일관성)
+      const storedPwd=String(_getCol(matched,PWD_KEYS)||'').trim().normalize('NFC');
       document.getElementById('login-load').textContent='';
       let pwdOk=false;
       if(!storedPwd){
         // 첫 접속 — 비밀번호 설정 (2번 입력)
-        const newPwd=await _promptPasswordSetup(userName);
-        if(!newPwd){
+        const newPwdRaw=await _promptPasswordSetup(userName);
+        if(!newPwdRaw){
           // 취소
           password='';sessionStorage.removeItem('pw');
           pins.forEach(p=>{p.value=''});pins[0].focus();
           return;
         }
+        // 저장 전 정규화 — trim + NFC (한글 일관성)
+        const newPwd=String(newPwdRaw).trim().normalize('NFC');
         // 시트 K열에 비밀번호 저장 (PATCH)
         try{
           const ri=matched._rowIndex;
-          const updated=Object.assign({},matched,{'비밀번호':newPwd,'계정여부':accountStatus||'정상'});
+          // 계정여부 — 체크박스 ON('1')로 저장. isFlagOn에서 인식.
+          const updated=Object.assign({},matched,{'비밀번호':newPwd,'계정여부':'1'});
           delete updated._rowIndex;
           await api('PATCH','/api/sheet/manager/'+ri,{values:Object.values(updated)});
           pwdOk=true;
           // 메모리에서도 즉시 반영
           matched['비밀번호']=newPwd;
-          matched['계정여부']=accountStatus||'정상';
+          matched['계정여부']='1';
         }catch(e){
           console.error('[password save]',e);
           showToast('비밀번호 저장 실패: '+e.message,'error');
@@ -1275,12 +1280,14 @@ async function tryLogin(){
         }
       } else {
         // 기존 사용자 — 비밀번호 입력
-        const inputPwd=await _promptPasswordInput(userName);
-        if(!inputPwd){
+        const inputPwdRaw=await _promptPasswordInput(userName);
+        if(!inputPwdRaw){
           password='';sessionStorage.removeItem('pw');
           pins.forEach(p=>{p.value=''});pins[0].focus();
           return;
         }
+        // 입력값도 동일하게 정규화 후 비교
+        const inputPwd=String(inputPwdRaw).trim().normalize('NFC');
         if(inputPwd!==storedPwd){
           password='';sessionStorage.removeItem('pw');
           document.getElementById('login-msg').textContent='비밀번호가 일치하지 않아요';
@@ -1395,7 +1402,7 @@ const SHEET_CONFIG={
       {key:'예술교육여부',label:'예술교육',type:'checkbox'},
       {key:'대관여부',label:'대관',type:'checkbox'},
       {key:'PIN',label:'PIN (4자리)',type:'text'},
-      {key:'계정여부',label:'계정여부',type:'text'}
+      {key:'계정여부',label:'계정 활성',type:'checkbox'}
     ]
   }
 };
@@ -1421,7 +1428,13 @@ const TYPE_TO_FLAG={
   '대관':'대관여부',
   '기타':null
 };
-function isFlagOn(v){return v==='1'||v===1||v===true||String(v||'').toLowerCase()==='true';}
+function isFlagOn(v){
+  if(v===true||v===1||v==='1') return true;
+  if(v===null||v===undefined||v==='') return false;
+  const s=String(v).trim().toLowerCase();
+  // ON으로 인식할 값: true/1/y/yes/o/on/active/✓/✔/활성/예/사용/가능
+  return /^(true|1|y|yes|o|on|active|✓|✔|활성|예|사용|가능|t)$/i.test(s);
+}
 function filterManagersByType(contentType){
   if(!contentType)return MANAGERS;
   const flag=TYPE_TO_FLAG[contentType];
