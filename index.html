@@ -7293,7 +7293,7 @@ function onEvContextMenu(event,rowIndex,dateKey){
     if(adminStatus==='신청 중'){
       // 신청 중 — 접수 / 취소(사유) / 변경 / 삭제
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();approvePromoFromBoard('+rowIndex+')"><span class="emo" style="color:#0F8B4C">✓</span>접수 (예정으로)</div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소 (사유 전달)</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
     }else if(adminStatus==='예정'){
@@ -7301,7 +7301,7 @@ function onEvContextMenu(event,rowIndex,dateKey){
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();adminCompleteWithResult('+rowIndex+')"><span class="emo">✅</span>완료</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소 (사유 전달)</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
     }else{
       // 완료/취소 — 변경 / 복사 / 삭제
