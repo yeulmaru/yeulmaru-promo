@@ -2065,17 +2065,16 @@ async function adminCompleteWithResult(rowIndex){
   // PATCH — 진행상태='완료' + 결과 필드 3개 (기존 다른 필드 유지)
   try{
     showToast('완료 처리 중...','info');
-    const updated=Object.assign({},rec,{
+    const row = buildRecordRow(rec, {
       '진행 상태':'완료',
       '결과_링크':result.link||'',
       '결과_첨부URL':result.attach||'',
       '결과_비고':result.memo||''
     });
-    delete updated._rowIndex;
     const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
       method:'PATCH',
       headers:{'Content-Type':'application/json','x-pw':password},
-      body:JSON.stringify({values:Object.values(updated)})
+      body:JSON.stringify({values: row})
     });
     if(!res.ok)throw new Error('API '+res.status);
     showToast('완료 처리됐어요','success');
@@ -2829,6 +2828,43 @@ function updateBulkActionsUI(){
   if(btn2) btn2.textContent = '✕ 선택한 '+cnt+'건 취소';
 }
 // 일괄 접수 — 신청 중 → 예정 (순차 PATCH)
+// === 시트 PATCH용 row 배열 빌더 — 시트 헤더 순서 정확히 매핑 ===
+// 시트 헤더: A=No, B=입력시간(KST), C=날짜, D=연도, E=월, F=일, G=요일,
+//          H=플랫폼1, I=플랫폼2, J=콘텐츠 구분, K=프로그램, L=담당 부서,
+//          M=콘텐츠 제목, N=콘텐츠 형식, O=콘텐츠 내용, P=게시 담당자,
+//          Q=진행 상태, R=비고, S=신청자, T=결과_링크, U=결과_첨부URL, V=결과_비고
+function buildRecordRow(rec, overrides){
+  overrides = overrides || {};
+  function pick(key){
+    if(overrides[key] !== undefined) return overrides[key];
+    return rec[key] !== undefined ? rec[key] : '';
+  }
+  return [
+    pick('#'),
+    pick('입력시간(KST)'),
+    pick('날짜'),
+    pick('연도'),
+    pick('월'),
+    pick('일'),
+    pick('요일'),
+    pick('플랫폼 1'),
+    pick('플랫폼 2'),
+    pick('콘텐츠 구분'),
+    pick('프로그램'),
+    pick('담당 부서'),
+    pick('콘텐츠 제목'),
+    pick('콘텐츠 형식'),
+    pick('콘텐츠 내용'),
+    pick('게시 담당자'),
+    pick('진행 상태'),
+    pick('비고'),
+    pick('신청자'),
+    pick('결과_링크'),
+    pick('결과_첨부URL'),
+    pick('결과_비고')
+  ];
+}
+
 async function bulkApprovePending(){
   if(!_pendingChecks.size){showToast('선택된 건이 없어요','error');return;}
   const ids = Array.from(_pendingChecks);
@@ -2841,12 +2877,11 @@ async function bulkApprovePending(){
     try{
       const rec = records.find(function(r){return r._rowIndex === rowIndex;});
       if(!rec){failed++;continue;}
-      const updated = Object.assign({}, rec, {'진행 상태': '예정'});
-      delete updated._rowIndex;
+      const row = buildRecordRow(rec, {'진행 상태': '예정'});
       const res = await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex, {
         method: 'PATCH',
         headers: {'Content-Type':'application/json','x-pw':password},
-        body: JSON.stringify({values: Object.values(updated)})
+        body: JSON.stringify({values: row})
       });
       if(!res.ok) throw new Error('API '+res.status);
       success++;
@@ -2902,12 +2937,11 @@ async function cancelWithReason(rowIndex){
     const ts=new Date().toISOString().slice(0,16).replace('T',' ');
     const oldMemo=(rec['비고']||'').toString();
     const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
-    const updated=Object.assign({},rec,{'진행 상태':'취소','비고':newMemo});
-    delete updated._rowIndex;
+    const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
     const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
       method:'PATCH',
       headers:{'Content-Type':'application/json','x-pw':password},
-      body:JSON.stringify({values:Object.values(updated)})
+      body:JSON.stringify({values: row})
     });
     if(!res.ok)throw new Error('API '+res.status);
     showToast('취소 처리 완료 (사유 저장됨)');
@@ -2937,12 +2971,11 @@ async function bulkCancelPending(){
       if(!rec){failed++;continue;}
       const oldMemo=(rec['비고']||'').toString();
       const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
-      const updated=Object.assign({},rec,{'진행 상태':'취소','비고':newMemo});
-      delete updated._rowIndex;
+      const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
       const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
         method:'PATCH',
         headers:{'Content-Type':'application/json','x-pw':password},
-        body:JSON.stringify({values:Object.values(updated)})
+        body:JSON.stringify({values: row})
       });
       if(!res.ok)throw new Error('API '+res.status);
       success++;
@@ -3641,12 +3674,11 @@ async function submitPromoEdit(){
   if(!Object.keys(patch).length){showToast('변경된 항목이 없어요','error');return;}
   showOverlayLoad('변경 사항 저장 중...');
   try{
-    const updated=Object.assign({},orig,patch);
-    delete updated._rowIndex;
+    const row = buildRecordRow(orig, patch);
     const res=await fetch(WORKER_BASE+'/api/sheet/records/'+_pwEditTarget,{
       method:'PATCH',
       headers:{'Content-Type':'application/json','x-pw':password},
-      body:JSON.stringify({values:Object.values(updated)})
+      body:JSON.stringify({values: row})
     });
     if(!res.ok)throw new Error('API '+res.status);
     showToast('변경 사항이 저장됐어요','success');
