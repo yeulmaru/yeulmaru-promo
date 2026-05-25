@@ -1356,9 +1356,8 @@ async function tryLogin(){
         try{
           const ri=matched._rowIndex;
           // 계정여부 — 체크박스 ON('1')로 저장. isFlagOn에서 인식.
-          const updated=Object.assign({},matched,{'비밀번호':newPwd,'계정여부':'1'});
-          delete updated._rowIndex;
-          await api('PATCH','/api/sheet/manager/'+ri,{values:Object.values(updated)});
+          const mRow = buildManagerRow(matched, {'비밀번호':newPwd,'계정여부':'1'});
+          await api('PATCH','/api/sheet/manager/'+ri,{values: mRow});
           pwdOk=true;
           // 메모리에서도 즉시 반영
           matched['비밀번호']=newPwd;
@@ -2087,14 +2086,8 @@ async function completePromoRequest(rowIndex){
   if(!ok)return;
   showOverlayLoad();
   try{
-    const row=[
-      r['#']||'',r['입력시간(KST)']||'',r['시리얼']||'',r['연도']||'',r['월']||'',r['일']||'',r['요일']||'',
-      r['플랫폼 1']||'',r['플랫폼 2']||'',r['콘텐츠 구분']||'',r['프로그램']||'',r['담당 부서']||'',
-      r['콘텐츠 제목']||'',r['콘텐츠 형식']||'',r['콘텐츠 내용']||'',r['게시 담당자']||'',
-      '완료',
-      r['비고']||''
-    ];
-    await api('PATCH','/api/records/'+rowIndex,{values:row});
+    const row = buildRecordRow(r, {'진행 상태':'완료'});
+    await api('PATCH','/api/records/'+rowIndex,{values: row});
     await syncReload(0);
     renderPromoBoard();
     showToast('게시 완료 처리됐어요');
@@ -2126,27 +2119,8 @@ async function cancelPromoRequest(rowIndex){
   // PATCH — 전체 row의 진행 상태만 '취소'로 변경 (다른 필드 유지)
   showOverlayLoad();
   try{
-    const row=[
-      r['#']||'',
-      r['입력시간(KST)']||'',
-      r['시리얼']||'',
-      r['연도']||'',
-      r['월']||'',
-      r['일']||'',
-      r['요일']||'',
-      r['플랫폼 1']||'',
-      r['플랫폼 2']||'',
-      r['콘텐츠 구분']||'',
-      r['프로그램']||'',
-      r['담당 부서']||'',
-      r['콘텐츠 제목']||'',
-      r['콘텐츠 형식']||'',
-      r['콘텐츠 내용']||'',
-      r['게시 담당자']||'',
-      '취소',
-      r['비고']||''
-    ];
-    await api('PATCH','/api/records/'+rowIndex,{values:row});
+    const row = buildRecordRow(r, {'진행 상태':'취소'});
+    await api('PATCH','/api/records/'+rowIndex,{values: row});
     await syncReload(0);
     renderPromoBoard();
     showToast('신청이 취소됐어요');
@@ -2812,6 +2786,21 @@ function updateBulkActionsUI(){
   if(btn2) btn2.textContent = '✕ 선택한 '+cnt+'건 취소';
 }
 // 일괄 접수 — 신청 중 → 예정 (순차 PATCH)
+// === manager 시트 PATCH용 row 배열 빌더 ===
+// 시트 헤더: A=담당부서, B=담당자, C=직위, D=휴직여부, E=홍보여부, F=공연여부,
+//          G=전시여부, H=예술교육여부, I=대관여부, J=PIN, K=비밀번호, L=계정여부
+function buildManagerRow(rec, overrides){
+  overrides = overrides || {};
+  function pick(key){
+    if(overrides[key] !== undefined) return overrides[key];
+    return rec[key] !== undefined ? rec[key] : '';
+  }
+  return [
+    pick('담당부서'),pick('담당자'),pick('직위'),pick('휴직여부'),
+    pick('홍보여부'),pick('공연여부'),pick('전시여부'),pick('예술교육여부'),pick('대관여부'),
+    pick('PIN'),pick('비밀번호'),pick('계정여부')
+  ];
+}
 // === 시트 PATCH용 row 배열 빌더 — 시트 헤더 순서 정확히 매핑 ===
 // 시트 헤더: A=No, B=입력시간(KST), C=날짜, D=연도, E=월, F=일, G=요일,
 //          H=플랫폼1, I=플랫폼2, J=콘텐츠 구분, K=프로그램, L=담당 부서,
@@ -6536,9 +6525,8 @@ async function resetUserPassword(rowIndex, userName){
   showOverlayLoad('초기화 중...');
   try{
     // 비밀번호 빈값으로 + 나머지는 그대로
-    const updated = Object.assign({}, rec, {'비밀번호':''});
-    delete updated._rowIndex;
-    await api('PATCH', '/api/sheet/manager/'+rowIndex, {values: Object.values(updated)});
+    const mRow = buildManagerRow(rec, {'비밀번호':''});
+    await api('PATCH', '/api/sheet/manager/'+rowIndex, {values: mRow});
     showToast(userName+' 님 비밀번호 초기화 완료. 다음 접속 시 새로 설정합니다.');
     // 캐시 갱신
     MANAGERS = [];
