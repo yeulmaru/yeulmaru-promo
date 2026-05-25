@@ -886,7 +886,7 @@ function statusClass(st){
   if(st==='예정')return'st-pre';
   if(st==='완료')return'st-done';
   if(st==='취소')return'st-cancel';
-  if(st==='대기 중')return'st-wait';
+  if(st==='신청 중')return'st-wait';
   return '';
 }
 function recTimeStr(r){
@@ -1268,8 +1268,8 @@ async function loadContentMeta(){
     CONTENT_TYPES=rows.map(r=>r['콘텐츠구분']).filter(Boolean);
     CONTENT_FORMATS=rows.map(r=>r['콘텐츠형식']).filter(Boolean);
     STATUSES=rows.map(r=>r['진행상태']).filter(Boolean);
-    // 홍보 신청 워크플로우용 — 시트에 없어도 "대기 중" 보장
-    if(!STATUSES.includes('대기 중'))STATUSES.unshift('대기 중');
+    // 홍보 신청 워크플로우용 — 시트에 없어도 "신청 중" 보장
+    if(!STATUSES.includes('신청 중'))STATUSES.unshift('신청 중');
   }catch(e){console.error('[loadContentMeta]',e);}
 }
 
@@ -1668,13 +1668,13 @@ function modalBgClick(e,closeFn){
   }
 }
 
-// === admin 접수 처리 (대기 중 → 예정) ===
+// === admin 접수 처리 (신청 중 → 예정) ===
 async function approvePromoFromBoard(rowIndex){
   if(userRole!=='admin'){showToast('관리자만 접수할 수 있어요','error');return;}
   const r=records.find(function(x){return x._rowIndex===rowIndex;});
   if(!r){showToast('신청을 찾을 수 없어요','error');return;}
   const _st=r['진행 상태']||'';
-  if(_st!=='대기 중'&&_st!=='신청 중'){showToast('대기 중 또는 신청 중 상태만 접수할 수 있어요','error');return;}
+  if(_st!=='신청 중'&&_st!=='신청 중'){showToast('신청 중 상태만 접수할 수 있어요','error');return;}
   const title=r['콘텐츠 제목']||'(제목 없음)';
   const ok=await showConfirm('"'+title+'"\n\n이 신청을 접수(예정)할까요?');
   if(!ok)return;
@@ -2506,7 +2506,7 @@ function renderPromoBoard(){
   // 상태 필터 (특수일정은 status='all'일 때만 포함, 대기/예정/완료 탭에선 제외)
   if(_promoFilter.status!=='all'){
     rows=rows.filter(function(r){return!r._isSpecial;});
-    if(_promoFilter.status==='pending')rows=rows.filter(function(r){const s=r['진행 상태']||'';return s==='대기 중'||s==='신청 중';});
+    if(_promoFilter.status==='pending')rows=rows.filter(function(r){const s=r['진행 상태']||'';return s==='신청 중'||s==='신청 중';});
     else if(_promoFilter.status==='approved')rows=rows.filter(function(r){return r['진행 상태']==='예정';});
     else if(_promoFilter.status==='done')rows=rows.filter(function(r){return r['진행 상태']==='완료';});
   }
@@ -2551,7 +2551,7 @@ function renderPromoBoard(){
       return rowDtKey(a).localeCompare(rowDtKey(b));
     });
   }else{
-    // 기본 정렬: 대기 중 우선 → 오늘 → 미래(가까운) → 과거(최근)
+    // 기본 정렬: 신청 중 우선 → 오늘 → 미래(가까운) → 과거(최근)
     function rowBucket(r){
       const dk=getRecDateKey(r);
       if(dk===todayKey)return 0;
@@ -2559,8 +2559,8 @@ function renderPromoBoard(){
       return 2;
     }
     rows.sort(function(a,b){
-      const ap=a['진행 상태']==='대기 중'?0:1;
-      const bp=b['진행 상태']==='대기 중'?0:1;
+      const ap=a['진행 상태']==='신청 중'?0:1;
+      const bp=b['진행 상태']==='신청 중'?0:1;
       if(ap!==bp)return ap-bp;
       const ab=rowBucket(a),bb=rowBucket(b);
       if(ab!==bb)return ab-bb;
@@ -2574,10 +2574,10 @@ function renderPromoBoard(){
   function recIsMine(r){return myApplicant&&(r['게시 담당자']||'')===myApplicant;}
   const myRows=isAdmin?records.filter(recIsMine):records.filter(recIsMine);
   const summaryBase=isAdmin?records:myRows;
-  const myPending=summaryBase.filter(function(r){return r['진행 상태']==='대기 중';}).length;
+  const myPending=summaryBase.filter(function(r){return r['진행 상태']==='신청 중';}).length;
   const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
   const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
-  const pendingCnt=records.filter(function(r){return r['진행 상태']==='대기 중';}).length;
+  const pendingCnt=records.filter(function(r){return r['진행 상태']==='신청 중';}).length;
   // 오늘 건수 (완료/취소 제외)
   const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
   // === 헤더 ===
@@ -2592,7 +2592,7 @@ function renderPromoBoard(){
   const todayDoneCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']==='완료';}).length;
   // 한 줄 요약 박스
   html+='<div style="display:flex;align-items:center;gap:14px;padding:10px 16px;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;font-size:12px;margin-bottom:14px;flex-wrap:wrap;text-align:left">';
-  html+='<span><span style="color:#888">'+(isAdmin?'전체':'내')+' 대기 중:</span> <span style="color:var(--peach-text);font-weight:700;margin-left:3px">'+myPending+'건</span></span>';
+  html+='<span><span style="color:#888">'+(isAdmin?'전체':'내')+' 신청 중:</span> <span style="color:var(--peach-text);font-weight:700;margin-left:3px">'+myPending+'건</span></span>';
   html+='<span style="color:#ddd;font-weight:300">|</span>';
   html+='<span><span style="color:#888">오늘 일정:</span> <span style="color:var(--accent);font-weight:700;margin-left:3px">'+todayDoneCnt+' / '+todayAllCnt+'건</span></span>';
   html+='<span style="color:#ddd;font-weight:300">|</span>';
@@ -2606,7 +2606,7 @@ function renderPromoBoard(){
   html+='</div>';
   // === 필터 탭 ===
   html+='<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center">';
-  const tabs=[{k:'all',l:'전체'},{k:'pending',l:'대기 중'},{k:'approved',l:'예정'},{k:'done',l:'완료'}];
+  const tabs=[{k:'all',l:'전체'},{k:'pending',l:'신청 중'},{k:'approved',l:'예정'},{k:'done',l:'완료'}];
   const ctrlStyle='display:inline-flex;align-items:center;padding:6px 14px;height:32px;box-sizing:border-box;border-radius:16px;font-size:12px;line-height:1;cursor:pointer;font-family:inherit';
   tabs.forEach(function(t){
     const on=_promoFilter.status===t.k;
@@ -2745,9 +2745,9 @@ function renderPromoBoard(){
       // === 콘텐츠 row (기존) ===
       const status=r['진행 상태']||'-';
       const isApplying=status==='신청 중';
-      const isWaiting=status==='대기 중';
+      const isWaiting=status==='신청 중';
       const isPendingLike=isApplying||isWaiting;
-      // 상태별 색상: 신청 중=살구(점선), 대기 중=살구, 예정=초록, 완료=파랑, 취소=회색
+      // 상태별 색상: 신청 중=살구, 예정=초록, 완료=파랑, 취소=회색
       const sColor=status==='완료'?'#2563EB':status==='취소'?'#888':status==='예정'?'#0F8B4C':isPendingLike?'var(--peach-text)':'#888';
       const sBg=status==='완료'?'#DBEAFE':status==='취소'?'#f0f0f0':status==='예정'?'#E8F5EC':isPendingLike?'var(--peach-light)':'#f5f5f5';
       const m2=String(r['월']||'').padStart(2,'0'),d2=String(r['일']||'').padStart(2,'0');
@@ -2795,12 +2795,12 @@ function renderPromoBoard(){
       html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+';white-space:nowrap">'+escapeHtml(r['게시 담당자']||'상관 없음')+'</td>';
       // 신청자 컬럼 — 추후 사용자 시스템 도입 후 본인 이름. 지금은 '상관 없음' 디폴트
       html+='<td style="padding:10px 12px;text-align:left;color:#888;font-size:12px;white-space:nowrap">'+escapeHtml(r['신청자']||'상관 없음')+'</td>';
-      // 액션 — 대기 중(admin만 접수) / 예정(본인·admin 완료) — 평소 ✓, hover 시 텍스트(초록)
-      const canApprove=isAdmin&&(status==='대기 중'||status==='신청 중');
+      // 액션 — 신청 중(admin만 접수) / 예정(본인·admin 완료) — 평소 ✓, hover 시 텍스트(초록)
+      const canApprove=isAdmin&&(status==='신청 중'||status==='신청 중');
       const canComplete=(isMine||isAdmin)&&status==='예정';
       html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
       if(canApprove){
-        html+='<button onclick="event.stopPropagation();approvePromoFromBoard('+r._rowIndex+')" title="신청 접수 (대기 중 → 예정)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:var(--peach-text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'접수\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.color=\'var(--peach-text)\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
+        html+='<button onclick="event.stopPropagation();approvePromoFromBoard('+r._rowIndex+')" title="신청 접수 (신청 중 → 예정)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:var(--peach-text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'접수\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.color=\'var(--peach-text)\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
       }else if(canComplete){
         html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#bbb;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'완료\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'✓\';this.style.color=\'#bbb\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">✓</button>';
       }
@@ -5255,8 +5255,8 @@ function buildScheduleListHtml(rows){
     const isToday=recKey===todayKey;
     const trClass=isPast?'past':(isToday?'today':'');
     const status=r['진행 상태']||'';
-    const sColor=status==='완료'?'#0F8B4C':status==='취소'?'#888':status==='예정'?'#C97A11':status==='대기 중'?'var(--accent)':'#888';
-    const sBg=status==='완료'?'#E8F5EC':status==='취소'?'#f0f0f0':status==='예정'?'#FFF4DC':status==='대기 중'?'rgba(74,77,231,0.1)':'#f5f5f5';
+    const sColor=status==='완료'?'#0F8B4C':status==='취소'?'#888':status==='예정'?'#C97A11':status==='신청 중'?'var(--accent)':'#888';
+    const sBg=status==='완료'?'#E8F5EC':status==='취소'?'#f0f0f0':status==='예정'?'#FFF4DC':status==='신청 중'?'rgba(74,77,231,0.1)':'#f5f5f5';
     const todayBadge=isToday?' <span style="display:inline-block;padding:2px 6px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px">오늘</span>':'';
     if(isAdmin){
       html+='<tr class="'+trClass+'" onclick="openScheduleRow(\''+dateKey+'\','+r._rowIndex+')" style="cursor:pointer">';
@@ -6371,8 +6371,8 @@ function onEvContextMenu(event,rowIndex,dateKey){
       const appl=escapeHtml(rec['게시 담당자']||'다른 사용자');
       menuHtml='<div style="padding:10px 14px;color:#b35a30;font-size:12px;line-height:1.4;background:#fff8f3;border-radius:8px;margin:2px;max-width:220px">⚠️ 수정 불가<br><span style="color:#888;font-size:11px">'+appl+' 님이 신청한 내역입니다</span></div>';
     }else if(status==='신청 중'){
-      // 본인 + 신청 대기 중 — 안내 + 수정/취소
-      menuHtml='<div style="padding:10px 14px;color:#b35a30;font-size:12px;line-height:1.4;background:#fff8f3;border-radius:8px;margin:2px 2px 4px;max-width:220px">💡 신청 대기 중<br><span style="color:#888;font-size:11px">관리자 확정 대기 — 수정/취소 가능해요</span></div>'+
+      // 본인 + 신청 중 — 안내 + 수정/취소
+      menuHtml='<div style="padding:10px 14px;color:#b35a30;font-size:12px;line-height:1.4;background:#fff8f3;border-radius:8px;margin:2px 2px 4px;max-width:220px">💡 신청 중<br><span style="color:#888;font-size:11px">관리자 확정 대기 — 수정/취소 가능해요</span></div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>수정</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>신청 취소</div>';
     }else if(status==='완료'){
@@ -6684,9 +6684,9 @@ function openModal(dateKey,rec,opts){
   opts=opts||{};
   const[y,m,d]=dateKey.split('-').map(Number),dateObj=new Date(y,m-1,d),dn=DAY_NAMES[dateObj.getDay()];
   editing={dateKey,existing:rec||null};
-  // user는 기본 read-only, 단 대기 중 row(자기 신청)는 수정 가능
+  // user는 기본 read-only, 단 신청 중 row(자기 신청)는 수정 가능
   // opts.readOnly = true면 강제 read-only (admin이 캘린더 ev 클릭 시)
-  const isPending=rec&&rec['진행 상태']==='대기 중';
+  const isPending=rec&&rec['진행 상태']==='신청 중';
   const isReadOnly=opts.readOnly||(userRole!=='admin'&&!isPending);
   if(isReadOnly&&rec){
     renderReadOnlyView(dateKey,rec,dateObj,dn);
@@ -6712,7 +6712,7 @@ function openModal(dateKey,rec,opts){
   onPlatChange();
   if(rec){fillModalFields(rec);document.getElementById('btn-del').style.display='inline-block';}
   else{document.getElementById('btn-del').style.display='none';}
-  // 대기 중 + 역할별 버튼 분기
+  // 신청 중 + 역할별 버튼 분기
   const isAdmin=userRole==='admin';
   const showApproveReject=isPending&&isAdmin;
   document.getElementById('btn-approve').style.display=showApproveReject?'inline-block':'none';
