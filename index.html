@@ -2851,7 +2851,12 @@ let _pwSubStep=1;       // Step 4 내부 sub-step
 const PW_TOTAL=5;
 const PW_SUB_TOTAL=4;   // Step 4 sub-step 최대 (플랫폼1 → 플랫폼2/형식 → 세부 → 게시자)
 let _pwData={};
-let _pwMode='request';  // 'request' | 'admin'
+let _pwMode='request';  // 'request' | 'admin' | 'edit'
+// === 변경 위저드 state ===
+let _pwEditTarget=null;        // 변경 대상 rowIndex
+let _pwSelectedSteps=[];       // [1,3,4] 선택된 step 배열
+let _pwSelectedIdx=0;          // 현재 진행 중 idx
+let _pwOriginalRec=null;       // 원본 row (diff용)
 function openPromoWizard(prefillDate){
   _pwMode='request';
   document.querySelector('#promo-wizard h3').textContent='홍보 신청';
@@ -2908,7 +2913,190 @@ function openAdminWizard(dateKey){
   document.getElementById('promo-wizard').classList.add('show');
   renderPwStep();
 }
+// ═══════════════════════════════════════════════════════════
+// ═══ 변경 위저드 (편집 모드) ═══
+// ═══════════════════════════════════════════════════════════
+function _extractRecTime(rec){
+  const ts=rec['입력시간(KST)'];
+  if(typeof ts==='string'&&ts.indexOf(' ')>-1)return ts.split(' ')[1].substr(0,5);
+  if(typeof ts==='number'){
+    const tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;
+    return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  }
+  return '10:00';
+}
+function _recDateKey(rec){
+  const y=rec['연도']||'';
+  const m=String(rec['월']||'').padStart(2,'0');
+  const d=String(rec['일']||'').padStart(2,'0');
+  return y+'-'+m+'-'+d;
+}
+// 변경 위저드 진입
+function openChangeWizard(rowIndex){
+  const rec=records.find(r=>r._rowIndex===rowIndex);
+  if(!rec){showToast('신청을 찾을 수 없어요','error');return;}
+  // 권한 체크
+  if(userRole!=='admin'){
+    let myAppl='';try{myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
+    const isMine=myAppl&&(rec['게시 담당자']||'')===myAppl;
+    const st=rec['진행 상태']||'';
+    if(!isMine||(st!=='신청 중'&&st!=='예정')){
+      showToast('변경 권한이 없어요','error');
+      return;
+    }
+  }
+  _renderChangeMenu(rec);
+}
+// 변경 메뉴 모달 (체크박스 multi-select)
+function _renderChangeMenu(rec){
+  const isAdmin=userRole==='admin';
+  const dt=_recDateKey(rec)+' '+_extractRecTime(rec);
+  const items=[
+    {step:1,icon:'🎭',label:'프로그램',desc:rec['프로그램']||'(없음)'},
+    {step:2,icon:'📝',label:'콘텐츠 제목',desc:rec['콘텐츠 제목']||'(없음)'},
+    {step:3,icon:'📅',label:'일자·시간',desc:dt},
+    {step:4,icon:'📱',label:'플랫폼·내용·담당자',desc:(rec['플랫폼 1']||'')+' · '+(rec['게시 담당자']||'')},
+    {step:6,icon:'📋',label:'비고',desc:rec['비고']||'(없음)'}
+  ];
+  if(isAdmin)items.push({step:7,icon:'⚙️',label:'진행 상태 (관리자)',desc:rec['진행 상태']||''});
+  let html='<div class="modal-bg show" id="change-menu-modal" style="z-index:99998" onclick="if(event.target===this)closeChangeMenu()">';
+  html+='<div class="modal" style="max-width:480px;padding:24px;text-align:left;position:relative">';
+  html+='<button class="modal-x" onclick="closeChangeMenu()" title="닫기">✕</button>';
+  html+='<h3 style="margin:0 0 4px">변경할 항목 선택</h3>';
+  html+='<div style="font-size:12px;color:#888;margin-bottom:6px">여러 개 선택 가능 — 선택한 순서대로 진행</div>';
+  html+='<div style="font-size:12px;color:var(--accent);padding:8px 12px;background:rgba(74,77,231,0.06);border-radius:8px;margin-bottom:14px;font-weight:600">'+escapeHtml(rec['콘텐츠 제목']||'(제목 없음)')+'</div>';
+  html+='<div id="change-menu-list">';
+  items.forEach(it=>{
+    html+='<label style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;background:#fafafa;margin-bottom:8px;transition:all .15s;border:1.5px solid transparent" onmouseover="this.style.background=\'rgba(74,77,231,0.06)\';this.style.borderColor=\'rgba(74,77,231,0.2)\'" onmouseout="this.style.background=\'#fafafa\';this.style.borderColor=\'transparent\'">';
+    html+='<input type="checkbox" data-step="'+it.step+'" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer">';
+    html+='<div style="flex:1;min-width:0">';
+    html+='<div style="font-size:13px;font-weight:600;color:#222">'+it.icon+' '+escapeHtml(it.label)+'</div>';
+    html+='<div style="font-size:11px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">현재: '+escapeHtml(it.desc)+'</div>';
+    html+='</div></label>';
+  });
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">';
+  html+='<button class="m-btn cancel" onclick="closeChangeMenu()">취소</button>';
+  html+='<button class="m-btn save" onclick="_startChangeWizard('+rec._rowIndex+')">선택한 항목 변경 →</button>';
+  html+='</div></div></div>';
+  let el=document.getElementById('change-menu-modal');
+  if(el)el.remove();
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+function closeChangeMenu(){
+  const el=document.getElementById('change-menu-modal');
+  if(el)el.remove();
+}
+// 선택된 step으로 위저드 시작
+function _startChangeWizard(rowIndex){
+  const checks=document.querySelectorAll('#change-menu-list input[type=checkbox]:checked');
+  if(!checks.length){showToast('변경할 항목을 선택해 주세요','error');return;}
+  _pwSelectedSteps=Array.from(checks).map(c=>parseInt(c.dataset.step)).sort((a,b)=>a-b);
+  _pwSelectedIdx=0;
+  _pwEditTarget=rowIndex;
+  const rec=records.find(r=>r._rowIndex===rowIndex);
+  _pwOriginalRec=Object.assign({},rec);
+  closeChangeMenu();
+  _prefillPwDataFromRec(rec);
+  _pwMode='edit';
+  _pwStep=_pwSelectedSteps[0];
+  if(_pwStep===4)_pwSubStep=1;
+  document.getElementById('promo-wizard').classList.add('show');
+  renderPwStep();
+}
+// 기존 row → _pwData 매핑
+function _prefillPwDataFromRec(rec){
+  const typeMap={'공연':'c','전시':'e','예술교육':'a','대관':'r'};
+  _pwData={
+    program:rec['프로그램']||'',
+    programType:typeMap[rec['콘텐츠 구분']]||'c',
+    isCustom:false,
+    isMonthly:false,
+    customName:'',
+    customCat:'',
+    title:rec['콘텐츠 제목']||'',
+    date:_recDateKey(rec),
+    time:_extractRecTime(rec),
+    plat1:rec['플랫폼 1']||'',
+    plat2:rec['플랫폼 2']||'',
+    applicant:rec['게시 담당자']||'',
+    memo:rec['비고']||'',
+    format:rec['콘텐츠 형식']||'',
+    fromCalendar:false,
+    status:rec['진행 상태']||'신청 중'
+  };
+}
+// 변경 사항 PATCH
+async function submitPromoEdit(){
+  if(!_pwEditTarget||!_pwOriginalRec){showToast('변경 대상 없음','error');return;}
+  const orig=_pwOriginalRec;
+  const patch={};
+  // Step 1 — 프로그램 (콘텐츠 구분 자동 매핑)
+  if(_pwSelectedSteps.includes(1)){
+    patch['프로그램']=_pwData.program;
+    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
+    patch['콘텐츠 구분']=typeMap[_pwData.programType]||orig['콘텐츠 구분'];
+  }
+  // Step 2 — 콘텐츠 제목
+  if(_pwSelectedSteps.includes(2)){
+    patch['콘텐츠 제목']=_pwData.title;
+  }
+  // Step 3 — 일자·시간
+  if(_pwSelectedSteps.includes(3)){
+    const[y,m,d]=_pwData.date.split('-').map(Number);
+    const ts=_pwData.date+' '+_pwData.time+':00';
+    const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
+    const DAYS=['일','월','화','수','목','금','토'];
+    patch['연도']=y;
+    patch['월']=m;
+    patch['일']=d;
+    patch['요일']=DAYS[new Date(y,m-1,d).getDay()]+'요일';
+    patch['입력시간(KST)']=ts;
+    patch['시리얼']=serial;
+  }
+  // Step 4 — 플랫폼·형식·내용·게시담당자
+  if(_pwSelectedSteps.includes(4)){
+    patch['플랫폼 1']=_pwData.plat1;
+    patch['플랫폼 2']=_pwData.plat2||'-';
+    if(typeof resolvePwFormat==='function')patch['콘텐츠 형식']=resolvePwFormat();
+    if(typeof buildPwContentText==='function')patch['콘텐츠 내용']=buildPwContentText();
+    patch['게시 담당자']=_pwData.applicant;
+  }
+  // Step 6 — 비고
+  if(_pwSelectedSteps.includes(6)){
+    patch['비고']=_pwData.memo;
+  }
+  // Step 7 — 진행 상태 (admin only)
+  if(_pwSelectedSteps.includes(7)&&userRole==='admin'){
+    patch['진행 상태']=_pwData.status;
+  }
+  if(!Object.keys(patch).length){showToast('변경된 항목이 없어요','error');return;}
+  showOverlayLoad('변경 사항 저장 중...');
+  try{
+    const updated=Object.assign({},orig,patch);
+    delete updated._rowIndex;
+    const res=await fetch(WORKER_BASE+'/api/sheet/records/'+_pwEditTarget,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','x-pw':password},
+      body:JSON.stringify({values:Object.values(updated)})
+    });
+    if(!res.ok)throw new Error('API '+res.status);
+    showToast('변경 사항이 저장됐어요','success');
+    closePromoWizard(true);
+    await loadRecords();
+    render();
+    if(typeof renderPromoBoard==='function')renderPromoBoard();
+  }catch(e){
+    console.error(e);
+    showToast('저장 실패: '+e.message,'error');
+  }finally{
+    if(typeof hideOverlayLoad==='function')hideOverlayLoad();
+  }
+}
+
 async function closePromoWizard(force){
+  // edit 모드 state 초기화
+  if(_pwMode==='edit'){_pwMode='request';_pwEditTarget=null;_pwSelectedSteps=[];_pwSelectedIdx=0;_pwOriginalRec=null;}
   // 완료 화면이거나 force면 바로 닫기
   if(force||_pwStep===99||_pwStep===1&&!_pwData.program&&!_pwData.isCustom){
     document.getElementById('promo-wizard').classList.remove('show');
@@ -3024,6 +3212,48 @@ function renderPwStep(){
     // Step 4: 어떻게 홍보할까요? (sub-step 분기 트리)
     renderPwStep4(body,next);
   }else if(_pwStep===5){
+    // === edit 모드 — 변경 사항 요약 ===
+    if(_pwMode==='edit'){
+      const stepLabels={1:'프로그램',2:'콘텐츠 제목',3:'일자·시간',4:'플랫폼·내용·담당자',6:'비고',7:'진행 상태'};
+      const orig=_pwOriginalRec||{};
+      let summaryHtml='<div class="pw-question">변경 사항 확인</div>';
+      summaryHtml+='<div class="pw-hint">아래 항목이 변경됩니다. 저장하면 시트에 반영돼요.</div>';
+      summaryHtml+='<div style="margin-top:14px;background:#fafafa;border-radius:10px;padding:14px;border:1px solid #f0f0f0">';
+      _pwSelectedSteps.forEach(s=>{
+        let oldVal='',newVal='';
+        if(s===1){oldVal=orig['프로그램']||'(없음)';newVal=_pwData.program||'(없음)';}
+        else if(s===2){oldVal=orig['콘텐츠 제목']||'(없음)';newVal=_pwData.title||'(없음)';}
+        else if(s===3){oldVal=_recDateKey(orig)+' '+_extractRecTime(orig);newVal=_pwData.date+' '+_pwData.time;}
+        else if(s===4){oldVal=(orig['플랫폼 1']||'')+' · '+(orig['게시 담당자']||'');newVal=(_pwData.plat1||'')+' · '+(_pwData.applicant||'');}
+        else if(s===6){oldVal=orig['비고']||'(없음)';newVal=_pwData.memo||'(없음)';}
+        else if(s===7){oldVal=orig['진행 상태']||'';newVal=_pwData.status||'';}
+        const changed=String(oldVal)!==String(newVal);
+        summaryHtml+='<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:12px">';
+        summaryHtml+='<div style="font-size:11px;font-weight:600;color:'+(changed?'var(--accent)':'#aaa')+';min-width:120px">'+(stepLabels[s]||'Step '+s)+'</div>';
+        summaryHtml+='<div style="flex:1;color:#444">';
+        if(changed){
+          summaryHtml+='<div style="color:#888;text-decoration:line-through;font-size:11px">'+escapeHtml(String(oldVal))+'</div>';
+          summaryHtml+='<div style="color:var(--accent);font-weight:600;margin-top:2px">'+escapeHtml(String(newVal))+'</div>';
+        }else{
+          summaryHtml+='<div style="color:#888">'+escapeHtml(String(oldVal))+' <span style="color:#bbb;font-size:10px;margin-left:4px">(변경 없음)</span></div>';
+        }
+        summaryHtml+='</div></div>';
+      });
+      summaryHtml+='</div>';
+      const changedCount=_pwSelectedSteps.filter(s=>{
+        if(s===1)return (orig['프로그램']||'')!==(_pwData.program||'');
+        if(s===2)return (orig['콘텐츠 제목']||'')!==(_pwData.title||'');
+        if(s===3)return (_recDateKey(orig)+' '+_extractRecTime(orig))!==(_pwData.date+' '+_pwData.time);
+        if(s===4)return (orig['플랫폼 1']||'')!==(_pwData.plat1||'')||(orig['게시 담당자']||'')!==(_pwData.applicant||'');
+        if(s===6)return (orig['비고']||'')!==(_pwData.memo||'');
+        if(s===7)return (orig['진행 상태']||'')!==(_pwData.status||'');
+        return false;
+      }).length;
+      body.innerHTML=summaryHtml;
+      next.textContent=changedCount?(changedCount+'건 변경 저장'):'변경 없이 닫기';
+      next.disabled=false;
+      return;
+    }
     // Step 5: 마지막 확인 + 비고
     let html='<div class="pw-question">마지막으로 확인해주세요</div>';
     html+='<div class="pw-hint">신청 내용을 확인하고 추가 요청이 있으면 적어주세요</div>';
@@ -3033,6 +3263,31 @@ function renderPwStep(){
     html+='<textarea id="pw-memo" rows="3" placeholder="관리자에게 전달할 추가 요청사항" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.memo)+'</textarea>';
     body.innerHTML=html;
     next.textContent='신청 완료';
+  }else if(_pwStep===6){
+    // === edit 모드 — 비고 변경 ===
+    body.innerHTML='<div class="pw-question">비고를 변경하시겠어요?</div>'
+      +'<div class="pw-hint">관리자에게 전달할 추가 요청사항</div>'
+      +'<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">비고</label>'
+      +'<textarea id="pw-memo-edit" rows="4" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.memo||'')+'</textarea>';
+    next.textContent='다음';next.disabled=false;
+    return;
+  }else if(_pwStep===7){
+    // === edit 모드 — 진행 상태 변경 (admin only) ===
+    if(userRole!=='admin'){
+      _pwSelectedIdx++;
+      if(_pwSelectedIdx<_pwSelectedSteps.length){_pwStep=_pwSelectedSteps[_pwSelectedIdx];if(_pwStep===4)_pwSubStep=1;}
+      else _pwStep=5;
+      renderPwStep();return;
+    }
+    let opts='';['신청 중','예정','완료','취소'].forEach(s=>{
+      opts+='<option value="'+s+'"'+(_pwData.status===s?' selected':'')+'>'+s+'</option>';
+    });
+    body.innerHTML='<div class="pw-question">진행 상태를 변경하시겠어요?</div>'
+      +'<div class="pw-hint">관리자 권한으로 상태 변경</div>'
+      +'<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">진행 상태</label>'
+      +'<select id="pw-status-edit" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">'+opts+'</select>';
+    next.textContent='다음';next.disabled=false;
+    return;
   }else if(_pwStep===99){
     // 완료
     document.getElementById('pw-steplabel').textContent='';
@@ -3148,6 +3403,12 @@ function collectPwStep(){
   }else if(_pwStep===5){
     const el=document.getElementById('pw-memo');
     if(el)_pwData.memo=el.value;
+  }else if(_pwStep===6){
+    const el=document.getElementById('pw-memo-edit');
+    if(el)_pwData.memo=el.value;
+  }else if(_pwStep===7){
+    const el=document.getElementById('pw-status-edit');
+    if(el)_pwData.status=el.value;
   }
 }
 function validatePwStep(){
@@ -3186,6 +3447,31 @@ function promoBack(){
     if(_pwStep>1){collectPwStep();_pwStep--;renderPwStep();}
     return;
   }
+  // === edit 모드: 이전 선택된 step으로 jump ===
+  if(_pwMode==='edit'){
+    collectPwStep();
+    // Step 4면 sub-step 먼저 역방향
+    if(_pwStep===4&&_pwSubStep>1){
+      _pwSubStep--;renderPwStep();return;
+    }
+    // Step 5 → 마지막 선택된 step으로
+    if(_pwStep===5){
+      _pwStep=_pwSelectedSteps[_pwSelectedSteps.length-1];
+      if(_pwStep===4){_pwSubStep=getPwSubSteps().length;}
+      renderPwStep();
+      return;
+    }
+    // 이전 선택된 step으로
+    _pwSelectedIdx--;
+    if(_pwSelectedIdx>=0){
+      _pwStep=_pwSelectedSteps[_pwSelectedIdx];
+      if(_pwStep===4){_pwSubStep=getPwSubSteps().length;}
+      renderPwStep();
+      return;
+    }
+    _pwSelectedIdx=0;
+    return;
+  }
   // === Monthly 흐름 역방향: Step 5 → 4 → 3 → 1 ===
   if(_pwData.isMonthly){
     collectPwStep();
@@ -3216,6 +3502,26 @@ async function promoNext(){
     await submitAdminEntry();
     return;
   }
+  // === edit 모드: 선택된 step만 순차 진행, 끝에 Step 5(확인) ===
+  if(_pwMode==='edit'){
+    // Step 4면 sub-step 먼저 다 진행
+    if(_pwStep===4){
+      const subs=getPwSubSteps();
+      if(_pwSubStep<subs.length){_pwSubStep++;renderPwStep();return;}
+    }
+    // 다음 선택된 step으로 jump
+    _pwSelectedIdx++;
+    if(_pwSelectedIdx<_pwSelectedSteps.length){
+      _pwStep=_pwSelectedSteps[_pwSelectedIdx];
+      if(_pwStep===4)_pwSubStep=1;
+      renderPwStep();
+      return;
+    }
+    // 모든 선택 step 완료 → Step 5 (확인)
+    _pwStep=5;
+    renderPwStep();
+    return;
+  }
   // === Monthly 흐름: Step 1 → 3 → 4(sms_body) → 5 ===
   if(_pwData.isMonthly){
     if(_pwStep===1){_pwStep=3;renderPwStep();return;}
@@ -3238,6 +3544,10 @@ async function promoNext(){
     return;
   }
   // Step 5 → 제출
+  if(_pwMode==='edit'){
+    await submitPromoEdit();
+    return;
+  }
   await submitPromoRequest();
 }
 async function submitPromoRequest(){
@@ -6896,14 +7206,19 @@ function editRec(rowIndex,dateKey,ev,forceReadOnly){
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
   var rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec)return;
-  // 사용자 권한: 본인이 신청한 "신청 중" 건만 편집 가능. 그 외는 읽기 전용.
-  if(userRole!=='admin'){
+  // === user 본인 신청 중·예정 → 변경 위저드 (step별 선택) ===
+  if(userRole!=='admin'&&!forceReadOnly){
     var myAppl='';try{myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
     var isMine=myAppl&&(rec['게시 담당자']||'')===myAppl;
     var status=rec['진행 상태']||'';
-    var canEdit=isMine&&status==='신청 중';
-    if(!canEdit)forceReadOnly=true;
+    if(isMine&&(status==='신청 중'||status==='예정')){
+      openChangeWizard(rowIndex);
+      return;
+    }
+    // 그 외 user → 읽기 전용 모달
+    forceReadOnly=true;
   }
+  // admin 또는 forceReadOnly → 기존 모달
   openModal(dateKey,rec,{readOnly:!!forceReadOnly});
 }
 // 복사 직후 점등 효과용 — 셀 dateKey 저장
