@@ -1539,7 +1539,7 @@ async function openPerfUrl(url, perfName){
   if(!url)return;
   event&&event.stopPropagation&&event.stopPropagation();
   const msg=
-    "<div style=\"white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">'"+escapeHtml(perfName)+"'</div>"+
+    "<div style=\"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--accent);font-weight:700\">'"+escapeHtml(perfName)+"'</div>"+
     "<div>상세페이지로 이동할까요?</div>"+
     "<br>"+
     "<span style=\"font-size:12px;color:#999;font-weight:400\">새 창에서 열립니다</span>";
