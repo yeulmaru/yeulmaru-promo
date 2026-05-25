@@ -1109,11 +1109,57 @@ async function tryLogin(){
   document.getElementById('login-msg').textContent='';
   document.getElementById('login-load').textContent='확인 중...';
   try{
+    // === 1차: Worker /api/auth (0510=user, 0511=admin 공유 PIN) ===
     const r=await fetch(`${API}/api/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pin})});
     const d=await r.json();
-    if(d.ok){password=pin;userRole=d.role||'user';sessionStorage.setItem('pw',pin);sessionStorage.setItem('role',userRole);document.getElementById('login').style.display='none';document.getElementById('app').style.display='';initApp();}
-    else{document.getElementById('login-load').textContent='';document.getElementById('login-msg').textContent='비밀번호가 틀립니다';pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();}
-  }catch(e){document.getElementById('login-load').textContent='';document.getElementById('login-msg').textContent='서버 연결 실패';}
+    if(d.ok){
+      password=pin;userRole=d.role||'user';
+      sessionStorage.setItem('pw',pin);sessionStorage.setItem('role',userRole);
+      // admin 또는 0510 공유 PIN — 개인 사용자 정보 없음
+      try{localStorage.removeItem('myUserDept');}catch(e){}
+      document.getElementById('login').style.display='none';
+      document.getElementById('app').style.display='';
+      initApp();
+      return;
+    }
+    // === 2차: 담당자 시트 J열(PIN) 매칭 — 개별 사용자 식별 ===
+    // 0510으로 임시 인증해서 담당자 시트 로드
+    password='0510';userRole='user';
+    if(!MANAGERS||!MANAGERS.length) await loadManagers();
+    const matched=(MANAGERS||[]).find(function(m){return (m['PIN']||'').toString().trim()===pin;});
+    if(matched){
+      const accountStatus=(matched['계정여부']||'').toString().trim();
+      if(accountStatus==='비활성'){
+        password='';sessionStorage.removeItem('pw');
+        document.getElementById('login-load').textContent='';
+        document.getElementById('login-msg').textContent='비활성 계정입니다. 관리자에게 문의해 주세요.';
+        pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
+        return;
+      }
+      // 매칭 성공 — user 권한 + 개인 정보 저장
+      const userName=matched['담당자']||'';
+      const userDept=matched['담당부서']||'';
+      sessionStorage.setItem('pw','0510');sessionStorage.setItem('role','user');
+      try{
+        localStorage.setItem('myApplicant',userName);
+        localStorage.setItem('myUserDept',userDept);
+      }catch(e){}
+      document.getElementById('login').style.display='none';
+      document.getElementById('app').style.display='';
+      initApp();
+      setTimeout(function(){if(typeof showToast==='function')showToast(userName+' 님 환영합니다','success');},300);
+      return;
+    }
+    // 모두 실패
+    password='';sessionStorage.removeItem('pw');
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='비밀번호가 틀립니다';
+    pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
+  }catch(e){
+    console.error(e);
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='서버 연결 실패';
+  }
 }
 (function(){const s=sessionStorage.getItem('pw');if(s){password=s;userRole=sessionStorage.getItem('role')||'user';document.getElementById('login').style.display='none';document.getElementById('app').style.display='';initApp();}})();
 
@@ -2778,8 +2824,11 @@ function renderPromoBoard(){
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
   html+='<h3 style="margin:0;flex:1;text-align:left">일정 확인 및 관리';
   if(!isAdmin){
+    let _meDept='';
+    try{_meDept=localStorage.getItem('myUserDept')||'';}catch(e){}
     const _meName=myApplicant||'0000';
-    html+='<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:8px">· 0000 팀, '+escapeHtml(_meName)+' 님</span>';
+    const _meDeptShow=_meDept||'0000';
+    html+='<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:8px">· '+escapeHtml(_meDeptShow)+', '+escapeHtml(_meName)+' 님</span>';
   }
   html+='</h3>';
   if(!isAdmin)html+='<button class="m-btn save" onclick="openPromoWizardFromBoard()" style="padding:7px 14px">+ 새 신청</button>';
