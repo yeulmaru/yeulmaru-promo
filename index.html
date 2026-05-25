@@ -6398,11 +6398,13 @@ function openPanel(dateObj,recs){
       var dd=(ref>=sd&&ref<=ed)?0:Math.round((sd-ref)/86400000);
       var ddText=dd===0?'D-Day':dd>0?'D-'+dd:'종료';
       var hasUrl=!!perf.u;
-      var clickAttr=hasUrl?' onclick="openPerfUrl(\''+escapeHtml(perf.u).replace(/'/g,'\\\'')+'\',\''+escapeHtml(perf.f).replace(/'/g,'\\\'')+'\')" title="클릭하면 공연 페이지로 이동" style="cursor:pointer"':'';
+      // ★ style 속성은 한 번만 — clickAttr에서 style 제거하고 메인 style에 cursor 합침
+      var clickAttr=hasUrl?' onclick="openPerfUrl(\''+escapeHtml(perf.u).replace(/'/g,'\\\'')+'\',\''+escapeHtml(perf.f).replace(/'/g,'\\\'')+'\')" title="클릭하면 공연 페이지로 이동"':'';
+      var cursorStyle=hasUrl?'cursor:pointer;':'';
       var venueP=perf.l||'장소 미정';
       var nameWithArrow=escapeHtml(perf.f)+(hasUrl?' <span style="font-size:9px;color:var(--accent);font-weight:500;margin-left:2px">↗</span>':'');
       // 전시 row와 100% 동일 구조 — 색깔/라벨/onclick만 다름
-      h+='<div'+clickAttr+' class="panel-perf-row" data-perf-name="'+escapeHtml(perf.f)+'" style="display:flex;align-items:center;padding:10px 12px;background:rgba(74,77,231,0.15);border-radius:10px;margin-bottom:6px;gap:10px;transition:background .15s">';
+      h+='<div'+clickAttr+' class="panel-perf-row" data-perf-name="'+escapeHtml(perf.f)+'" style="'+cursorStyle+'display:flex;align-items:center;padding:10px 12px;background:rgba(74,77,231,0.15);border-radius:10px;margin-bottom:6px;gap:10px;transition:background .15s">';
       h+='<span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;font-size:8px;font-weight:700;background:var(--accent);color:#fff;flex-shrink:0">공</span>';
       h+='<div style="flex:1;min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nameWithArrow+'</div><div style="font-size:10px;color:var(--dim);margin-top:1px">'+escapeHtml(venueP)+'</div></div>';
       h+='<span style="font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;flex-shrink:0">'+ddText+'</span>';
