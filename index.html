@@ -3519,6 +3519,11 @@ async function promoNext(){
   }
   // === edit 모드: 선택된 step만 순차 진행, 끝에 Step 5(확인) ===
   if(_pwMode==='edit'){
+    // Step 5 (확인 화면)에서 next 클릭 = 저장
+    if(_pwStep===5){
+      await submitPromoEdit();
+      return;
+    }
     // Step 4면 sub-step 먼저 다 진행
     if(_pwStep===4){
       const subs=getPwSubSteps();
