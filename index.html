@@ -2071,12 +2071,7 @@ async function adminCompleteWithResult(rowIndex){
       '결과_첨부URL':result.attach||'',
       '결과_비고':result.memo||''
     });
-    const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','x-pw':password},
-      body:JSON.stringify({values: row})
-    });
-    if(!res.ok)throw new Error('API '+res.status);
+    await api('PATCH','/api/records/'+rowIndex,{values: row});
     showToast('완료 처리됐어요','success');
     await syncReload(0);
     if(typeof renderPromoBoard==='function')renderPromoBoard();
@@ -2878,12 +2873,7 @@ async function bulkApprovePending(){
       const rec = records.find(function(r){return r._rowIndex === rowIndex;});
       if(!rec){failed++;continue;}
       const row = buildRecordRow(rec, {'진행 상태': '예정'});
-      const res = await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex, {
-        method: 'PATCH',
-        headers: {'Content-Type':'application/json','x-pw':password},
-        body: JSON.stringify({values: row})
-      });
-      if(!res.ok) throw new Error('API '+res.status);
+      await api('PATCH', '/api/records/'+rowIndex, {values: row});
       success++;
       showOverlayLoad('일괄 접수 중... ('+(i+1)+'/'+ids.length+')');
     }catch(e){ console.error(e); failed++; }
@@ -2938,12 +2928,7 @@ async function cancelWithReason(rowIndex){
     const oldMemo=(rec['비고']||'').toString();
     const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
     const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
-    const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','x-pw':password},
-      body:JSON.stringify({values: row})
-    });
-    if(!res.ok)throw new Error('API '+res.status);
+    await api('PATCH','/api/records/'+rowIndex,{values: row});
     showToast('취소 처리 완료 (사유 저장됨)');
     await syncReload(0);
     if(typeof renderPromoBoard==='function')renderPromoBoard();
@@ -2972,12 +2957,7 @@ async function bulkCancelPending(){
       const oldMemo=(rec['비고']||'').toString();
       const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
       const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
-      const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
-        method:'PATCH',
-        headers:{'Content-Type':'application/json','x-pw':password},
-        body:JSON.stringify({values: row})
-      });
-      if(!res.ok)throw new Error('API '+res.status);
+      await api('PATCH','/api/records/'+rowIndex,{values: row});
       success++;
       showOverlayLoad('일괄 취소 중... ('+(i+1)+'/'+ids.length+')');
     }catch(e){console.error(e);failed++;}
@@ -3675,12 +3655,7 @@ async function submitPromoEdit(){
   showOverlayLoad('변경 사항 저장 중...');
   try{
     const row = buildRecordRow(orig, patch);
-    const res=await fetch(WORKER_BASE+'/api/sheet/records/'+_pwEditTarget,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','x-pw':password},
-      body:JSON.stringify({values: row})
-    });
-    if(!res.ok)throw new Error('API '+res.status);
+    await api('PATCH','/api/records/'+_pwEditTarget,{values: row});
     showToast('변경 사항이 저장됐어요','success');
     closePromoWizard(true);
     await syncReload(0);
