@@ -2549,6 +2549,102 @@ async function bulkApprovePending(){
   if(typeof renderPromoBoard==='function') renderPromoBoard();
   render();
 }
+// === 취소 사유 입력 모달 (단건/일괄 공용) ===
+function _renderCancelReasonModal(count, onSubmit){
+  return new Promise(function(resolve){
+    const inpSt='width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5';
+    const html='<div class="modal-bg show" id="cancel-reason-modal" style="z-index:99999" onclick="if(event.target===this)_resolveCancelReason(null)"><div class="modal" style="max-width:440px;padding:24px;text-align:left;position:relative"><button class="modal-x" onclick="_resolveCancelReason(null)" title="닫기">✕</button>'+
+      '<h3 style="margin:0 0 4px">'+(count>1?count+'건 ':'')+'신청 취소</h3>'+
+      '<div style="font-size:12px;color:#888;margin-bottom:14px">취소 사유를 입력해 주세요. 신청자에게 전달됩니다.</div>'+
+      '<label style="display:block;font-size:11px;color:#888;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">취소 사유<span style="color:var(--peach);margin-left:3px">*</span></label>'+
+      '<textarea id="cancel-reason-input" rows="4" placeholder="예: 같은 날 카카오톡 신청이 이미 있어 취소합니다." style="'+inpSt+'"></textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">'+
+      '<button onclick="_resolveCancelReason(null)" class="m-btn cancel">취소</button>'+
+      '<button onclick="_resolveCancelReasonOk()" class="m-btn save" style="background:#E24B4A;border-color:#E24B4A">취소 처리</button>'+
+      '</div></div></div>';
+    let el=document.getElementById('cancel-reason-modal');
+    if(el)el.remove();
+    document.body.insertAdjacentHTML('beforeend',html);
+    window._cancelReasonResolver=resolve;
+    setTimeout(function(){const t=document.getElementById('cancel-reason-input');if(t)t.focus();},80);
+  });
+}
+function _resolveCancelReason(val){
+  const el=document.getElementById('cancel-reason-modal');
+  if(el)el.remove();
+  if(window._cancelReasonResolver){window._cancelReasonResolver(val);window._cancelReasonResolver=null;}
+}
+function _resolveCancelReasonOk(){
+  const t=document.getElementById('cancel-reason-input');
+  const v=(t&&t.value||'').trim();
+  if(!v){showToast('취소 사유를 입력해 주세요','error');t&&t.focus();return;}
+  _resolveCancelReason(v);
+}
+// 단건 취소 + 사유
+async function cancelWithReason(rowIndex){
+  const rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  if(!rec){showToast('신청을 찾을 수 없어요','error');return;}
+  const reason=await _renderCancelReasonModal(1);
+  if(!reason)return;
+  showOverlayLoad('취소 처리 중...');
+  try{
+    const ts=new Date().toISOString().slice(0,16).replace('T',' ');
+    const oldMemo=(rec['비고']||'').toString();
+    const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
+    const updated=Object.assign({},rec,{'진행 상태':'취소','비고':newMemo});
+    delete updated._rowIndex;
+    const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','x-pw':password},
+      body:JSON.stringify({values:Object.values(updated)})
+    });
+    if(!res.ok)throw new Error('API '+res.status);
+    showToast('취소 처리 완료 (사유 저장됨)');
+    await loadRecords();
+    if(typeof renderPromoBoard==='function')renderPromoBoard();
+    render();
+  }catch(e){
+    console.error(e);
+    showToast('취소 실패: '+e.message,'error');
+  }finally{
+    if(typeof hideOverlayLoad==='function')hideOverlayLoad();
+  }
+}
+// 일괄 취소 + 사유
+async function bulkCancelPending(){
+  if(!_pendingChecks.size){showToast('선택된 건이 없어요','error');return;}
+  const ids=Array.from(_pendingChecks);
+  const reason=await _renderCancelReasonModal(ids.length);
+  if(!reason)return;
+  showOverlayLoad('일괄 취소 중... (0/'+ids.length+')');
+  let success=0,failed=0;
+  const ts=new Date().toISOString().slice(0,16).replace('T',' ');
+  for(let i=0;i<ids.length;i++){
+    const rowIndex=ids[i];
+    try{
+      const rec=records.find(function(r){return r._rowIndex===rowIndex;});
+      if(!rec){failed++;continue;}
+      const oldMemo=(rec['비고']||'').toString();
+      const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
+      const updated=Object.assign({},rec,{'진행 상태':'취소','비고':newMemo});
+      delete updated._rowIndex;
+      const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json','x-pw':password},
+        body:JSON.stringify({values:Object.values(updated)})
+      });
+      if(!res.ok)throw new Error('API '+res.status);
+      success++;
+      showOverlayLoad('일괄 취소 중... ('+(i+1)+'/'+ids.length+')');
+    }catch(e){console.error(e);failed++;}
+  }
+  hideOverlayLoad();
+  showToast(success+'건 취소 완료'+(failed?' / '+failed+'건 실패':''),failed?'error':'success');
+  _pendingChecks.clear();
+  await loadRecords();
+  if(typeof renderPromoBoard==='function')renderPromoBoard();
+  render();
+}
 function renderPromoBoard(){
   const body=document.getElementById('promo-board-body');
   if(!body)return;
@@ -2833,6 +2929,7 @@ function renderPromoBoard(){
           if(_sec===0){
             _sectionRowHtml+='<div id="apply-bulk-actions" style="display:none;margin-left:auto;gap:6px;align-items:center">';
             _sectionRowHtml+='<button id="apply-bulk-approve-btn" onclick="event.stopPropagation();bulkApprovePending()" style="padding:5px 12px;border-radius:8px;border:1.5px solid #0F8B4C;background:#0F8B4C;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s" onmouseover="this.style.background=\'#0a6e3c\'" onmouseout="this.style.background=\'#0F8B4C\'">✓ 선택한 건 접수</button>';
+            _sectionRowHtml+='<button id="apply-bulk-cancel-btn" onclick="event.stopPropagation();bulkCancelPending()" style="padding:5px 12px;border-radius:8px;border:1.5px solid #E24B4A;background:#fff;color:#E24B4A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s;margin-left:6px" onmouseover="this.style.background=\'#E24B4A\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#E24B4A\'">✕ 선택한 건 취소</button>';
             _sectionRowHtml+='</div>';
           }
           _sectionRowHtml+='</div></td></tr>';
@@ -2880,7 +2977,8 @@ function renderPromoBoard(){
         // 액션 — admin만 삭제
         html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
         if(userRole==='admin'){
-          html+='<button onclick="event.stopPropagation();deleteSpecialEntry('+r._rowIndex+')" title="담당자 일정 삭제" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#ccc;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'삭제\';this.style.color=\'#E24B4A\';this.style.background=\'rgba(226,75,74,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'—\';this.style.color=\'#ccc\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">—</button>';
+          // 특수 일정 우측 액션: 변경 (편집 모달). 삭제는 우클릭 메뉴로 이동.
+          html+='<button onclick="event.stopPropagation();openSpecialEntry(null,'+r._rowIndex+')" title="담당자 일정 변경" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#ccc;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'변경\';this.style.color=\'var(--accent)\';this.style.background=\'rgba(74,77,231,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'—\';this.style.color=\'#ccc\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">—</button>';
         }
         html+='</td>';
         html+='</tr>';
@@ -6837,11 +6935,26 @@ function onEvContextMenu(event,rowIndex,dateKey){
   let menuHtml='';
 
   if(userRole==='admin'){
-    // admin — 변경 / 복사 / 완료 / 삭제
-    menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
-      '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
-      '<div class="ccm-item" onclick="closeCellContextMenu();adminCompleteWithResult('+rowIndex+')"><span class="emo">✅</span>완료</div>'+
-      '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
+    const adminStatus=rec['진행 상태']||'';
+    if(adminStatus==='신청 중'){
+      // 신청 중 — 접수 / 취소(사유) / 변경 / 삭제
+      menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();approvePromoFromBoard('+rowIndex+')"><span class="emo" style="color:#0F8B4C">✓</span>접수 (예정으로)</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소 (사유 전달)</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
+    }else if(adminStatus==='예정'){
+      // 예정 — 완료 / 변경 / 복사 / 취소(사유) / 삭제
+      menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();adminCompleteWithResult('+rowIndex+')"><span class="emo">✅</span>완료</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소 (사유 전달)</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
+    }else{
+      // 완료/취소 — 변경 / 복사 / 삭제
+      menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
+    }
   }else{
     let myAppl='';try{myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
     const isMine=_isMineRec(rec,myAppl);
