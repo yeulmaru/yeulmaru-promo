@@ -1699,6 +1699,84 @@ async function approvePromoFromBoard(rowIndex){
 }
 
 // === 본인/admin 완료 처리 (예정 → 완료) ===
+// === admin 완료 처리 (결과 입력 팝업) ===
+async function adminCompleteWithResult(rowIndex){
+  if(userRole!=='admin'){showToast('관리자만 처리할 수 있어요','error');return;}
+  const rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  if(!rec){showToast('항목을 찾을 수 없어요','error');return;}
+
+  // 기존 결과 데이터 (재입력 가능)
+  const prevLink=rec['결과_링크']||'';
+  const prevAttach=rec['결과_첨부URL']||'';
+  const prevMemo=rec['결과_비고']||'';
+
+  // 모달 표시
+  const result=await new Promise(function(resolve){
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:99999';
+    overlay.innerHTML=
+      '<div style="background:#fff;border-radius:14px;padding:24px;width:420px;max-width:90vw;max-height:90vh;overflow-y:auto;font-family:inherit">'+
+        '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">완료 처리</div>'+
+        '<div style="font-size:12px;color:#888;margin-bottom:18px">결과 정보는 모두 선택입력이에요</div>'+
+        '<div style="margin-bottom:14px">'+
+          '<label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px">링크 (URL)</label>'+
+          '<input type="url" id="cr-link" placeholder="https://..." value="'+escapeHtml(prevLink)+'" style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:8px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box">'+
+        '</div>'+
+        '<div style="margin-bottom:14px">'+
+          '<label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px">관련 내용 첨부 (URL)</label>'+
+          '<input type="url" id="cr-attach" placeholder="https://... (SharePoint/OneDrive 등에 올린 파일 URL)" value="'+escapeHtml(prevAttach)+'" style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:8px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box">'+
+        '</div>'+
+        '<div style="margin-bottom:20px">'+
+          '<label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:5px">비고</label>'+
+          '<textarea id="cr-memo" placeholder="추가 메모..." style="width:100%;padding:9px 12px;border:1.5px solid #eee;border-radius:8px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;min-height:70px;resize:vertical">'+escapeHtml(prevMemo)+'</textarea>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+          '<button id="cr-cancel" style="padding:9px 18px;border-radius:8px;border:1.5px solid #eee;background:#f5f5f5;color:#666;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>'+
+          '<button id="cr-ok" style="padding:9px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">완료 처리</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    document.getElementById('cr-link').focus();
+    function close(val){document.body.removeChild(overlay);resolve(val);}
+    document.getElementById('cr-cancel').onclick=function(){close(null);};
+    document.getElementById('cr-ok').onclick=function(){
+      close({
+        link:document.getElementById('cr-link').value.trim(),
+        attach:document.getElementById('cr-attach').value.trim(),
+        memo:document.getElementById('cr-memo').value.trim()
+      });
+    };
+    overlay.onclick=function(e){if(e.target===overlay)close(null);};
+  });
+
+  if(!result)return;  // 취소
+
+  // PATCH — 진행상태='완료' + 결과 필드 3개 (기존 다른 필드 유지)
+  try{
+    showToast('완료 처리 중...','info');
+    const updated=Object.assign({},rec,{
+      '진행 상태':'완료',
+      '결과_링크':result.link||'',
+      '결과_첨부URL':result.attach||'',
+      '결과_비고':result.memo||''
+    });
+    delete updated._rowIndex;
+    const res=await fetch(WORKER_BASE+'/api/sheet/records/'+rowIndex,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','x-pw':password},
+      body:JSON.stringify({values:Object.values(updated)})
+    });
+    if(!res.ok)throw new Error('API '+res.status);
+    showToast('완료 처리됐어요','success');
+    await loadRecords();
+    if(typeof renderPromoBoard==='function')renderPromoBoard();
+    render();
+  }catch(e){
+    console.error(e);
+    showToast('완료 처리 실패: '+e.message,'error');
+  }
+}
+
 async function completePromoRequest(rowIndex){
   const r=records.find(function(x){return x._rowIndex===rowIndex;});
   if(!r){showToast('신청을 찾을 수 없어요','error');return;}
@@ -2611,9 +2689,10 @@ function renderPromoBoard(){
     html+=_sh('platform','플랫폼',125);
     html+=_sh('category','구분',70);
     html+=_sh('content','콘텐츠',null);
-    html+=_sh('applicant','신청자',80);
+    html+=_sh('manager','담당자',90);
+    html+=_sh('applicant','신청자',90);
     const actW=(_colWidths&&_colWidths.action)||60;
-    html+='<th data-col="action" style="padding:10px 4px;text-align:center;width:'+actW+'px;color:#fff">액션</th>';
+    html+='<th data-col="action" style="padding:10px 4px;text-align:center;width:'+actW+'px;color:#fff">변경</th>';
     html+='</tr></thead><tbody>';
     rows.forEach(function(r,idx){
       const _animDelay=Math.min(idx*25,600)+'ms';
@@ -2712,7 +2791,10 @@ function renderPromoBoard(){
       html+='<td style="padding:10px 12px;text-align:left;color:#555;font-size:12px;white-space:nowrap">'+platHtml+'</td>';
       html+='<td style="padding:10px 12px;text-align:left;color:#666;font-size:11px;white-space:nowrap">'+escapeHtml(cat||'-')+'</td>';
       html+='<td style="padding:10px 12px;text-align:left;color:#222;font-weight:500">'+escapeHtml(title)+'<div style="font-size:11px;color:#888;font-weight:400;margin-top:2px">'+escapeHtml(prog)+'</div></td>';
-      html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+'">'+escapeHtml(r['게시 담당자']||'-')+(isMine?' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:6px;margin-left:2px">나</span>':'')+'</td>';
+      // 담당자 컬럼 — 게시 담당자 (홍보 담당자 1명 또는 '상관 없음')
+      html+='<td style="padding:10px 12px;text-align:left;color:'+(isMine?'var(--accent)':'#555')+';font-weight:'+(isMine?'600':'500')+';white-space:nowrap">'+escapeHtml(r['게시 담당자']||'상관 없음')+'</td>';
+      // 신청자 컬럼 — 추후 사용자 시스템 도입 후 본인 이름. 지금은 '상관 없음' 디폴트
+      html+='<td style="padding:10px 12px;text-align:left;color:#888;font-size:12px;white-space:nowrap">'+escapeHtml(r['신청자']||'상관 없음')+'</td>';
       // 액션 — 대기 중(admin만 접수) / 예정(본인·admin 완료) — 평소 ✓, hover 시 텍스트(초록)
       const canApprove=isAdmin&&(status==='대기 중'||status==='신청 중');
       const canComplete=(isMine||isAdmin)&&status==='예정';
@@ -6275,9 +6357,10 @@ function onEvContextMenu(event,rowIndex,dateKey){
   let menuHtml='';
 
   if(userRole==='admin'){
-    // admin — 수정 / 복사 / 삭제
+    // admin — 수정 / 복사 / 완료 / 삭제
     menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>수정</div>'+
       '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
+      '<div class="ccm-item" onclick="closeCellContextMenu();adminCompleteWithResult('+rowIndex+')"><span class="emo">✅</span>완료</div>'+
       '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
   }else{
     let myAppl='';try{myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
