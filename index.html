@@ -2808,12 +2808,15 @@ function buildManagerRow(rec, overrides){
 //          Q=진행 상태, R=비고, S=신청자, T=결과_링크, U=결과_첨부URL, V=결과_비고
 function buildRecordRow(rec, overrides){
   overrides = overrides || {};
-  function pick(key){
+  function pick(key, altKey){
     if(overrides[key] !== undefined) return overrides[key];
-    return rec[key] !== undefined ? rec[key] : '';
+    if(altKey && overrides[altKey] !== undefined) return overrides[altKey];
+    if(rec[key] !== undefined && rec[key] !== '') return rec[key];
+    if(altKey && rec[altKey] !== undefined && rec[altKey] !== '') return rec[altKey];
+    return '';
   }
   return [
-    pick('#'),
+    pick('No', '#'),
     pick('입력시간(KST)'),
     pick('날짜'),
     pick('연도'),
