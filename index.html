@@ -1986,14 +1986,8 @@ async function approvePromoFromBoard(rowIndex){
   if(!ok)return;
   showOverlayLoad();
   try{
-    const row=[
-      r['#']||'',r['입력시간(KST)']||'',r['시리얼']||'',r['연도']||'',r['월']||'',r['일']||'',r['요일']||'',
-      r['플랫폼 1']||'',r['플랫폼 2']||'',r['콘텐츠 구분']||'',r['프로그램']||'',r['담당 부서']||'',
-      r['콘텐츠 제목']||'',r['콘텐츠 형식']||'',r['콘텐츠 내용']||'',r['게시 담당자']||'',
-      '예정',
-      r['비고']||''
-    ];
-    await api('PATCH','/api/records/'+rowIndex,{values:row});
+    const row = buildRecordRow(r, {'진행 상태':'예정'});
+    await api('PATCH','/api/records/'+rowIndex,{values: row});
     await syncReload(0);
     renderPromoBoard();
     showToast('접수됐어요 (예정)');
@@ -3296,6 +3290,8 @@ function renderPromoBoard(){
         html+='<td style="padding:10px 12px;text-align:left;color:#666;font-size:11px;white-space:nowrap">홍보</td>';
         html+='<td style="padding:10px 12px;text-align:left;color:#222;font-weight:500">'+escapeHtml(labelStr)+'</td>';
         html+='<td style="padding:10px 12px;text-align:left;color:#555;font-weight:500">'+escapeHtml(it.person||'-')+'</td>';
+        // 신청자 컬럼 — S 시리즈는 신청 개념 없음 (담당자 일정). 빈 칸으로 컬럼 정렬만 맞춤.
+        html+='<td style="padding:10px 12px;text-align:left;color:#bbb;font-size:12px;white-space:nowrap">—</td>';
         // 액션 — admin만 삭제
         html+='<td style="padding:10px 4px;text-align:center;white-space:nowrap">';
         if(userRole==='admin'){
@@ -7322,19 +7318,16 @@ function onEvContextMenu(event,rowIndex,dateKey){
       // 신청 중 — 접수 / 취소(사유) / 변경 / 삭제
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();approvePromoFromBoard('+rowIndex+')"><span class="emo" style="color:#0F8B4C">✓</span>접수 (예정으로)</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소</div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
     }else if(adminStatus==='예정'){
       // 예정 — 완료 / 변경 / 복사 / 취소(사유) / 삭제
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();adminCompleteWithResult('+rowIndex+')"><span class="emo">✅</span>완료</div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();cancelWithReason('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
     }else{
       // 완료/취소 — 변경 / 복사 / 삭제
-      menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();editRec('+rowIndex+',\''+dateKey+'\',null,false)"><span class="emo">✏️</span>변경</div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
+      menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
     }
   }else{
