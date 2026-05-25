@@ -1328,17 +1328,12 @@ async function tryLogin(){
     const PIN_KEYS=['PIN','Pin','pin','PIN(4자리)','PIN 4자리','핀'];
     const PWD_KEYS=['비밀번호','password','Password','PASSWORD','pwd','PWD','패스워드'];
     const STATUS_KEYS=['계정여부','계정상태','status','Status','계정','활성여부'];
-    const matched=(MANAGERS||[]).find(function(m){return _getCol(m,PIN_KEYS).toString().trim()===pin;});
+    // 활성 계정만 PIN 매칭 — 비활성 계정의 PIN은 시스템이 완전히 무시
+    const matched=(MANAGERS||[]).find(function(m){
+      return isFlagOn(_getCol(m,STATUS_KEYS)) && _getCol(m,PIN_KEYS).toString().trim()===pin;
+    });
     if(matched){
-      // 계정여부 — checkbox(체크박스) 토글로 관리. OFF면 비활성 처리.
-      const accountActive=isFlagOn(_getCol(matched,STATUS_KEYS));
-      if(!accountActive){
-        password='';sessionStorage.removeItem('pw');
-        document.getElementById('login-load').textContent='';
-        document.getElementById('login-msg').textContent='비활성 계정입니다. 관리자에게 문의해 주세요.';
-        pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
-        return;
-      }
+      // 활성 계정만 매칭됐으므로 비활성 차단 로직 불필요
       // 매칭 성공 — 비밀번호 검증/설정 단계
       const userName=matched['담당자']||'';
       const userDept=matched['담당부서']||'';
@@ -6577,6 +6572,32 @@ async function saveInlineRow(slug,rowIndex){
     if(c.type==='checkbox')return el.checked?'1':'';
     return el.value||'';
   });
+  // === manager 시트 사전 검증 ===
+  if(slug==='manager'){
+    // 컬럼 인덱스로 PIN과 계정여부 추출
+    const pinColIdx=cfg.columns.findIndex(c=>c.key==='PIN');
+    const activeColIdx=cfg.columns.findIndex(c=>c.key==='계정여부');
+    const myPin=(values[pinColIdx]||'').toString().trim();
+    const myActive=values[activeColIdx]==='1';
+    const myName=tr.querySelector('[data-key="담당자"]')?tr.querySelector('[data-key="담당자"]').value:'';
+    // 활성 ON 인데 PIN 빈값 → 차단
+    if(myActive && !myPin){
+      showToast('활성 ON 시 PIN 필수입니다 (4자리 숫자)','error');
+      return;
+    }
+    // 활성 ON + PIN 있는 경우 — 다른 활성 계정과 중복 체크 (비활성 계정은 무시)
+    if(myActive && myPin){
+      const dup=(_sheetCache['manager']||[]).find(function(m){
+        if(m._rowIndex===rowIndex)return false; // 자기 자신 제외
+        if(!isFlagOn(m['계정여부']))return false; // 비활성 계정 무시
+        return String(m['PIN']||'').trim()===myPin;
+      });
+      if(dup){
+        showToast('PIN '+myPin+'은 이미 '+(dup['담당자']||'다른 활성 계정')+'님이 사용 중입니다','error');
+        return;
+      }
+    }
+  }
   showOverlayLoad('\uC800\uC7A5 \uC911\uC785\uB2C8\uB2E4...');
   try{
     await api('PATCH','/api/sheet/'+slug+'/'+rowIndex,{values});
