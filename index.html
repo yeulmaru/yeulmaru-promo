@@ -1538,7 +1538,11 @@ function closeAnnualCalendar(){
 async function openPerfUrl(url, perfName){
   if(!url)return;
   event&&event.stopPropagation&&event.stopPropagation();
-  const msg="'"+escapeHtml(perfName)+"' 상세페이지로 이동할까요?<br><br><span style=\"font-size:12px;color:#999;font-weight:400\">새 창에서 열립니다</span>";
+  const msg=
+    "<div style=\"white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">'"+escapeHtml(perfName)+"'</div>"+
+    "<div>상세페이지로 이동할까요?</div>"+
+    "<br>"+
+    "<span style=\"font-size:12px;color:#999;font-weight:400\">새 창에서 열립니다</span>";
   const ok=await showConfirm(msg,{okText:'이동',cancelText:'취소',html:true});
   if(ok)window.open(url,'_blank','noopener,noreferrer');
 }
