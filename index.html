@@ -3396,12 +3396,9 @@ function renderPromoBoard(){
       const isFuture=dateKey>todayKey;
       const isPast=dateKey<todayKey;
       const isPending=isPendingLike;
-      // 행 배경: 본인 row(연한 강조색) → 짝홀 zebra. 상태 색은 배지에만.
+      // 행 배경: zebra만 유지 (isMine 강조 제거 — 모든 row 동일하게)
       let trBg='',trBorder='border-left:3px solid transparent';
-      if(isMine){
-        trBg='background:rgba(74,77,231,0.06)';
-        trBorder='border-left:3px solid rgba(74,77,231,0.45)';
-      }else if(idx%2===0){
+      if(idx%2===0){
         trBg='background:#fafafa';
       }
       const hoverBg='#f0f0f0';
