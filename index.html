@@ -3450,7 +3450,7 @@ function renderPromoBoard(){
       }else if(canComplete){
         html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#bbb;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'완료\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'—\';this.style.color=\'#ccc\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">—</button>';
       }else if(canMineEdit){
-        html+='<button onclick="event.stopPropagation();editRec('+r._rowIndex+',\''+dKey+'\',null,false)" title="신청 내용 변경" style="padding:5px 8px;border-radius:6px;border:none;background:rgba(74,77,231,0.08);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s" onmouseover="this.style.background=\'rgba(74,77,231,0.18)\'" onmouseout="this.style.background=\'rgba(74,77,231,0.08)\'">변경</button>';
+        html+='<button onclick="event.stopPropagation();openChangeWizard('+r._rowIndex+')" title="신청 내용 변경" style="padding:5px 8px;border-radius:6px;border:none;background:rgba(74,77,231,0.08);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s" onmouseover="this.style.background=\'rgba(74,77,231,0.18)\'" onmouseout="this.style.background=\'rgba(74,77,231,0.08)\'">변경</button>';
       }
       html+='</td>';
       html+='</tr>';
