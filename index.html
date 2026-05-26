@@ -3132,7 +3132,7 @@ function renderPromoBoard(){
         if(sa!==sb)return sa-sb;
         // 같은 섹션 내 시간순
         const ad=getRecDateKey(a),bd=getRecDateKey(b);
-        if(sa===3){if(ad!==bd)return bd.localeCompare(ad);}  // 과거: 최근 먼저
+        if(sa===3){if(ad!==bd)return ad.localeCompare(bd);}  // 과거: 오래된 먼저 (시간 흐름순)
         else{if(ad!==bd)return ad.localeCompare(bd);}       // 그 외: 가까운 먼저
         return rowTimeStr(a).localeCompare(rowTimeStr(b));
       });
@@ -3150,7 +3150,7 @@ function renderPromoBoard(){
         const ab=rowBucket(a),bb=rowBucket(b);
         if(ab!==bb)return ab-bb;
         const ad=getRecDateKey(a),bd=getRecDateKey(b);
-        if(ab===2){if(ad!==bd)return bd.localeCompare(ad);}
+        if(ab===2){if(ad!==bd)return ad.localeCompare(bd);}  // 과거: 오래된 먼저 (시간 흐름순)
         else{if(ad!==bd)return ad.localeCompare(bd);}
         return rowTimeStr(a).localeCompare(rowTimeStr(b));
       });
@@ -3451,6 +3451,9 @@ function renderPromoBoard(){
         html+='<button onclick="event.stopPropagation();completePromoRequest('+r._rowIndex+')" title="게시 완료 처리 (예정 → 완료)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#bbb;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s" onmouseover="this.innerHTML=\'완료\';this.style.color=\'#0F8B4C\';this.style.background=\'rgba(15,139,76,0.08)\';this.style.fontSize=\'12px\'" onmouseout="this.innerHTML=\'—\';this.style.color=\'#ccc\';this.style.background=\'transparent\';this.style.fontSize=\'14px\'">—</button>';
       }else if(canMineEdit){
         html+='<button onclick="event.stopPropagation();openChangeWizard('+r._rowIndex+')" title="신청 내용 변경" style="padding:5px 8px;border-radius:6px;border:none;background:rgba(74,77,231,0.08);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s" onmouseover="this.style.background=\'rgba(74,77,231,0.18)\'" onmouseout="this.style.background=\'rgba(74,77,231,0.08)\'">변경</button>';
+      }else if(isAdmin){
+        // admin + 보류/완료/취소 — 우클릭 메뉴 호출 버튼
+        html+='<button onclick="event.stopPropagation();onEvContextMenu(event,'+r._rowIndex+',\''+dKey+'\')" title="메뉴 열기 (변경/삭제 등)" style="padding:5px 10px;border-radius:8px;border:none;background:transparent;color:#ccc;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:50px;transition:all .12s;letter-spacing:1px" onmouseover="this.style.color=\'var(--accent)\';this.style.background=\'rgba(74,77,231,0.08)\'" onmouseout="this.style.color=\'#ccc\';this.style.background=\'transparent\'">···</button>';
       }
       html+='</td>';
       html+='</tr>';
@@ -7426,9 +7429,11 @@ function onEvContextMenu(event,rowIndex,dateKey){
         '<div class="ccm-divider"></div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>';
     }else if(adminStatus==='보류'){
-      // 보류 — 변경 / 승인 (재처리)
+      // 보류 — 변경 / 승인 / 삭제
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();openChangeWizard('+rowIndex+')"><span class="emo">✏️</span>변경</div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();approvePromoFromBoard('+rowIndex+')"><span class="emo" style="color:#0F8B4C">✓</span>승인 (예정으로)</div>';
+        '<div class="ccm-item" onclick="closeCellContextMenu();approvePromoFromBoard('+rowIndex+')"><span class="emo" style="color:#0F8B4C">✓</span>승인 (예정으로)</div>'+
+        '<div class="ccm-divider"></div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
     }else{
       // 완료/취소 — 복사 / 삭제 (admin only, 캘린더에선 안 보임. 일정관리 페이지 우클릭만)
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
