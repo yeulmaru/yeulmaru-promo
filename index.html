@@ -1678,6 +1678,10 @@ function updatePerfOpen(){
 }
 async function initApp(){
   buildNav();startClock();updateRoleTag();
+  // admin 모드 진입 시 myApplicant 자동 정리 (대신 신청 등으로 오염된 값 자가 치유)
+  if(userRole==='admin'){
+    try{localStorage.removeItem('myApplicant');}catch(e){}
+  }
   try{await loadPrograms();}catch(e){console.warn('[initApp loadPrograms]',e);}
   try{await loadAllMasters();}catch(e){console.warn('[initApp loadAllMasters]',e);}
   try{await loadPromoSpecial();}catch(e){console.warn('[initApp loadPromoSpecial]',e);}
@@ -1701,6 +1705,8 @@ async function switchRole(){
       password='0510';
       sessionStorage.setItem('pw','0510');
       sessionStorage.setItem('role','user');
+      // admin이 user로 전환할 때도 정리 (다음 user가 새 PIN으로 로그인할 가능성)
+      try{localStorage.removeItem('myApplicant');}catch(e){}
       updateRoleTag();
       buildNav();
       render();
@@ -4244,7 +4250,10 @@ async function submitPromoRequest(){
       requesterName
     ];
     await api('POST','/api/records',{values:row});
-    try{localStorage.setItem('myApplicant',_pwData.applicant);}catch(e){}
+    // admin 모드에서는 _pwData.applicant로 myApplicant 덮어쓰지 않음 (대신 신청 시 오염 방지)
+    if(userRole!=='admin'){
+      try{localStorage.setItem('myApplicant',_pwData.applicant);}catch(e){}
+    }
     await syncReload();
     _pwStep=99;
     renderPwStep();
