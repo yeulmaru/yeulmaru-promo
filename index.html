@@ -3648,6 +3648,7 @@ function _startChangeWizard(rowIndex){
   _pwMode='edit';
   _pwStep=_pwSelectedSteps[0];
   if(_pwStep===4)_pwSubStep=1;
+  document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
   document.getElementById('promo-wizard').classList.add('show');
   renderPwStep();
 }
