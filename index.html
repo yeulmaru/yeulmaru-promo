@@ -4226,7 +4226,11 @@ async function submitPromoRequest(){
     const content=buildPwContentText();
     // 신청자 — user 본인 식별 (localStorage.myApplicant 우선)
     let _myAppl='';try{_myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
-    const requesterName=_myAppl||_pwData.applicant||'';
+    // 신청자(S) 결정 로직:
+    // - admin(0510): '관리자' 고정 — 본인 식별 무관, 담당자(P)와 독립
+    // - user: localStorage.myApplicant (로그인 시 PIN→userName으로 저장됨)
+    // ❌ 폴백으로 _pwData.applicant 사용 X (담당자=신청자 동일 값 버그 방지)
+    const requesterName = (userRole==='admin') ? '관리자' : (_myAppl || '');
     const row=[
       records.length+1,
       ts,
