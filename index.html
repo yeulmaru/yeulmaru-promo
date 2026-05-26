@@ -1712,8 +1712,9 @@ async function switchRole(){
       password='0510';
       sessionStorage.setItem('pw','0510');
       sessionStorage.setItem('role','user');
-      // admin이 user로 전환할 때도 정리 (다음 user가 새 PIN으로 로그인할 가능성)
-      try{localStorage.removeItem('myApplicant');}catch(e){}
+      // admin → user 전환 시 신청자 이름 자동 설정 (admin = 황세웅 본인 가정)
+      // 확장: localStorage 'adminFallbackUser' 키에 다른 이름 저장하면 그 값이 우선
+      try{localStorage.setItem('myApplicant',(localStorage.getItem('adminFallbackUser')||'').trim()||'황세웅');}catch(e){}
       updateRoleTag();
       buildNav();
       render();
