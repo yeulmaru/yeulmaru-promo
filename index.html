@@ -3618,7 +3618,7 @@ async function submitPromoEdit(){
     patch['일']=d;
     patch['요일']=DAYS[new Date(y,m-1,d).getDay()]+'요일';
     patch['입력시간(KST)']=ts;
-    patch['시리얼']=serial;
+    patch['날짜']=serial;
   }
   // Step 4 — 플랫폼·형식·내용·게시담당자
   if(_pwSelectedSteps.includes(4)){
