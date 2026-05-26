@@ -3742,11 +3742,15 @@ async function closePromoWizard(force){
   // 완료 화면이거나 force면 바로 닫기
   if(force||_pwStep===99||_pwStep===1&&!_pwData.program&&!_pwData.isCustom){
     document.getElementById('promo-wizard').classList.remove('show');
+    document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
     return;
   }
   // 진행 중 → confirm
   const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을까요?');
-  if(ok)document.getElementById('promo-wizard').classList.remove('show');
+  if(ok){
+    document.getElementById('promo-wizard').classList.remove('show');
+    document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
+  }
 }
 function renderPwStep(){
   const bar=document.getElementById('pw-progress-bar');
