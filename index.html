@@ -4257,10 +4257,12 @@ async function submitPromoRequest(){
       requesterName
     ];
     await api('POST','/api/records',{values:row});
-    // admin 모드에서는 _pwData.applicant로 myApplicant 덮어쓰지 않음 (대신 신청 시 오염 방지)
-    if(userRole!=='admin'){
-      try{localStorage.setItem('myApplicant',_pwData.applicant);}catch(e){}
-    }
+    // ⚠️ myApplicant는 절대 _pwData.applicant(게시 담당자, P열)로 덮어쓰지 않음.
+    // 로그인 시 line 1400에서 본인 이름으로 이미 저장됨. 위저드에서 갱신 불필요.
+    // 이전 코드 (if userRole!=='admin' setItem _pwData.applicant)는
+    // user의 myApplicant를 게시 담당자 값으로 오염시키는 버그였음.
+    // 예: 심희은이 게시 담당자=황세웅으로 신청 → localStorage가 '황세웅'으로 덮어씌워짐
+    // → UI가 "황세웅 님"으로 바뀌고 "내 신청만" 필터 작동 안 함.
     await syncReload();
     _pwStep=99;
     renderPwStep();
