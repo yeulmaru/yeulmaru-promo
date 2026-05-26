@@ -2549,7 +2549,9 @@ async function saveSpecialEntry(){
     }
     showToast(isEdit?'담당자 일정이 변경했어요':'담당자 일정이 추가했어요 ('+type+')');
   }catch(e){
-    showToast((isEdit?'변경':'저장')+' 실패: '+(e.message||e),'error');
+    console.error('[saveSpecialEntry 실패]', e);
+    const msg = e&&e.message ? e.message : String(e);
+    showToast((isEdit?'변경':'저장')+' 실패: '+msg,'error');
   }finally{
     hideOverlayLoad();
   }
