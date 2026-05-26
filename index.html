@@ -6989,10 +6989,10 @@ function dk(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0'
 function isToday(d){return dk(d)===dk(new Date());}
 function isPast(d){const t=new Date();t.setHours(0,0,0,0);const dd=new Date(d);dd.setHours(0,0,0,0);return dd<t;}
 function getRecsForDate(d){
-  // 캘린더 표시 정책: 신청 중, 예정만 보임. 완료/취소/보류는 숨김 (일정관리 페이지에서만 조회)
+  // 캘린더 표시 정책: 신청 중, 예정, 완료 표시 (완료는 취소선). 취소/보류만 숨김
   return records.filter(function(r){
     const st=(r['진행 상태']||'').toString();
-    if(st==='완료'||st==='취소'||st==='보류')return false;
+    if(st==='취소'||st==='보류')return false;
     return excelToKey(r['날짜'])===dk(d);
   });
 }
