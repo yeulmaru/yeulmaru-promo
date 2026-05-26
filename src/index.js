@@ -310,6 +310,46 @@ var index_default = {
         if (role) return json({ ok: true, role }, env);
         return json({ ok: false, error: "Wrong password" }, env, 401);
       }
+
+      // === 비밀번호 초기 저장 / 재설정 (PIN 기반, 인증 헤더 불요) ===
+      // user가 자기 PIN으로 인증 → 비번 설정. admin only PATCH 정책 우회.
+      // PIN이 담당자 시트의 활성 row와 매칭되면 그 row의 비번/계정여부 컬럼만 업데이트.
+      if (url.pathname === "/api/auth/set-password" && request.method === "POST") {
+        try {
+          const { pin, newPassword } = await request.json();
+          if (!pin || !newPassword) {
+            return json({ error: "PIN과 비밀번호가 필요해요" }, env, 400);
+          }
+          const token = await getToken(env);
+          const { headers, rows } = await handleGetSheet(token, "\uB2F4\uB2F9\uC790");
+          // PIN 매칭 — 휴직여부 OFF인 row만 (계정여부는 초기 설정 시 OFF일 수 있어 무시)
+          const matchedRow = rows.find((r) => {
+            const rPin = String(r["PIN"] || "").trim();
+            const isOnLeave = r["\uD734\uC9C1\uC5EC\uBD80"] === true || r["\uD734\uC9C1\uC5EC\uBD80"] === 1 || String(r["\uD734\uC9C1\uC5EC\uBD80"]).trim() === "1";
+            return rPin === String(pin).trim() && !isOnLeave;
+          });
+          if (!matchedRow) {
+            return json({ error: "PIN을 찾을 수 없거나 휴직 중인 계정이에요" }, env, 403);
+          }
+          // 이미 비번 설정된 경우 차단 (재설정은 admin이 처리)
+          const existingPwd = String(matchedRow["\uBE44\uBC00\uBC88\uD638"] || "").trim();
+          if (existingPwd) {
+            return json({ error: "이미 비밀번호가 설정된 계정이에요. 관리자에게 재설정 요청하세요." }, env, 409);
+          }
+          // 전체 row values 배열 구성. 비밀번호 + 계정여부만 변경.
+          const values = headers.map((h) => {
+            if (h === "\uBE44\uBC00\uBC88\uD638") return newPassword;
+            if (h === "\uACC4\uC815\uC5EC\uBD80") return true;
+            return matchedRow[h] !== void 0 && matchedRow[h] !== null ? matchedRow[h] : "";
+          });
+          await handleUpdateSheetRow(token, "\uB2F4\uB2F9\uC790", matchedRow._rowIndex, { values }, "user", "manager");
+          return json({ ok: true, name: matchedRow["\uB2F4\uB2F9\uC790"] || "" }, env);
+        } catch (e) {
+          console.error("[set-password]", e);
+          return json({ error: e.message }, env, 500);
+        }
+      }
+
       const pw = request.headers.get("X-App-Password");
       const role = roleOf(pw, env);
       if (!role) return json({ error: "Unauthorized" }, env, 401);
