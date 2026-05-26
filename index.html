@@ -425,7 +425,7 @@ button{font-family:inherit;cursor:pointer}
 .today-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(74,77,231,0.25)}
 .c-inner > .dn{position:sticky;top:0;z-index:2;background:inherit}
 .c.today .c-inner > .dn{padding:0 0 3px 0}
-.ev{display:flex;align-items:center;gap:4px;padding:2px 0;font-size:10.5px;line-height:1.4;min-width:0;overflow:hidden}
+.ev{display:flex;align-items:center;gap:4px;padding:2px 0;font-size:10.5px;line-height:1.4;min-width:0}
 .ev:hover{background:rgba(74,77,231,0.06);border-radius:4px}
 .ev-dragging{opacity:0.4 !important}
 .c.drag-over{background:rgba(74,77,231,0.12) !important;box-shadow:inset 0 0 0 2px var(--accent)}
@@ -6042,6 +6042,9 @@ function canApplyOnDate(dateKey){
   }
   // 접수월 외 — 가장 마지막에 체크 (자동 옵션이 더 우선적 사유)
   const dateYm=dateKey.substring(0,7);
+  // 당월은 접수월 설정과 무관하게 무조건 허용 (운영 룰)
+  const todayYm=getTodayKey().substring(0,7);
+  if(dateYm===todayYm)return{ok:true};
   if(!ymArr.includes(dateYm))return{ok:false,reason:'신청 가능한 월: '+ymArr.join(', ')};
   return{ok:true};
 }
