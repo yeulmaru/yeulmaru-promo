@@ -3102,7 +3102,9 @@ async function cancelWithReason(rowIndex){
   try{
     const ts=new Date().toISOString().slice(0,16).replace('T',' ');
     const oldMemo=(rec['비고']||'').toString();
-    const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
+    const newMemo = _isSelfCancel
+      ? oldMemo  // 본인 취소 — 비고 변경 없음
+      : ('[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:''));
     const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
     await api('PATCH','/api/records/'+rowIndex,{values: row});
     showToast('취소 처리 완료 (사유 저장됨)');
