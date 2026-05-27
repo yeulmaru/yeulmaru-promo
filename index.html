@@ -61,8 +61,8 @@ button{font-family:inherit;cursor:pointer}
 @keyframes pw-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 .pw-shake{animation:pw-shake 0.4s ease}
 .ev[data-tooltip]{position:relative}
-.ev[data-tooltip]:hover::before{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:5px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.25);opacity:0;animation:tooltipFade 0.15s ease 0.05s forwards}
-.ev[data-tooltip]:hover::after{content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#333;z-index:9999;pointer-events:none;opacity:0;animation:tooltipFade 0.15s ease 0.05s forwards}
+.ev[data-tooltip]:hover::before{content:'👤  ' attr(data-tooltip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent) 0%,#6366F1 100%);color:#fff;padding:8px 14px;border-radius:12px;font-size:11.5px;font-weight:500;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 8px 24px rgba(74,77,231,0.28),0 2px 6px rgba(0,0,0,0.08);opacity:0;letter-spacing:0.2px;animation:tooltipFade 0.18s ease 0.08s forwards}
+.ev[data-tooltip]:hover::after{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--accent);z-index:9999;pointer-events:none;opacity:0;animation:tooltipFade 0.18s ease 0.08s forwards}
 @keyframes tooltipFade{from{opacity:0}to{opacity:1}}
 .pw-age-row .pw-age-track{position:absolute;left:0;right:0;top:50%;height:4px;background:#E0DEEC;border-radius:2px;transform:translateY(-50%);pointer-events:none}
 .pw-age-row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;height:24px;margin:0;position:absolute;left:0;right:0;width:100%}
@@ -4335,6 +4335,16 @@ function onPwPlat1Change(){
   }
   _pwData.plat1=v;
   document.getElementById('pw-plat2-wrap').innerHTML=buildPwPlat2Html();
+  // 플랫폼 1 선택 후 → 플랫폼 2 자동 focus (가능하면 dropdown 자동 열기)
+  setTimeout(function(){
+    const _p2=document.getElementById('pw-plat2');
+    if(_p2 && _p2.options.length > 1){
+      _p2.focus();
+      if(_p2.showPicker){
+        try{ _p2.showPicker(); }catch(e){}
+      }
+    }
+  },80);
   // 기타 플랫폼 자유 입력 토글
   const cw=document.getElementById('pw-custom-plat-wrap');
   if(cw){
