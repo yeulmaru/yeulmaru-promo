@@ -3696,6 +3696,7 @@ function renderPromoBoard(){
       html+='<button onclick="_showApplyList=!_showApplyList;renderPromoBoard()" title="'+(_showApplyList?'닫기':'펼치기')+'" style="padding:7px 14px;border-radius:10px;border:1.5px solid var(--peach);background:'+_bgColor+';color:'+_txtColor+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;margin-right:8px;transition:all .15s">'+_onIcon+' 🔔 새 신청 '+_applyPendingCnt+'건</button>';
     }
   }
+  html+='<div style="margin-top:8px;text-align:right"><button type="button" onclick="pwClearRoot()" style="background:transparent;color:#888;border:1px solid rgba(0,0,0,0.10);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit" title="OneDrive root 폴더 등록을 초기화 (다음 폴더 선택 시 재등록 안내)">🔄 OneDrive 재등록</button></div>';
   html+='</div>';
   // === 오늘 요약 한 줄 박스 ===
   const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소';}).length;
