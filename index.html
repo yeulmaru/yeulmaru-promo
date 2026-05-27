@@ -60,6 +60,10 @@ button{font-family:inherit;cursor:pointer}
 @keyframes role-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
 @keyframes pw-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 .pw-shake{animation:pw-shake 0.4s ease}
+.ev[data-tooltip]{position:relative}
+.ev[data-tooltip]:hover::before{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:5px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.25);opacity:0;animation:tooltipFade 0.15s ease 0.05s forwards}
+.ev[data-tooltip]:hover::after{content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#333;z-index:9999;pointer-events:none;opacity:0;animation:tooltipFade 0.15s ease 0.05s forwards}
+@keyframes tooltipFade{from{opacity:0}to{opacity:1}}
 .pw-age-row .pw-age-track{position:absolute;left:0;right:0;top:50%;height:4px;background:#E0DEEC;border-radius:2px;transform:translateY(-50%);pointer-events:none}
 .pw-age-row input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;height:24px;margin:0;position:absolute;left:0;right:0;width:100%}
 .pw-age-row input[type=range].pw-age-min{z-index:3}
@@ -4638,6 +4642,7 @@ function pwFolderInputs(){
     const isFirst=(i===0);
     html+='<div class="pw-folder-row" data-idx="'+i+'" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">';
     html+='<input id="pw-folder-'+i+'" class="pw-folder-input" type="text" data-idx="'+i+'" value="'+escapeHtml(v||'')+'" oninput="pwFolderInputChange('+i+',this.value)" placeholder="'+escapeHtml(ph)+'" style="flex:1;min-width:0;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box">';
+    html+='<button type="button" onclick="pwPickFolder('+i+')" title="내 PC에서 폴더 선택 (자동 입력)" style="flex-shrink:0;width:42px;height:42px;background:#F8F7FC;color:var(--accent);border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:18px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;line-height:1">📁</button>';
     if(isFirst){
       html+='<button type="button" onclick="pwAddFolder()" title="폴더 추가" style="flex-shrink:0;width:42px;height:42px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:22px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 6px rgba(74,77,231,0.25);transition:transform 0.1s">+</button>';
     }else{
@@ -4658,6 +4663,33 @@ function pwCollectFoldersFromDOM(){
   const inputs=document.querySelectorAll('.pw-folder-input');
   if(inputs.length===0)return;
   _pwData.folders=Array.prototype.map.call(inputs,function(el){return el.value;});
+}
+
+// === 폴더 선택 (showDirectoryPicker) — 폴더명 자동 입력 ===
+async function pwPickFolder(idx){
+  if(!window.showDirectoryPicker){
+    showToast('이 브라우저는 폴더 선택을 지원하지 않아요 (Chrome/Edge에서 사용 가능)','error');
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker();
+    const folderName = handle.name || '';
+    pwCollectFoldersFromDOM();
+    if(!_pwData.folders) _pwData.folders=[''];
+    _pwData.folders[idx] = folderName;
+    const input = document.getElementById('pw-folder-'+idx);
+    if(input){
+      input.value = folderName;
+      // 시각적 피드백
+      input.style.background='#F0F8E0';
+      setTimeout(function(){input.style.background='#F8F7FC';},800);
+    }
+  } catch(err){
+    // 사용자 취소는 조용히 무시
+    if(err.name !== 'AbortError'){
+      console.error('Folder pick error:', err);
+    }
+  }
 }
 
 function pwAddFolder(){
@@ -7417,7 +7449,7 @@ function renderCal(){
         var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':'';
         // 우클릭 메뉴: 항상 부착 — onEvContextMenu에서 케이스별 분기
         var _ctxAttr=' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"';
-        h+='<div class="ev'+(done?' done':'')+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'" '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600" title="'+(p2&&p2!=='-'?p2:p)+'">'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
+        h+='<div class="ev'+(done?' done':'')+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'"'+(applying?' data-tooltip="'+(r['게시 담당자']||'').replace(/"/g,'&quot;')+' 님이 신청 중입니다."':'')+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600" title="'+(p2&&p2!=='-'?p2:p)+'">'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
