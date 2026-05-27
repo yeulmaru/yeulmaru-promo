@@ -4285,13 +4285,11 @@ function _showKakaoConflictHint(conflict){
   const dateStr=Number(m)+'월 '+Number(d)+'일';
   const cat=conflict['콘텐츠 구분']||'';
   const status=conflict['진행 상태']||'';
-  const catStr=cat?"'"+cat+"' ":'';
-  const statusStr=status?"'"+status+"' ":'';
   hint.style.display='';
-  hint.style.background='rgba(226,75,74,0.1)';
-  hint.style.borderLeft='3px solid #E24B4A';
-  hint.style.color='#E24B4A';
-  hint.innerHTML='🚫 <b>'+dateStr+'</b>에 '+catStr+'홍보를 '+statusStr+'인 내용이 있어 연속 발송이 어려워요.';
+  hint.style.background='rgba(74,77,231,0.08)';
+  hint.style.borderLeft='3px solid var(--accent)';
+  hint.style.color='#333';
+  hint.innerHTML='🙏 <b style="color:var(--accent)">'+escapeHtml(dateStr)+'</b>에 <b style="color:var(--accent)">'+escapeHtml(cat)+'</b> 홍보를 <b style="color:var(--accent)">'+escapeHtml(status)+'</b>인 내용이 있어요.<br>카카오톡은 2일 연속 발송이 어려워요.<br>급한 경우, 관리자에게 문의해주세요. 🫰';
   hint.classList.remove('pw-shake');
   void hint.offsetWidth;
   hint.classList.add('pw-shake');
@@ -4299,10 +4297,10 @@ function _showKakaoConflictHint(conflict){
 function _resetKakaoHint(){
   const hint=document.getElementById('pw-kakao-hint');
   if(!hint) return;
-  hint.style.background='rgba(216,132,85,0.08)';
-  hint.style.borderLeft='3px solid var(--peach)';
-  hint.style.color='var(--peach-text)';
-  hint.innerHTML='📢 <b>카카오톡 안내</b><br>카카오톡은 2연일 발송이 어려워요.<br>급한 경우 관리자에게 문의해주세요. (절)';
+  hint.style.background='rgba(74,77,231,0.08)';
+  hint.style.borderLeft='3px solid var(--accent)';
+  hint.style.color='#333';
+  hint.innerHTML='🙏 <b style="color:var(--accent)">카카오톡 안내</b><br>카카오톡은 2일 연속 발송이 어려워요.<br>급한 경우, 관리자에게 문의해주세요. 🫰';
   hint.classList.remove('pw-shake');
 }
 
@@ -4850,7 +4848,7 @@ function renderPwSubPlat(body,next){
   html+='</select>';
   // 카카오톡 선택 시 안내 (user만, admin은 자유)
   const _khDisp=(_pwData.plat1==='카카오톡' && userRole!=='admin')?'':'none';
-  html+='<div id="pw-kakao-hint" style="display:'+_khDisp+';font-size:11px;color:var(--peach-text);background:rgba(216,132,85,0.08);border-left:3px solid var(--peach);padding:10px 12px;border-radius:6px;margin-top:10px;line-height:1.5">📢 <b>카카오톡 안내</b><br>카카오톡은 2연일 발송이 어려워요.<br>급한 경우 관리자에게 문의해주세요. (절)</div>';
+  html+='<div id="pw-kakao-hint" style="display:'+_khDisp+';font-size:11px;color:#333;background:rgba(74,77,231,0.08);border-left:3px solid var(--accent);padding:10px 12px;border-radius:6px;margin-top:10px;line-height:1.5">🙏 <b style="color:var(--accent)">카카오톡 안내</b><br>카카오톡은 2일 연속 발송이 어려워요.<br>급한 경우, 관리자에게 문의해주세요. 🫰</div>';
   html+='<div id="pw-plat2-wrap" style="margin-top:14px">'+buildPwPlat2Html()+'</div>';
   // "기타" 선택 시 자유 입력
   const otherDisp=_pwData.plat1==='기타'?'':'none';
