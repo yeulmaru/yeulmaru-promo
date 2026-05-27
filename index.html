@@ -744,6 +744,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
     </div>
     <div class="nav-center" id="nav-menus"></div>
     <div class="nav-right">
+      <span class="welcome-msg" id="welcome-msg" style="font-size:12.5px;color:#888;margin-right:12px;font-family:inherit"></span>
       <span class="role-tag" id="role-tag"></span>
       <span class="kst" id="kst"></span>
       <button class="icon-btn" onclick="loadData()" title="새로고침">↻</button>
@@ -3459,7 +3460,10 @@ function renderPromoBoard(){
   if(isAdmin){
     html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
     html+='<select onchange="_promoFilter.applicant=this.value;renderPromoBoard()" style="padding:6px 10px;height:32px;width:140px;box-sizing:border-box;border-radius:8px;border:1.5px solid #eee;font-size:12px;outline:none;background:#fff;font-family:inherit;line-height:1"><option value="">전체 신청자</option>';
-    PR_MANAGERS.forEach(function(m){const n=m['담당자'];html+='<option value="'+escapeHtml(n)+'"'+(_promoFilter.applicant===n?' selected':'')+'>'+escapeHtml(n)+'</option>';});
+    // 신청 record 엮인 신청자만 추출 + 가나다순
+    const _applicants = new Set();
+    (records||[]).forEach(function(r){const _n=(r['게시 담당자']||'').trim();if(_n)_applicants.add(_n);});
+    Array.from(_applicants).sort(function(a,b){return a.localeCompare(b,'ko');}).forEach(function(n){html+='<option value="'+escapeHtml(n)+'"'+(_promoFilter.applicant===n?' selected':'')+'>'+escapeHtml(n)+'</option>';});
     html+='</select>';
   }
   // 지난 일정 감추기 — 검색 바로 앞 (끝쪽)
@@ -4760,7 +4764,7 @@ function renderPwSubPlat(body,next){
   html+='</select>';
   // 카카오톡 선택 시 안내 (user만, admin은 자유)
   const _khDisp=(_pwData.plat1==='카카오톡' && userRole!=='admin')?'':'none';
-  html+='<div id="pw-kakao-hint" style="display:'+_khDisp+';font-size:11px;color:var(--peach-text);background:rgba(216,132,85,0.08);border-left:3px solid var(--peach);padding:10px 12px;border-radius:6px;margin-top:10px;line-height:1.5">📢 <b>카카오톡 안내</b><br>같은 날 또는 전날에 카카오톡 신청이 있으면 등록할 수 없어요. (관리자는 자유)</div>';
+  html+='<div id="pw-kakao-hint" style="display:'+_khDisp+';font-size:11px;color:var(--peach-text);background:rgba(216,132,85,0.08);border-left:3px solid var(--peach);padding:10px 12px;border-radius:6px;margin-top:10px;line-height:1.5">📢 <b>카카오톡 안내</b><br>카카오톡은 2연일 발송이 어려워요.<br>급한 경우 관리자에게 문의해주세요. (절)</div>';
   html+='<div id="pw-plat2-wrap" style="margin-top:14px">'+buildPwPlat2Html()+'</div>';
   // "기타" 선택 시 자유 입력
   const otherDisp=_pwData.plat1==='기타'?'':'none';
@@ -7024,7 +7028,25 @@ async function deleteProgram(rowIndex){
   }
 }
 
-function startClock(){function tick(){const n=new Date();document.getElementById('kst').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')} KST`;}tick();setInterval(tick,1000);}
+function startClock(){
+  function tick(){
+    const n=new Date();
+    document.getElementById('kst').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')} KST`;
+    // 환영 메시지 — myApplicant 사용 (user/admin 공통)
+    const _wel = document.getElementById('welcome-msg');
+    if(_wel){
+      let _name = '';
+      try{ _name = localStorage.getItem('myApplicant') || ''; }catch(e){}
+      if(_name){
+        _wel.innerHTML = '<b style="color:var(--accent);font-weight:700">'+_name.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</b><span style="margin-left:4px">님 환영합니다.</span>';
+      } else {
+        _wel.innerHTML = '';
+      }
+    }
+  }
+  tick();
+  setInterval(tick,1000);
+}
 
 // f-time input wheel 이벤트 - 10분 단위 +/-
 document.addEventListener('DOMContentLoaded',function(){
