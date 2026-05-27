@@ -2258,6 +2258,55 @@ function closeSpecialView(){
 }
 
 // === 전역 ESC 핸들러 — 활성 팝업/모달 우선순위 닫기 ===
+// === JS 호버 툴팁 (body에 fixed div — 부모 overflow:hidden 무관하게 표시) ===
+(function(){
+  if(window._evTooltipInstalled) return;
+  window._evTooltipInstalled = true;
+  let _tipEl = null;
+  let _hideTimer = null;
+  function ensureTip(){
+    if(_tipEl) return _tipEl;
+    _tipEl = document.createElement('div');
+    _tipEl.id = '_ev-tooltip-box';
+    _tipEl.style.cssText = 'position:fixed;background:linear-gradient(135deg,var(--accent) 0%,#6366F1 100%);color:#fff;padding:8px 14px;border-radius:12px;font-size:11.5px;font-weight:500;letter-spacing:0.2px;box-shadow:0 8px 24px rgba(74,77,231,0.28),0 2px 6px rgba(0,0,0,0.08);pointer-events:none;z-index:99999;opacity:0;transition:opacity 0.15s ease;white-space:nowrap;font-family:inherit;line-height:1.3';
+    document.body.appendChild(_tipEl);
+    return _tipEl;
+  }
+  function showTip(target){
+    const text = target.getAttribute('data-tooltip');
+    if(!text) return;
+    if(_hideTimer){ clearTimeout(_hideTimer); _hideTimer = null; }
+    const tip = ensureTip();
+    tip.textContent = '👤  ' + text;
+    const rect = target.getBoundingClientRect();
+    tip.style.left = (rect.left + rect.width/2) + 'px';
+    tip.style.top = (rect.top - 8) + 'px';
+    tip.style.transform = 'translate(-50%, -100%)';
+    requestAnimationFrame(function(){ tip.style.opacity = '1'; });
+  }
+  function hideTip(){
+    if(!_tipEl) return;
+    _tipEl.style.opacity = '0';
+    if(_hideTimer) clearTimeout(_hideTimer);
+    _hideTimer = setTimeout(function(){ _hideTimer = null; }, 200);
+  }
+  // 이벤트 위임 — body에서 ev[data-tooltip] 호버 감지
+  document.addEventListener('mouseover', function(e){
+    const t = e.target && e.target.closest && e.target.closest('.ev[data-tooltip]');
+    if(t) showTip(t);
+  }, true);
+  document.addEventListener('mouseout', function(e){
+    const t = e.target && e.target.closest && e.target.closest('.ev[data-tooltip]');
+    if(t){
+      // related target이 같은 ev 안이면 무시 (자식간 이동)
+      const rel = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.ev[data-tooltip]');
+      if(rel !== t) hideTip();
+    }
+  }, true);
+  // 스크롤 시 숨김
+  window.addEventListener('scroll', hideTip, true);
+})();
+
 (function(){
   if(window._escHandlerInstalled) return;
   window._escHandlerInstalled = true;
@@ -7457,7 +7506,7 @@ function renderCal(){
         var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':'';
         // 우클릭 메뉴: 항상 부착 — onEvContextMenu에서 케이스별 분기
         var _ctxAttr=' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"';
-        h+='<div class="ev'+(done?' done':'')+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'"'+(applying?' data-tooltip="'+(r['게시 담당자']||'').replace(/"/g,'&quot;')+' 님이 신청 중입니다." title="'+(r['게시 담당자']||'').replace(/"/g,'&quot;')+' 님이 신청 중입니다."':'')+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600"'+(applying?'':' title="'+(p2&&p2!=='-'?p2:p).replace(/"/g,'&quot;')+'"')+'>'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
+        h+='<div class="ev'+(done?' done':'')+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'"'+(applying?' data-tooltip="'+(r['게시 담당자']||'').replace(/"/g,'&quot;')+' 님이 신청 중입니다."':'')+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600"'+(applying?'':' title="'+(p2&&p2!=='-'?p2:p).replace(/"/g,'&quot;')+'"')+'>'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
