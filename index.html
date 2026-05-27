@@ -2673,7 +2673,7 @@ function onSpContextMenu(event,rowIndex){
 }
 
 // === 홍보 신청 검토 페이지 ===
-let _promoFilter={status:'all',q:'',hidePast:true,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
+let _promoFilter={status:'all',q:'',hidePast:true,showCancelled:false,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
 // 컬럼 너비 localStorage 로드 (v2 — 시간 컬럼 기본값 변경 반영)
 let _colWidths={};
 try{
@@ -2801,6 +2801,37 @@ function closePromoBoard(){
   const el=document.getElementById('promo-board');
   if(el)el.innerHTML='';
 }
+// === 1차 상태 그룹 매핑 (보류는 신청 중에 흡수) ===
+function statusToPrimary(s){
+  const v = String(s||'').trim();
+  if (v === '신청 중' || v === '보류') return '신청 중';
+  if (v === '예정') return '예정';
+  if (v === '완료') return '완료';
+  if (v === '취소') return '취소';
+  return '';
+}
+// 현재 KST 'YYYY-MM-DD HH:mm:ss'
+function nowKstStr(){
+  const d = new Date(Date.now() + 9*60*60*1000);
+  return d.toISOString().slice(0,19).replace('T',' ');
+}
+// 취소 row의 원 1차 그룹 (직전 상태 비어있으면 신청 중 fallback)
+function getCancelOrigGroup(r){
+  return statusToPrimary(r['직전 상태']) || '신청 중';
+}
+// UI 표시용 상태/진행 매핑
+function getUiStatusLabel(rawStatus, prevStatus){
+  const s = String(rawStatus||'').trim();
+  if (s === '보류') return '신청 중';  // 보류는 신청 중 그룹에 표시
+  return s || '-';
+}
+function getUiProgressLabel(rawStatus, prevStatus){
+  const s = String(rawStatus||'').trim();
+  if (s === '보류') return '보류';
+  if (s === '취소') return statusToPrimary(prevStatus) || '신청 중';
+  return '-';
+}
+
 // === isMine 매핑 (전역) — 순수 신청자 기준 ===
 function _isMineRec(rec, myAppl){
   if(!myAppl||!rec) return false;
@@ -2876,6 +2907,15 @@ function buildManagerRow(rec, overrides){
 //          Q=진행 상태, R=비고, S=신청자, T=결과_링크, U=결과_첨부URL, V=결과_비고
 function buildRecordRow(rec, overrides){
   overrides = overrides || {};
+  // 진행 상태 변경 감지 → W열(직전 상태) + X열(상태 변경 KST) 자동 채움
+  if (overrides['진행 상태'] !== undefined && overrides['진행 상태'] !== (rec['진행 상태']||'')){
+    if (overrides['직전 상태'] === undefined){
+      overrides['직전 상태'] = statusToPrimary(rec['진행 상태']);
+    }
+    if (overrides['상태 변경 KST'] === undefined){
+      overrides['상태 변경 KST'] = nowKstStr();
+    }
+  }
   function pick(key, altKey){
     if(overrides[key] !== undefined) return overrides[key];
     if(altKey && overrides[altKey] !== undefined) return overrides[altKey];
@@ -2905,7 +2945,9 @@ function buildRecordRow(rec, overrides){
     pick('신청자'),
     pick('결과_링크'),
     pick('결과_첨부URL'),
-    pick('결과_비고')
+    pick('결과_비고'),
+    pick('직전 상태'),
+    pick('상태 변경 KST')
   ];
 }
 
@@ -3294,6 +3336,7 @@ function renderPromoBoard(){
   // 지난 일정 감추기 — 검색 바로 앞 (끝쪽)
   html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
   html+='<label style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;box-sizing:border-box;font-size:12px;line-height:1;color:#666;cursor:pointer;user-select:none;font-family:inherit;transform:translateY(-2px)"><input type="checkbox"'+(_promoFilter.hidePast?' checked':'')+' onchange="_promoFilter.hidePast=this.checked;renderPromoBoard()" style="width:14px;height:14px;margin:0;padding:0;cursor:pointer;accent-color:var(--accent);flex-shrink:0">지난 일정 감추기</label>';
+  html+='<label style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px;box-sizing:border-box;font-size:12px;line-height:1;color:#666;cursor:pointer;user-select:none;font-family:inherit;transform:translateY(-2px)"><input type="checkbox"'+(_promoFilter.showCancelled?' checked':'')+' onchange="_promoFilter.showCancelled=this.checked;renderPromoBoard()" style="width:14px;height:14px;margin:0;padding:0;cursor:pointer;accent-color:var(--accent);flex-shrink:0">취소 일정 보기</label>';
   html+='<input type="text" placeholder="검색..." value="'+escapeHtml(_promoFilter.q)+'" oninput="onPromoSearch(this.value)" style="margin-left:auto;padding:6px 12px;height:32px;box-sizing:border-box;border-radius:8px;border:1.5px solid #eee;font-size:12px;outline:none;width:200px;text-align:left;line-height:1;font-family:inherit">';
   html+='</div>';
   // === 빈 상태 처리 ===
@@ -3339,6 +3382,7 @@ function renderPromoBoard(){
     html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;table-layout:fixed"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
     html+=_sh('no','NO',60);
     html+=_sh('status','상태',80);
+    html+=_sh('progress','진행',70);
     html+=_sh('date','날짜',90);
     html+=_sh('time','시간',110);
     html+=_sh('platform','플랫폼',125);
@@ -3363,7 +3407,7 @@ function renderPromoBoard(){
           const _sCount=rows.filter(function(rr){return _getAdminSection(rr,todayKey)===_sec;}).length;
           const _sBg=_sec===0?'rgba(216,132,85,0.08)':_sec===1?'rgba(74,77,231,0.06)':_sec===2?'#fafafa':'#f5f5f5';
           const _sBorder=_sec===0?'border-top:2px solid var(--peach);border-bottom:1px solid rgba(216,132,85,0.2)':_sec===1?'border-top:2px solid var(--accent);border-bottom:1px solid rgba(74,77,231,0.15)':'border-top:1px solid #eee;border-bottom:1px solid #eee';
-          let _sectionRowHtml='<tr style="background:'+_sBg+';'+_sBorder+'"><td colspan="10" style="padding:10px 14px">';
+          let _sectionRowHtml='<tr style="background:'+_sBg+';'+_sBorder+'"><td colspan="11" style="padding:10px 14px">';
           _sectionRowHtml+='<div style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#333;letter-spacing:0.3px">';
           // 신청 대기 헤더 — 전체 선택 체크박스
           if(_sec===0){
@@ -3413,6 +3457,7 @@ function renderPromoBoard(){
         html+='<td title="'+escapeHtml(noTitle)+'" style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;cursor:help">'+escapeHtml(noShort)+'</td>';
         // 상태: 예정 (콘텐츠 예정과 동일)
         html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:#E8F5EC;color:#0F8B4C;font-size:11px;font-weight:600;white-space:nowrap">예정</span></td>';
+        html+='<td style="padding:10px 12px;text-align:left;color:#bbb;font-size:11px">-</td>';
         html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';white-space:nowrap"><span style="font-variant-numeric:tabular-nums">'+rangeStr+'</span>'+todayBadge+'</td>';
         html+='<td style="padding:10px 12px;text-align:left;color:'+(isPast?'#aaa':'#333')+';font-variant-numeric:tabular-nums;white-space:nowrap">'+escapeHtml(timeStr)+(endStr?'<span style="color:#aaa;margin-left:3px">'+escapeHtml(endStr)+'</span>':'')+'</td>';
         // 플랫폼 (유형): 일반 색
@@ -4324,7 +4369,12 @@ async function submitPromoRequest(){
       _pwData.applicant,
       '신청 중',
       _pwData.memo||'',
-      requesterName
+      requesterName,
+      '',  // T: 결과_링크
+      '',  // U: 결과_첨부URL
+      '',  // V: 결과_비고
+      '',  // W: 직전 상태 (등록 시점은 빈값)
+      nowKstStr()  // X: 상태 변경 KST
     ];
     await api('POST','/api/records',{values:row});
     // ⚠️ myApplicant는 절대 _pwData.applicant(게시 담당자, P열)로 덮어쓰지 않음.
