@@ -8590,6 +8590,7 @@ function openPromoBoardForProgram(perfName){
     _promoFilter.q = perfName;
     _promoFilter.viewMode = 'all';  // 본인(mine) → 전체(all)로 강제 — 다른 사람 같은 프로그램 홍보 현황도 보기
     _promoFilter.applicant = '';     // admin 신청자 드롭다운 필터도 풀기
+    _promoFilter.hidePast = false;   // 지난 일정 감추기 OFF — 우클릭 진입 시 과거 record도 보이게 (프로그램 전체 이력)
     renderPromoBoard();
   }, 50);
 }
