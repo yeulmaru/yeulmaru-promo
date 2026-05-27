@@ -2035,7 +2035,7 @@ async function approvePromoFromBoard(rowIndex){
   const r=records.find(function(x){return x._rowIndex===rowIndex;});
   if(!r){showToast('신청을 찾을 수 없어요','error');return;}
   const _st=r['진행 상태']||'';
-  if(_st!=='신청 중'&&_st!=='신청 중'){showToast('신청 중 상태만 접수할 수 있어요','error');return;}
+  if(_st!=='신청 중'){showToast('신청 중 상태만 접수할 수 있어요','error');return;}
   const title=r['콘텐츠 제목']||'(제목 없음)';
   const ok=await showConfirm('"'+title+'"\n\n이 신청을 접수(예정)할까요?');
   if(!ok)return;
@@ -2160,7 +2160,7 @@ async function completePromoRequest(rowIndex){
     await api('PATCH','/api/records/'+rowIndex,{values: row});
     // 메시지함 hook (일반: 예정→완료)
     try{
-      const _r3 = (typeof r !== 'undefined' && r) ? r : rec;
+      const _r3 = r;
       if(_r3){
         const _rs3 = (_r3['날짜']||'') + ' ' + (_r3['플랫폼 1']||'') + ' ' + (_r3['콘텐츠 제목']||'');
         pushMessage({
@@ -2298,10 +2298,10 @@ async function _msgApiCall(method, path, body){
     }
     const resp = await fetch(_MSG_API_BASE + path, opts);
     if(!resp.ok){
-      if(resp.status === 404){
-        // 엔드포인트 미배포 — API 안 됨 표시
+      if(resp.status === 404 || resp.status === 401){
+        // 엔드포인트 미배포(404) 또는 인증 실패(401) — API 안 됨 표시 (60초 throttle)
         _msgApiAvailable = false;
-        setTimeout(function(){ _msgApiAvailable = true; }, 60000);  // 60초 후 재시도
+        setTimeout(function(){ _msgApiAvailable = true; }, 60000);
       }
       throw new Error('API ' + resp.status);
     }
