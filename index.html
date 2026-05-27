@@ -1728,8 +1728,7 @@ async function switchRole(){
     const subPin=sessionStorage.getItem('subAdminPin');
     if(subPin){
       // 서브 admin → user 모드 전환 (본인 신원 유지)
-      const myName=localStorage.getItem('myApplicant')||'';
-      if(await showConfirm('사용자 모드로 전환할까요? ('+myName+' 신원 유지)')){
+      if(await showConfirm('사용자 모드로 전환할까요?')){
         userRole='user';
         sessionStorage.setItem('role','user');
         // subAdminPin, myApplicant, myUserDept 모두 그대로 유지
