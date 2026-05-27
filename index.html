@@ -2277,7 +2277,7 @@ function closeSpecialView(){
     const w = ensureWarn();
     const rect = inputEl.getBoundingClientRect();
     w.style.left = rect.left + 'px';
-    w.style.top = (rect.bottom + 6) + 'px';
+    w.style.top = (rect.bottom + 10) + 'px';
     w.style.transform = 'none';
     w.style.display = '';
   }
@@ -4771,9 +4771,9 @@ function pwFolderInputChange(i,val){
 }
 
 function pwCollectFoldersFromDOM(){
-  const inputs=document.querySelectorAll('.pw-folder-input');
-  if(inputs.length===0)return;
-  _pwData.folders=Array.prototype.map.call(inputs,function(el){return el.value;});
+  // no-op: _pwData.folders는 pwFolderInputChange(oninput)으로 항상 sync됨
+  // input.value 기반 덮어쓰기는 Brave 등 sync 실패 시 데이터 손실 원인이 됨
+  return;
 }
 
 // === 폴더 선택 (showDirectoryPicker) — 폴더명 자동 입력 ===
@@ -4785,12 +4785,22 @@ async function pwPickFolder(idx){
   try {
     const handle = await window.showDirectoryPicker();
     const folderName = handle.name || '';
-    // 큐 방식: 매 선택 시 prefix + 선택폴더명으로 덮어쓰기
-    // (이전 값 무시 — 폴더 지정마다 초기화 후 새로 넣음)
-    const _ONEDRIVE_PREFIX = 'Onedrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\';
-    const newPath = _ONEDRIVE_PREFIX + folderName;
+    // _pwData.folders[idx]를 source of truth — input.value 무시 (Brave sync 실패 회피)
     if(!_pwData.folders) _pwData.folders = [''];
+    const current = (_pwData.folders[idx] || '').trim();
+    const _ONEDRIVE_PREFIX = 'Onedrive - GS칼텍스 예울마루\\예술사업팀 - 자료 공유\\';
+    let newPath;
+    if(current === ''){
+      // 빈 _pwData → prefix + folder
+      newPath = _ONEDRIVE_PREFIX + folderName;
+    } else {
+      // append — current 끝에 \folderName 추가
+      const sep = (current.endsWith('\\') || current.endsWith('/')) ? '' : '\\';
+      newPath = current + sep + folderName;
+    }
+    // _pwData 먼저 업데이트 (source of truth)
     _pwData.folders[idx] = newPath;
+    // input.value는 display 용도로만 동기화
     const input = document.getElementById('pw-folder-'+idx);
     if(input){
       input.value = newPath;
