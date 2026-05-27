@@ -2252,6 +2252,41 @@ function closeSpecialView(){
   if(el) el.innerHTML = '';
 }
 
+// === 전역 ESC 핸들러 — 활성 팝업/모달 우선순위 닫기 ===
+(function(){
+  if(window._escHandlerInstalled) return;
+  window._escHandlerInstalled = true;
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    // 우선순위: 우클릭 메뉴 → special-view → program-view → 일반 modal
+    const ccm = document.getElementById('cell-context-menu');
+    if(ccm){
+      if(typeof closeCellContextMenu === 'function') closeCellContextMenu();
+      else ccm.remove();
+      return;
+    }
+    const sv = document.getElementById('special-view-modal');
+    if(sv && sv.innerHTML){
+      if(typeof closeSpecialView === 'function') closeSpecialView();
+      else sv.innerHTML = '';
+      return;
+    }
+    const pv = document.getElementById('program-view-modal');
+    if(pv && pv.innerHTML){
+      if(typeof closeProgramView === 'function') closeProgramView();
+      else pv.innerHTML = '';
+      return;
+    }
+    const m = document.getElementById('modal');
+    if(m && m.classList.contains('show')){
+      if(typeof closeModal === 'function') closeModal();
+      else m.classList.remove('show');
+      return;
+    }
+  });
+})();
+
+
 function openSpecialEntry(key, editRowIndex){
   if(userRole!=='admin'){showToast('관리자만 등록할 수 있어요','error');return;}
   // 변경 모드: editRowIndex로 PROMO_SPECIAL 찾기
@@ -3563,8 +3598,8 @@ function renderPromoBoard(){
         const noShort='S'+String((parseInt(rawNo,10)||0)%100).padStart(2,'0');
         const noTitle='고유번호: '+rawNo;
         const todayBadge=isToday?'<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.5px;margin-left:5px">오늘</span>':'';
-        const clickAttr=userRole==='admin'?' onclick="_schedReturnFlag=true;closePromoBoard();openSpecialEntry(null,'+r._rowIndex+')"':'';
-        html+='<tr class="promo-row"'+clickAttr+' style="border-bottom:1px solid #f0f0f0;cursor:'+(userRole==='admin'?'pointer':'default')+';'+trBg+';'+trBorder+';animation-delay:'+_animDelay+'" onmouseover="this.style.background=\''+hoverBg+'\'" onmouseout="this.style.background=\''+baseBg+'\'">';
+        var clickAttr=' onclick="event.stopPropagation();openSpecialView('+it._rowIndex+')"';
+        var ctxAttr=' oncontextmenu="event.stopPropagation();event.preventDefault();onSpContextMenu(event,'+it._rowIndex+');return false;"';
         html+='<td title="'+escapeHtml(noTitle)+'" style="padding:10px 12px;text-align:left;color:#aaa;font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;cursor:help">'+escapeHtml(noShort)+'</td>';
         // 상태: 예정 (콘텐츠 예정과 동일)
         html+='<td style="padding:10px 12px;text-align:left"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:#E8F5EC;color:#0F8B4C;font-size:11px;font-weight:600;white-space:nowrap">예정</span></td>';
