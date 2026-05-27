@@ -1703,8 +1703,8 @@ function updatePerfOpen(){
 }
 async function initApp(){
   buildNav();startClock();updateRoleTag();
-  // admin 모드 진입 시 myApplicant 자동 정리 (대신 신청 등으로 오염된 값 자가 치유)
-  if(userRole==='admin'){
+  // 슈퍼 admin (subAdminPin 없음)만 myApplicant 정리. 서브 admin은 본인 신원 유지.
+  if(userRole==='admin' && !sessionStorage.getItem('subAdminPin')){
     try{localStorage.removeItem('myApplicant');}catch(e){}
   }
   try{await loadPrograms();}catch(e){console.warn('[initApp loadPrograms]',e);}
@@ -1729,34 +1729,22 @@ async function switchRole(){
     if(subPin){
       // 서브 admin → user 모드 전환 (본인 신원 유지)
       const myName=localStorage.getItem('myApplicant')||'';
-      if(await showConfirm('일반 모드로 전환할까요? ('+myName+' 신원 유지)')){
+      if(await showConfirm('사용자 모드로 전환할까요? ('+myName+' 신원 유지)')){
         userRole='user';
         sessionStorage.setItem('role','user');
         // subAdminPin, myApplicant, myUserDept 모두 그대로 유지
         updateRoleTag();
         buildNav();
         render();
-        showToast('일반 모드로 전환됐어요');
+        showToast('사용자 모드로 전환됐어요');
       }
       return;
     }
-    // 슈퍼 admin은 일반모드 전환 차단 (신원 없으니 일반 사용자처럼 작업 불가)
-    showToast('슈퍼 관리자는 일반 모드를 사용할 수 없어요. 본인 PIN으로 로그인해 주세요.','error');
+    // 슈퍼 admin은 사용자 모드 전환 차단 (신원 없으니 일반 사용자처럼 작업 불가)
+    showToast('슈퍼 관리자는 사용자 모드를 사용할 수 없어요. 본인 PIN으로 로그인해 주세요.','error');
     return;
   }else{
-    // user → admin 전환
-    const subPin=sessionStorage.getItem('subAdminPin');
-    if(subPin){
-      // 서브 admin이 일반 모드에서 토글 — PIN 재입력 없이 즉시 admin
-      userRole='admin';
-      sessionStorage.setItem('role','admin');
-      updateRoleTag();
-      buildNav();
-      render();
-      showToast('관리자 모드로 전환됐어요');
-      return;
-    }
-    // 일반 user → admin: 슈퍼 admin PIN 입력 모달
+    // user → admin 전환: 서브 admin/일반 user 무관 PIN 재입력 강제 (보안)
     showRolePrompt();
   }
 }
@@ -1786,6 +1774,28 @@ async function submitRolePrompt(){
   const err=document.getElementById('role-prompt-error');
   const card=document.getElementById('role-prompt-card');
   if(pin.length!==4){err.textContent='4자리 입력';return;}
+  // 서브 admin: 본인 PIN 재확인 (다른 PIN 거부)
+  const subPin=sessionStorage.getItem('subAdminPin');
+  if(subPin){
+    if(pin===subPin){
+      userRole='admin';
+      sessionStorage.setItem('role','admin');
+      closeRolePrompt();
+      updateRoleTag();
+      buildNav();
+      render();
+      showToast('관리자 모드로 전환됐어요');
+    }else{
+      err.textContent='본인 PIN을 입력해 주세요';
+      card.classList.remove('role-shake');
+      void card.offsetWidth;
+      card.classList.add('role-shake');
+      inp.value='';
+      inp.focus();
+    }
+    return;
+  }
+  // 일반 user → 슈퍼 admin PIN(0511) 입력
   try{
     const d=await fetch(API+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pin})}).then(r=>r.json());
     if(d.ok&&d.role==='admin'){
@@ -4286,11 +4296,12 @@ async function submitPromoRequest(){
     const content=buildPwContentText();
     // 신청자 — user 본인 식별 (localStorage.myApplicant 우선)
     let _myAppl='';try{_myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
-    // 신청자(S) 결정 로직:
-    // - admin(0510): '관리자' 고정 — 본인 식별 무관, 담당자(P)와 독립
-    // - user: localStorage.myApplicant (로그인 시 PIN→userName으로 저장됨)
-    // ❌ 폴백으로 _pwData.applicant 사용 X (담당자=신청자 동일 값 버그 방지)
-    const requesterName = (userRole==='admin') ? '관리자' : (_myAppl || '');
+    // 신청자(S) 결정 로직 (통일):
+    // - 일반 user: localStorage.myApplicant (로그인 시 PIN→userName으로 저장)
+    // - 서브 admin: 동일 (admin 진입 시에도 myApplicant 유지됨)
+    // - 슈퍼 admin: myApplicant 없음 → 황세웅으로 fallback (DB 동일 레벨)
+    // → DB 관점에서 모든 등록은 사람 이름 단위 (admin/user 마커 없음)
+    const requesterName = _myAppl || '황세웅';
     const row=[
       records.length+1,
       ts,
