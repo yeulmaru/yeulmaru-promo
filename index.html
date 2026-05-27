@@ -2269,6 +2269,62 @@ function closeSpecialView(){
 function _msgGet(){
   try { return JSON.parse(localStorage.getItem('nomute_messages') || '[]'); } catch(e){ return []; }
 }
+
+// === 메시지함 API hybrid (Worker 있으면 SharePoint sync, 없으면 localStorage fallback) ===
+const _MSG_API_BASE = 'https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
+let _msgLastFetch = 0;
+let _msgApiAvailable = true;  // API 호출 실패 시 false (재시도 throttle)
+
+async function _msgApiCall(method, path, body){
+  if(!_msgApiAvailable) return null;  // API 안 됨 알려진 상태면 skip
+  try {
+    const opts = {method};
+    if(body){
+      opts.headers = {'Content-Type': 'application/json'};
+      opts.body = JSON.stringify(body);
+    }
+    const resp = await fetch(_MSG_API_BASE + path, opts);
+    if(!resp.ok){
+      if(resp.status === 404){
+        // 엔드포인트 미배포 — API 안 됨 표시
+        _msgApiAvailable = false;
+        setTimeout(function(){ _msgApiAvailable = true; }, 60000);  // 60초 후 재시도
+      }
+      throw new Error('API ' + resp.status);
+    }
+    return await resp.json();
+  } catch(e){
+    console.warn('[msgApi]', method, path, e.message);
+    return null;
+  }
+}
+
+async function _msgFetchAll(){
+  const res = await _msgApiCall('GET', '/api/messages');
+  if(res && Array.isArray(res.messages)){
+    // API 결과를 localStorage 캐시에 저장 (정규화)
+    const normalized = res.messages.map(function(m){
+      return {
+        id: m.ID || m.id || '',
+        recipient: m['수신자'] || m.recipient || '',
+        type: m['종류'] || m.type || '일반',
+        trigger: m['트리거'] || m.trigger || '',
+        before: m['이전'] || m.before || '',
+        after: m['이후'] || m.after || '',
+        reason: m['사유'] || m.reason || '',
+        refNo: m['참조번호'] || m.refNo || '',
+        refSummary: m['참조요약'] || m.refSummary || '',
+        kst: m.KST || m.kst || '',
+        read: (m['읽음'] === 'TRUE' || m['읽음'] === true || m.read === true)
+      };
+    });
+    _msgSave(normalized);
+    return normalized;
+  }
+  // fallback
+  return _msgGet();
+}
+
 function _msgSave(msgs){
   try { localStorage.setItem('nomute_messages', JSON.stringify(msgs)); } catch(e){}
 }
@@ -2277,8 +2333,7 @@ function _msgMyAppl(){
 }
 function pushMessage(opts){
   if(!opts || !opts.recipient) return;
-  const msgs = _msgGet();
-  msgs.unshift({
+  const msg = {
     id: 'm' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
     recipient: opts.recipient || '',
     type: opts.type || '일반',
@@ -2290,12 +2345,28 @@ function pushMessage(opts){
     refSummary: opts.refSummary || '',
     kst: new Date().toISOString().slice(0,16).replace('T',' '),
     read: false
+  };
+  // API POST (fire-and-forget) — SharePoint 시트 + Worker 배포되면 자동 동기화
+  _msgApiCall('POST', '/api/messages', msg).then(function(_r){
+    if(_r) console.log('[pushMessage] API sync OK', msg.id);
   });
+  // localStorage 백업 (API 실패해도 즉시 동작)
+  const msgs = _msgGet();
+  msgs.unshift(msg);
   if(msgs.length > 200) msgs.splice(200);
   _msgSave(msgs);
   refreshMsgBoxBadge();
 }
 function refreshMsgBoxBadge(){
+  // 30초마다 background API fetch (UI 즉시 갱신은 localStorage 캐시 기반)
+  const _now = Date.now();
+  if(_now - _msgLastFetch > 30000){
+    _msgLastFetch = _now;
+    _msgFetchAll().then(function(){ try{ _refreshMsgBoxBadgeSync(); }catch(_e){} }).catch(function(){});
+  }
+  _refreshMsgBoxBadgeSync();
+}
+function _refreshMsgBoxBadgeSync(){
   const myAppl = _msgMyAppl();
   const allMsgs = _msgGet();
   const myMsgs = allMsgs.filter(function(m){ return m.recipient === myAppl && !m.read; });
@@ -2319,7 +2390,9 @@ function refreshMsgBoxBadge(){
     btn.classList.remove('msgbox-urgent');
   }
 }
-function openMsgBox(){
+async function openMsgBox(){
+  // 진입 시 최신 메시지 fetch (API 우선)
+  try { await _msgFetchAll(); } catch(_e){}
   const myAppl = _msgMyAppl();
   if(!myAppl){
     if(typeof showToast === 'function') showToast('로그인 후 사용 가능해요','info');
@@ -2385,6 +2458,11 @@ function closeMsgBox(){
   if(el) el.innerHTML = '';
 }
 function markMsgRead(id){
+  // API PATCH (fire-and-forget)
+  _msgApiCall('PATCH', '/api/messages/' + encodeURIComponent(id), {read: true}).then(function(_r){
+    if(_r) console.log('[markMsgRead] API sync OK', id);
+  });
+  // localStorage 즉시 갱신 (UI 반응성)
   const msgs = _msgGet();
   const m = msgs.find(function(x){ return x.id === id; });
   if(m && !m.read){
