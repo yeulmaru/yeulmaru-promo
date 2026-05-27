@@ -2030,6 +2030,20 @@ async function approvePromoFromBoard(rowIndex){
   try{
     const row = buildRecordRow(r, {'진행 상태':'예정'});
     await api('PATCH','/api/records/'+rowIndex,{values: row});
+    // 메시지함 hook (일반: 신청중→예정)
+    try{
+      const _rs1 = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
+      pushMessage({
+        recipient: rec['게시 담당자']||'',
+        type: '일반',
+        trigger: '신청중→예정',
+        before: '신청 중',
+        after: '예정',
+        reason: '',
+        refNo: rec['No']||rec['NO']||'',
+        refSummary: _rs1.trim()
+      });
+    }catch(_e){ console.error('[pushMessage approve]', _e); }
     await syncReload(0);
     renderPromoBoard();
     showToast('접수됐어요 (예정)');
@@ -2131,6 +2145,23 @@ async function completePromoRequest(rowIndex){
   try{
     const row = buildRecordRow(r, {'진행 상태':'완료'});
     await api('PATCH','/api/records/'+rowIndex,{values: row});
+    // 메시지함 hook (일반: 예정→완료)
+    try{
+      const _r3 = (typeof r !== 'undefined' && r) ? r : rec;
+      if(_r3){
+        const _rs3 = (_r3['날짜']||'') + ' ' + (_r3['플랫폼 1']||'') + ' ' + (_r3['콘텐츠 제목']||'');
+        pushMessage({
+          recipient: _r3['게시 담당자']||'',
+          type: '일반',
+          trigger: '예정→완료',
+          before: '예정',
+          after: '완료',
+          reason: '',
+          refNo: _r3['No']||_r3['NO']||'',
+          refSummary: _rs3.trim()
+        });
+      }
+    }catch(_e){ console.error('[pushMessage complete]', _e); }
     await syncReload(0);
     renderPromoBoard();
     showToast('게시 완료 처리됐어요');
@@ -3352,6 +3383,20 @@ async function holdPromoFromBoard(rowIndex){
     const newMemo='[보류 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
     const row = buildRecordRow(rec, {'진행 상태':'보류','비고':newMemo});
     await api('PATCH','/api/records/'+rowIndex,{values: row});
+    // 메시지함 hook (중요: 신청중→보류)
+    try{
+      const _rs2 = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
+      pushMessage({
+        recipient: rec['게시 담당자']||'',
+        type: '중요',
+        trigger: '신청중→보류',
+        before: '신청 중',
+        after: '보류',
+        reason: (typeof reason !== 'undefined' ? reason : ''),
+        refNo: rec['No']||rec['NO']||'',
+        refSummary: _rs2.trim()
+      });
+    }catch(_e){ console.error('[pushMessage hold]', _e); }
     showToast('보류 처리 완료 (사유 저장됨)');
     await syncReload(0);
     if(typeof renderPromoBoard==='function')renderPromoBoard();
@@ -9029,6 +9074,22 @@ async function onCellDrop(ev,toKey){
     showOverlayLoad();
     try{
       await api('PATCH','/api/sheet/special/'+drag.rowIndex,{values:values});
+      // 메시지함 hook (중요: 신청중→반려)
+      try{
+        if(typeof rec !== 'undefined' && rec){
+          const _rs4 = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
+          pushMessage({
+            recipient: rec['게시 담당자']||'',
+            type: '중요',
+            trigger: '신청중→반려',
+            before: '신청 중',
+            after: '반려',
+            reason: (typeof reason !== 'undefined' ? reason : ''),
+            refNo: rec['No']||rec['NO']||'',
+            refSummary: _rs4.trim()
+          });
+        }
+      }catch(_e){ console.error('[pushMessage reject]', _e); }
       await loadPromoSpecial();
       renderCal();
       if(panelOpen&&selected){
