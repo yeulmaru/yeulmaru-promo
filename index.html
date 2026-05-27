@@ -7882,7 +7882,7 @@ function openPanel(dateObj,recs){
       var venueP=perf.l||'장소 미정';
       var nameWithArrow=escapeHtml(perf.f)+(hasUrl?' <span style="font-size:9px;color:var(--accent);font-weight:500;margin-left:2px">↗</span>':'');
       // 전시 row와 100% 동일 구조 — 색깔/라벨/onclick만 다름
-      var perfCtxAttr=' oncontextmenu="onPerfContextMenu(event,\''+escapeHtml(perf.f).replace(/\\'/g,"\\'").replace(/\'/g,"\\'")+'\');return false;"';
+      var perfCtxAttr=' oncontextmenu="onPerfContextMenu(event,this);return false;"';
       h+='<div'+clickAttr+perfCtxAttr+' class="panel-perf-row" data-perf-name="'+escapeHtml(perf.f)+'" style="'+cursorStyle+'display:flex;align-items:center;padding:10px 12px;background:rgba(74,77,231,0.15);border-radius:10px;margin-bottom:6px;gap:10px;transition:background .15s">';
       h+='<span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;font-size:8px;font-weight:700;background:var(--accent);color:#fff;flex-shrink:0">공</span>';
       h+='<div style="flex:1;min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nameWithArrow+'</div><div style="font-size:10px;color:var(--dim);margin-top:1px">'+escapeHtml(venueP)+'</div></div>';
