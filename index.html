@@ -723,8 +723,19 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .m-btn.save{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(74,77,231,0.25)}
 .m-btn.del{background:#E24B4A;color:#fff;margin-right:auto;box-shadow:0 4px 12px rgba(226,75,74,0.2)}
 </style>
-  <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) -->
-  <script src="https://alcdn.msauth.net/browser/2.38.4/js/msal-browser.min.js"></script>
+  <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) — 공식 docs 권장 이중 fallback -->
+  <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+  <script>
+    if(typeof msal === 'undefined') {
+      document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.35.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
+    }
+  </script>
+  <script>
+    // 두 alcdn 모두 실패 시 jsDelivr fallback
+    if(typeof msal === 'undefined') {
+      document.write(unescape("%3Cscript src='https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.4/lib/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
+    }
+  </script>
 </head>
 <body>
 
@@ -3101,7 +3112,7 @@ function onSpContextMenu(event,rowIndex){
 }
 
 // === 홍보 신청 검토 페이지 ===
-let _promoFilter={status:'all',q:'',hidePast:true,showCancelled:false,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
+let _promoFilter={status:'all',q:'',hidePast:false,showCancelled:false,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
 // 컬럼 너비 localStorage 로드 (v2 — 시간 컬럼 기본값 변경 반영)
 let _colWidths={};
 try{
