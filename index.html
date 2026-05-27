@@ -7950,7 +7950,7 @@ function onPerfContextMenu(event, target){
     closeCellContextMenu();
     if(action === 'view') openProgramView(perfName);
     else if(action === 'promo') openPromoBoardForProgram(perfName);
-    else if(action === 'url' && detailUrl) openPerfUrl(detailUrl, perfName);
+    else if(action === 'url' && detailUrl) window.open(detailUrl, '_blank', 'noopener,noreferrer');
   });
   const rect = menu.getBoundingClientRect();
   const mx = Math.min(event.clientX, window.innerWidth - rect.width - 8);
@@ -7968,19 +7968,40 @@ function onPerfContextMenu(event, target){
 
 // === 프로그램 조회 모달 (콘텐츠 조회 디자인 계승, no/담당자/줄임명 제외) ===
 function openProgramView(perfName){
-  const p = (_programsCache||[]).find(function(x){return (x['풀네임']||'')===perfName;});
-  if(!p){
+  // PERFS(공연) / openExh(전시) / _programsCache(admin raw) 순으로 매칭
+  const perfObj = (PERFS||[]).find(function(x){return x.f===perfName;});
+  const exhObj = (typeof openExh!=='undefined'&&openExh)?openExh.find(function(x){return x.name===perfName;}):null;
+  const p = (typeof _programsCache!=='undefined'&&_programsCache)?_programsCache.find(function(x){return (x['풀네임']||'')===perfName;}):null;
+  if(!perfObj && !exhObj && !p){
     showToast('프로그램 정보를 찾을 수 없어요','error');
     return;
   }
   const fields = [];
-  if(p['콘텐츠구분']||p['콘텐츠 구분']) fields.push({label:'장르/구분', value:p['콘텐츠구분']||p['콘텐츠 구분']});
-  if(p['풀네임']) fields.push({label:'프로그램명', value:p['풀네임'], bold:true});
-  if(p['판매시작일']) fields.push({label:'판매 시작', value:excelDateDisplay(p['판매시작일'])});
-  if(p['판매종료일']) fields.push({label:'판매 종료', value:excelDateDisplay(p['판매종료일'])});
-  if(p['공연일']) fields.push({label:'공연 시작', value:excelDateDisplay(p['공연일'])});
-  if(p['공연종료일']) fields.push({label:'공연 종료', value:excelDateDisplay(p['공연종료일'])});
-  if(p['상태']) fields.push({label:'상태', value:p['상태']});
+  // 장르/구분
+  if(p && (p['콘텐츠구분']||p['콘텐츠 구분'])) fields.push({label:'장르/구분', value:p['콘텐츠구분']||p['콘텐츠 구분']});
+  else if(perfObj) fields.push({label:'장르/구분', value:'공연'});
+  else if(exhObj) fields.push({label:'장르/구분', value:'전시'});
+  // 프로그램명
+  fields.push({label:'프로그램명', value:perfName, bold:true});
+  // 날짜/장소 — _programsCache 우선, 없으면 PERFS/openExh
+  if(p){
+    if(p['판매시작일']) fields.push({label:'판매 시작', value:excelDateDisplay(p['판매시작일'])});
+    if(p['판매종료일']) fields.push({label:'판매 종료', value:excelDateDisplay(p['판매종료일'])});
+    if(p['공연일']) fields.push({label:'공연 시작', value:excelDateDisplay(p['공연일'])});
+    if(p['공연종료일']) fields.push({label:'공연 종료', value:excelDateDisplay(p['공연종료일'])});
+    if(p['상태']) fields.push({label:'상태', value:p['상태']});
+    if(p['장소']) fields.push({label:'장소', value:p['장소']});
+  } else if(perfObj){
+    if(perfObj.ss) fields.push({label:'판매 시작', value:perfObj.ss});
+    if(perfObj.se) fields.push({label:'판매 종료', value:perfObj.se});
+    if(perfObj.s) fields.push({label:'공연 시작', value:perfObj.s});
+    if(perfObj.e) fields.push({label:'공연 종료', value:perfObj.e});
+    if(perfObj.l) fields.push({label:'장소', value:perfObj.l});
+  } else if(exhObj){
+    if(exhObj.l || exhObj.venue) fields.push({label:'장소', value:exhObj.l||exhObj.venue});
+    if(exhObj.s || exhObj.start) fields.push({label:'시작', value:exhObj.s||exhObj.start});
+    if(exhObj.e || exhObj.end) fields.push({label:'종료', value:exhObj.e||exhObj.end});
+  }
   let bodyHtml = '<div class="mv-section">📊 프로그램 개요</div>';
   fields.forEach(function(f){
     if(!f.value) return;
