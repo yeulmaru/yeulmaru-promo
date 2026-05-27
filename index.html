@@ -3692,18 +3692,9 @@ function openPromoWizard(prefillDate){
   renderPwStep();
 }
 function openAdminWizard(dateKey){
-  _pwMode='admin';
-  document.querySelector('#promo-wizard h3').textContent='새 콘텐츠 등록';
-  _pwStep=1;
-  _pwData={
-    dateKey:dateKey,date:dateKey,time:'10:00',
-    author:'',plat1:'',plat2:'',
-    cat:'',program:'',format:'',title:'',content:'',
-    memo:'',hasMemo:false
-  };
-  document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
-  document.getElementById('promo-wizard').classList.add('show');
-  renderPwStep();
+  // admin도 user와 동일한 위저드 사용 (DB 24컬럼 일치)
+  // 진행 상태는 submitPromoRequest에서 userRole==='admin'이면 '예정'으로 자동 저장
+  openPromoWizard(dateKey);
 }
 // ═══════════════════════════════════════════════════════════
 // ═══ 변경 위저드 (편집 모드) ═══
@@ -4412,7 +4403,7 @@ async function submitPromoRequest(){
       format,
       content,
       _pwData.applicant,
-      '신청 중',
+      (userRole==='admin' ? '예정' : '신청 중'),
       _pwData.memo||'',
       requesterName,
       '',  // T: 결과_링크
