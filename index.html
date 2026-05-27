@@ -2045,15 +2045,15 @@ async function approvePromoFromBoard(rowIndex){
     await api('PATCH','/api/records/'+rowIndex,{values: row});
     // 메시지함 hook (일반: 신청중→예정)
     try{
-      const _rs1 = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
+      const _rs1 = (r['날짜']||'') + ' ' + (r['플랫폼 1']||'') + ' ' + (r['콘텐츠 제목']||'');
       pushMessage({
-        recipient: rec['게시 담당자']||'',
+        recipient: r['신청자']||'',
         type: '일반',
         trigger: '신청중→예정',
         before: '신청 중',
         after: '예정',
         reason: '',
-        refNo: rec['No']||rec['NO']||'',
+        refNo: r['No']||r['NO']||'',
         refSummary: _rs1.trim()
       });
     }catch(_e){ console.error('[pushMessage approve]', _e); }
@@ -2164,7 +2164,7 @@ async function completePromoRequest(rowIndex){
       if(_r3){
         const _rs3 = (_r3['날짜']||'') + ' ' + (_r3['플랫폼 1']||'') + ' ' + (_r3['콘텐츠 제목']||'');
         pushMessage({
-          recipient: _r3['게시 담당자']||'',
+          recipient: _r3['신청자']||'',
           type: '일반',
           trigger: '예정→완료',
           before: '예정',
@@ -3478,7 +3478,7 @@ async function holdPromoFromBoard(rowIndex){
     try{
       const _rs2 = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
       pushMessage({
-        recipient: rec['게시 담당자']||'',
+        recipient: rec['신청자']||'',
         type: '중요',
         trigger: '신청중→보류',
         before: '신청 중',
@@ -3563,7 +3563,7 @@ async function cancelWithReason(rowIndex){
       try{
         const _refSum = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
         pushMessage({
-          recipient: rec['게시 담당자'] || '',
+          recipient: rec['신청자'] || '',
           type: '중요',
           trigger: '예정→취소',
           before: rec['진행 상태'] || '예정',
