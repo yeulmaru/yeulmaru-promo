@@ -3504,7 +3504,7 @@ async function holdPromoFromBoard(rowIndex){
 async function reapplyPromoRequest(rowIndex){
   const rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec){showToast('신청을 찾을 수 없어요','error');return;}
-  if((rec['진행 상태']||'')!=='보류'){showToast('보류 상태에서만 재신청할 수 있어요','error');return;}
+  const _curSt=(rec['진행 상태']||'').toString();if(_curSt!=='취소' && _curSt!=='보류'){showToast('취소 또는 보류 상태에서만 재신청할 수 있어요','error');return;}
   // 권한 — 본인 또는 admin
   let myAppl='';try{myAppl=localStorage.getItem('myApplicant')||'';}catch(e){}
   if(userRole!=='admin' && !_isMineRec(rec,myAppl)){
