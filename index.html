@@ -3416,8 +3416,15 @@ function renderPromoBoard(){
     html+='<th data-col="action" style="padding:10px 4px;text-align:center;width:'+actW+'px;color:#fff">변경</th>';
     html+='</tr></thead><tbody>';
     let _adminLastSection=-1;
+    let _cancelSectionPrinted=false;
     const _adminSectionLabels={0:'🔔 신청 대기 중',1:'🎯 오늘 일정',2:'📅 예정된 일정',3:'🗂️ 지난 일정',4:'🚫 취소된 일정'};
     const _adminSectionDescs={0:'체크하면 일괄 처리 가능',1:'오늘 진행할 홍보',2:'다가오는 홍보',3:'과거 기록',4:'취소된 신청'};
+    // 사용자 모드: 취소 row를 표 뒤로 이동 (admin은 _getAdminSection이 처리)
+    if(!isAdmin){
+      const _activeRs=rows.filter(function(rr){return (rr['진행 상태']||'').toString().trim()!=='취소';});
+      const _cancelRs=rows.filter(function(rr){return (rr['진행 상태']||'').toString().trim()==='취소';});
+      rows=_activeRs.concat(_cancelRs);
+    }
     rows.forEach(function(r,idx){
       const _animDelay=Math.min(idx*25,600)+'ms';
       // === admin 섹션 헤더 row + 신청 대기 숨김 처리 ===
@@ -3448,6 +3455,15 @@ function renderPromoBoard(){
           _sectionRowHtml+='</div></td></tr>';
           html+=_sectionRowHtml;
           _adminLastSection=_sec;
+        }
+      }
+      // === 사용자 모드: 취소 row 첫 만남 시 섹션 헤더 출력 ===
+      if(!isAdmin && !r._isSpecial){
+        const _isCancelRow=(r['진행 상태']||'').toString().trim()==='취소';
+        if(_isCancelRow && !_cancelSectionPrinted){
+          _cancelSectionPrinted=true;
+          const _cCount=rows.filter(function(rr){return (rr['진행 상태']||'').toString().trim()==='취소';}).length;
+          html+='<tr style="background:#fafafa;border-top:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0"><td colspan="11" style="padding:10px 14px;font-size:12px;font-weight:600;color:#888"><span style="margin-right:4px">🚫</span>취소된 일정<span style="color:#aaa;font-weight:500;font-size:11px;margin-left:6px">('+_cCount+'건) 취소된 신청</span></td></tr>';
         }
       }
       // === 특수일정 row ===
