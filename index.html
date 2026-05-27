@@ -57,6 +57,13 @@ button{font-family:inherit;cursor:pointer}
 .role-tag:hover{opacity:0.85}
 .role-tag.admin{background:var(--accent);color:#fff}
 .role-tag.user{background:rgba(0,0,0,0.06);color:#666}
+.msgbox-btn{position:relative;background:transparent;border:none;cursor:pointer;padding:6px 8px;border-radius:8px;display:inline-flex;align-items:center;margin-right:6px;color:#666;transition:all .15s}
+.msgbox-btn:hover{background:rgba(0,0,0,0.04);color:var(--accent)}
+.msgbox-count{position:absolute;top:-2px;right:-2px;background:#999;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:14px;text-align:center;line-height:1.4;font-family:inherit;letter-spacing:0.2px;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+@keyframes msgUrgentPulse{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}50%{box-shadow:0 0 0 4px rgba(231,76,60,0.20)}}
+@keyframes msgUrgentBadge{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}50%{box-shadow:0 0 0 3px rgba(231,76,60,0.25)}}
+.msgbox-btn.msgbox-urgent{animation:msgUrgentPulse 1.8s ease-in-out infinite;border-radius:50%}
+.msgbox-btn.msgbox-urgent .msgbox-count{animation:msgUrgentBadge 1.8s ease-in-out infinite}
 @keyframes role-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
 @keyframes pw-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 .pw-shake{animation:pw-shake 0.4s ease}
@@ -748,6 +755,10 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
     </div>
     <div class="nav-center" id="nav-menus"></div>
     <div class="nav-right">
+      <button class="msgbox-btn" id="msgbox-btn" onclick="openMsgBox()" title="메시지함" aria-label="메시지함" style="font-family:inherit">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <span class="msgbox-count" id="msgbox-count" style="display:none">0</span>
+      </button>
       <span class="welcome-msg" id="welcome-msg" style="font-size:12.5px;color:#888;margin-right:12px;font-family:inherit"></span>
       <span class="role-tag" id="role-tag"></span>
       <span class="kst" id="kst"></span>
@@ -2223,6 +2234,143 @@ function closeSpecialView(){
 }
 
 // === 전역 ESC 핸들러 — 활성 팝업/모달 우선순위 닫기 ===
+// === 메시지함 시스템 (localStorage 기반, SharePoint 시트 통합은 추후) ===
+function _msgGet(){
+  try { return JSON.parse(localStorage.getItem('nomute_messages') || '[]'); } catch(e){ return []; }
+}
+function _msgSave(msgs){
+  try { localStorage.setItem('nomute_messages', JSON.stringify(msgs)); } catch(e){}
+}
+function _msgMyAppl(){
+  try { return localStorage.getItem('myApplicant') || ''; } catch(e){ return ''; }
+}
+function pushMessage(opts){
+  if(!opts || !opts.recipient) return;
+  const msgs = _msgGet();
+  msgs.unshift({
+    id: 'm' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+    recipient: opts.recipient || '',
+    type: opts.type || '일반',
+    trigger: opts.trigger || '',
+    before: opts.before || '',
+    after: opts.after || '',
+    reason: opts.reason || '',
+    refNo: opts.refNo || '',
+    refSummary: opts.refSummary || '',
+    kst: new Date().toISOString().slice(0,16).replace('T',' '),
+    read: false
+  });
+  if(msgs.length > 200) msgs.splice(200);
+  _msgSave(msgs);
+  refreshMsgBoxBadge();
+}
+function refreshMsgBoxBadge(){
+  const myAppl = _msgMyAppl();
+  const allMsgs = _msgGet();
+  const myMsgs = allMsgs.filter(function(m){ return m.recipient === myAppl && !m.read; });
+  const importantCount = myMsgs.filter(function(m){ return m.type === '중요'; }).length;
+  const total = myMsgs.length;
+  const btn = document.getElementById('msgbox-btn');
+  const badge = document.getElementById('msgbox-count');
+  if(!btn || !badge) return;
+  if(total === 0){
+    badge.style.display = 'none';
+    btn.classList.remove('msgbox-urgent');
+    return;
+  }
+  badge.textContent = total > 99 ? '99+' : String(total);
+  badge.style.display = '';
+  if(importantCount > 0){
+    badge.style.background = '#E74C3C';
+    btn.classList.add('msgbox-urgent');
+  } else {
+    badge.style.background = '#999';
+    btn.classList.remove('msgbox-urgent');
+  }
+}
+function openMsgBox(){
+  const myAppl = _msgMyAppl();
+  if(!myAppl){
+    if(typeof showToast === 'function') showToast('로그인 후 사용 가능해요','info');
+    return;
+  }
+  const allMsgs = _msgGet();
+  const myMsgs = allMsgs.filter(function(m){ return m.recipient === myAppl; });
+  myMsgs.sort(function(a, b){
+    if(a.type === '중요' && b.type !== '중요') return -1;
+    if(a.type !== '중요' && b.type === '중요') return 1;
+    if(!a.read && b.read) return -1;
+    if(a.read && !b.read) return 1;
+    return a.kst < b.kst ? 1 : -1;
+  });
+  let html = '<div class="modal-bg show" onclick="if(event.target===this)closeMsgBox()" style="z-index:9200">';
+  html += '<div class="modal" style="max-width:540px;padding:0;position:relative;text-align:left;max-height:80vh;display:flex;flex-direction:column">';
+  html += '<div style="padding:20px 24px 14px;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">';
+  html += '<h3 style="margin:0;font-size:16px;font-weight:700">\ud83d\udcec 메시지함</h3>';
+  html += '<button onclick="closeMsgBox()" style="background:rgba(216,132,85,0.15);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;color:var(--peach);font-family:inherit">×</button>';
+  html += '</div>';
+  html += '<div style="overflow-y:auto;padding:16px 24px 20px;flex:1">';
+  if(myMsgs.length === 0){
+    html += '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">받은 메시지가 없습니다.</div>';
+  } else {
+    myMsgs.forEach(function(m){
+      const isImp = m.type === '중요';
+      const bg = m.read ? '#fafafa' : (isImp ? 'rgba(231,76,60,0.06)' : 'rgba(74,77,231,0.04)');
+      const border = m.read ? '1px solid #eee' : (isImp ? '1.5px solid #E74C3C' : '1px solid rgba(74,77,231,0.18)');
+      const opacity = m.read ? '0.65' : '1';
+      html += '<div onclick="markMsgRead(\\\''+m.id+'\\\')" style="background:'+bg+';border:'+border+';border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;opacity:'+opacity+';transition:background 0.15s">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      if(isImp){
+        html += '<span style="background:#E74C3C;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:0.3px">\u26a0 중요</span>';
+      } else {
+        html += '<span style="background:#999;color:#fff;font-size:9px;font-weight:600;padding:2px 8px;border-radius:8px">일반</span>';
+      }
+      html += '<span style="font-size:10px;color:#aaa;font-variant-numeric:tabular-nums">'+escapeHtml(m.kst)+'</span>';
+      html += '</div>';
+      if(m.reason){
+        const reasonFs = isImp ? '14px' : '12px';
+        const reasonFw = isImp ? '700' : '600';
+        const reasonCol = isImp ? '#C0392B' : '#333';
+        html += '<div style="font-size:'+reasonFs+';font-weight:'+reasonFw+';color:'+reasonCol+';margin-bottom:6px;line-height:1.4">'+escapeHtml(m.reason)+'</div>';
+      }
+      html += '<div style="font-size:11px;color:#666;margin-bottom:4px">'+escapeHtml(m.before)+' → <strong style="color:#333">'+escapeHtml(m.after)+'</strong></div>';
+      if(m.refSummary){
+        html += '<div style="font-size:11px;color:#999;letter-spacing:0.2px">'+escapeHtml(m.refSummary)+'</div>';
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div></div></div>';
+  let el = document.getElementById('msgbox-modal');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'msgbox-modal';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = html;
+}
+function closeMsgBox(){
+  const el = document.getElementById('msgbox-modal');
+  if(el) el.innerHTML = '';
+}
+function markMsgRead(id){
+  const msgs = _msgGet();
+  const m = msgs.find(function(x){ return x.id === id; });
+  if(m && !m.read){
+    m.read = true;
+    _msgSave(msgs);
+    refreshMsgBoxBadge();
+    openMsgBox();
+  }
+}
+// 초기 로드 + 주기적 갱신
+(function(){
+  function _initBadge(){ try { refreshMsgBoxBadge(); } catch(e){} }
+  if(document.readyState !== 'loading') setTimeout(_initBadge, 500);
+  else document.addEventListener('DOMContentLoaded', function(){ setTimeout(_initBadge, 500); });
+  setInterval(_initBadge, 10000);
+})();
+
 // === CapsLock 알림 (비밀번호 input 아래 inline 표시) ===
 (function(){
   if(window._capsLockInstalled) return;
@@ -3274,6 +3422,22 @@ async function cancelWithReason(rowIndex){
       : ('[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:''));
     const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
     await api('PATCH','/api/records/'+rowIndex,{values: row});
+    // 메시지함 hook — 본인 취소가 아니면 (admin이 취소한 경우) 게시담당자에게 중요 메시지
+    if(!_isSelfCancel){
+      try{
+        const _refSum = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
+        pushMessage({
+          recipient: rec['게시 담당자'] || '',
+          type: '중요',
+          trigger: '예정→취소',
+          before: rec['진행 상태'] || '예정',
+          after: '취소',
+          reason: reason,
+          refNo: rec['No'] || rec['NO'] || '',
+          refSummary: _refSum.trim()
+        });
+      }catch(_e){ console.error('[pushMessage]', _e); }
+    }
     showToast('취소 처리 완료 (사유 저장됨)');
     await syncReload(0);
     if(typeof renderPromoBoard==='function')renderPromoBoard();
