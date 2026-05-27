@@ -2340,9 +2340,12 @@ function closeSpecialView(){
   }
   function hideTip(){
     if(!_tipEl) return;
-    _tipEl.style.opacity = '0';
     if(_hideTimer) clearTimeout(_hideTimer);
-    _hideTimer = setTimeout(function(){ _hideTimer = null; }, 200);
+    // 80ms 지연 hide — 자식 간 이동 시 mouseover가 cancel 가능 (Brave 깜빡임 방지)
+    _hideTimer = setTimeout(function(){
+      if(_tipEl) _tipEl.style.opacity = '0';
+      _hideTimer = null;
+    }, 80);
   }
   // 이벤트 위임 — body에서 ev[data-tooltip] 호버 감지
   document.addEventListener('mouseover', function(e){
@@ -4889,6 +4892,16 @@ function onPwDateChange(){
   const d=document.getElementById('pw-date');
   if(d)_pwData.date=d.value;
   checkPwSalesEnd();
+  // 날짜 선택 후 시간 input 자동 focus (Chrome/Edge는 showPicker로 dropdown 자동)
+  setTimeout(function(){
+    const t = document.getElementById('pw-time');
+    if(t){
+      t.focus();
+      if(t.showPicker){
+        try{ t.showPicker(); }catch(e){}
+      }
+    }
+  }, 80);
 }
 
 // 판매기간 검증 (선택한 프로그램의 종료일 초과 시 경고)
