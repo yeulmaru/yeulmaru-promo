@@ -2806,7 +2806,13 @@ function closePromoBoard(){
 function _isMineRec(rec, myAppl){
   if(!myAppl||!rec) return false;
   const applicant = (rec['신청자']||'').toString().trim();
-  return applicant === myAppl;
+  if(applicant === myAppl) return true;
+  // 옛 데이터 호환 (신청자=빈/관리자) → 게시 담당자(P)로 fallback 매칭
+  if(applicant === '' || applicant === '관리자'){
+    const poster = (rec['게시 담당자']||'').toString().trim();
+    return poster === myAppl;
+  }
+  return false;
 }
 // === admin 섹션 분류 헬퍼 (전역) ===
 // 0=신청 대기, 1=오늘, 2=미래 예정, 3=지난 일정, 4=취소
