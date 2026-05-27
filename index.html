@@ -8295,6 +8295,36 @@ function openModal(dateKey,rec,opts){
   setTimeout(()=>document.getElementById('f-title').focus(),100);
 }
 let _sortedRecs=[];
+// === 비고 포맷팅: 사유 패턴 추출 + 강조색 표시 ===
+function formatMemoCell(memo){
+  if(!memo) return '<span style="color:#bbb;font-size:12px">없음</span>';
+  const memoStr = String(memo);
+  // 사유 패턴: [취소 사유 ts] reason\n\n기존메모  /  [보류 사유 ts] / [반려 사유 ts] / [완료 결과 ts] 등
+  const m = memoStr.match(/^\[([^\]]+)\]\s*([^\n]+)(?:\n\n([\s\S]*))?/);
+  if(m){
+    const tag = m[1];
+    const reason = m[2].trim();
+    const rest = (m[3] || '').trim();
+    // 색상 분기: 완료 → accent(보라), 그 외(취소/보류/반려) → peach
+    let bg = 'rgba(216,132,85,0.10)';
+    let fg = 'var(--peach)';
+    let borderCol = 'rgba(216,132,85,0.25)';
+    if(tag.indexOf('완료') >= 0){
+      bg = 'rgba(74,77,231,0.08)';
+      fg = 'var(--accent)';
+      borderCol = 'rgba(74,77,231,0.20)';
+    }
+    let html = '<div style="background:'+bg+';border:1px solid '+borderCol+';color:'+fg+';padding:8px 12px;border-radius:10px;line-height:1.4;'+(rest?'margin-bottom:8px':'')+'">';
+    html += '<div style="opacity:0.55;font-size:10px;font-weight:500;letter-spacing:0.3px;margin-bottom:3px;text-transform:uppercase">'+escapeHtml(tag)+'</div>';
+    html += '<div style="font-weight:700;font-size:13px;letter-spacing:0.2px">'+escapeHtml(reason)+'</div>';
+    html += '</div>';
+    if(rest) html += '<div style="color:#666;font-size:12px;line-height:1.5;padding:0 2px">'+escapeHtml(rest).replace(/\n/g,'<br>')+'</div>';
+    return html;
+  }
+  // 사유 패턴 없으면 일반 메모로 표시
+  return '<span style="color:#555;font-size:12px;line-height:1.4">'+escapeHtml(memoStr).replace(/\n/g,'<br>')+'</span>';
+}
+
 function renderReadOnlyView(dateKey,rec,dateObj,dn){
   // 시간 추출
   const ts=rec['입력시간(KST)'];
@@ -8348,7 +8378,7 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
   html+='<div class="mv-row"><span class="lbl">일시</span><span class="val">'+escapeHtml(dateTimeFull)+'</span></div>';
   const statusColor=status==='예정'?'var(--peach)':status==='완료'?'var(--accent)':'#333';
   html+='<div class="mv-row"><span class="lbl">진행 상태</span><span class="val" style="font-weight:700;color:'+statusColor+'">'+escapeHtml(status)+'</span></div>';
-  html+='<div class="mv-row"><span class="lbl">비고</span><span class="val'+(memo?'':' muted')+'">'+(memo?escapeHtml(memo):'내용 없음')+'</span></div>';
+  html+='<div class="mv-memo" style="margin:10px 0 4px"><div style="font-size:11px;color:#888;font-weight:600;letter-spacing:0.3px;margin-bottom:6px;text-transform:uppercase">비고</div>'+formatMemoCell(memo)+'</div>';
   
   html+='<div class="mv-section">📍 홍보 주제 및 내용</div>';
   const platStr=escapeHtml(p1)+(p2&&p2!=='-'?'  ·  '+escapeHtml(p2):'');
