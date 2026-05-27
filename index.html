@@ -780,42 +780,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
     <button class="modal-x" onclick="closeModal()" title="닫기" aria-label="닫기">✕</button>
     <h3 id="m-title"></h3>
     <div class="meta" id="m-meta"></div>
-    <div id="modal-form" style="display:none !important"><!-- DEPRECATED: 옛 수정 화면. openModal에서 rec 있으면 read-only, rec 없으면 위저드 redirect -->
-    <label>날짜</label>
-    <input type="date" id="f-date" onchange="onDateChange()">
-    <label>시간</label>
-    <input type="time" id="f-time" value="10:00">
-    <label>플랫폼 1</label>
-    <select id="f-plat" onchange="onPlatChange()"></select>
-    <input type="text" id="f-plat-etc" placeholder="플랫폼명 입력" style="display:none;margin-top:6px">
-    <label>플랫폼 2<span class="req">*</span></label>
-    <select id="f-plat2" style="display:none"></select>
-    <input type="text" id="f-plat2-fixed" readonly value="-">
-    <label>프로그램</label>
-    <select id="f-program"></select>
-    <label>콘텐츠 제목<span class="req">*</span></label>
-    <input type="text" id="f-title" placeholder="입력">
-    <label>콘텐츠 구분<span class="req">*</span></label>
-    <select id="f-cat"></select>
-    <label>담당 부서</label>
-    <input type="text" id="f-dept" readonly value="예술사업팀">
-    <label>콘텐츠 형식 및 내용</label>
-    <select id="f-format"></select>
-    <textarea id="f-content" rows="3" placeholder="내용을 설명해주세요." style="margin-top:6px"></textarea>
-    <label>게시 담당자<span class="req">*</span></label>
-    <select id="f-author"></select>
-    <label>진행 상태</label>
-    <select id="f-status"></select>
-    <label>비고</label>
-    <input type="text" id="f-memo">
-    <div class="modal-acts">
-      <button class="m-btn del" id="btn-del" onclick="delEntry()" style="display:none">삭제</button>
-      <button class="m-btn cancel" id="btn-reject" onclick="rejectPromo()" style="display:none;background:#fee;color:#c00;border:1px solid #fcc">거절</button>
-      <button class="m-btn save" id="btn-approve" onclick="approvePromo()" style="display:none;background:#0F8B4C">승인</button>
-      <button class="m-btn cancel" onclick="closeModal()">취소</button>
-      <button class="m-btn save" id="btn-save" onclick="saveEntry()">저장</button>
-    </div>
-    </div>
+    <!-- DEPRECATED REMOVED: 옛 modal-form HTML 영역. 모든 수정은 변경 위저드(openChangeWizard), 모든 추가는 새 콘텐츠 위저드(openPromoWizard)로 처리. 저장/삭제/승인/반려 등 JS 함수들(saveEntry, delEntry, onPlatChange 등)은 dead code로 잔존하지만 호출처 없음. -->
     <div id="modal-view" style="display:none"></div>
   </div>
 </div>
