@@ -5016,7 +5016,6 @@ function pwFolderInputs(){
     }
     html+='</div>';
   });
-  html+='<div style="margin-top:8px;text-align:right"><button type="button" onclick="pwClearRoot()" style="background:transparent;color:#888;border:1px solid rgba(0,0,0,0.10);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit" title="OneDrive root 등록 초기화">🔄 OneDrive 재등록</button></div>';
   html+='</div>';
   return html;
 }
@@ -5113,7 +5112,9 @@ async function pwRegisterRoot(){
     const handle = await window.showDirectoryPicker({mode:'read'});
     if(!handle){ return null; }
     if(handle.name !== _ONEDRIVE_ROOT_NAME){
-      showToast('잘못 선택했어요: ' + handle.name + ' / 정확히 "' + _ONEDRIVE_ROOT_NAME + '" 폴더를 선택해야 합니다','error');
+      // 잘못 선택 안내 — 사용자가 자식 폴더를 root로 선택한 경우가 많음
+      showToast('이건 "' + handle.name + '" 폴더예요. 한 단계 위로 올라가서 "' + _ONEDRIVE_ROOT_NAME + '" 폴더 자체를 선택해주세요','error');
+      console.warn('[pwRegisterRoot] wrong folder selected', {selected: handle.name, expected: _ONEDRIVE_ROOT_NAME});
       return null;
     }
     const ok = await _verifyRootPermission(handle);
@@ -5148,9 +5149,17 @@ async function pwPickFolder(idx){
   // 1. root handle 확인
   let rootHandle = await _getRootHandle();
   if(!rootHandle){
-    showToast('처음 한 번 OneDrive root 폴더를 등록해야 해요','info');
-    rootHandle = await pwRegisterRoot();
-    if(!rootHandle) return;
+    // root 없으면 등록만 진행. 자식 선택은 사용자가 다시 폴더 선택 버튼 누를 때 진행.
+    // (같은 user gesture 안 다이얼로그 2개 호출 시 브라우저 차단 가능성 회피 + UX 명확화)
+    showToast('처음 한 번 OneDrive 폴더를 등록해야 해요. 파일 선택 창에서 "OneDrive - GS칼텍스 예울마루" 폴더를 선택해주세요','info');
+    const registered = await pwRegisterRoot();
+    if(!registered){
+      // 등록 실패 — 거부 토스트는 pwRegisterRoot 안에서 이미 표시됨
+      return;
+    }
+    // 등록 성공 — 사용자에게 다시 클릭하라고 안내
+    showToast('등록 완료! 폴더 선택 버튼(📁)을 다시 클릭해서 자료 폴더를 선택해주세요','info');
+    return;  // 종료. 자식 선택은 다음 사용자 클릭에서.
   }
   // 2. 자식 폴더 선택 (root 기준)
   try {
@@ -5159,8 +5168,9 @@ async function pwPickFolder(idx){
     // 3. resolve로 상대 경로 계산
     const relative = await rootHandle.resolve(childHandle);
     if(!relative){
-      showToast('OneDrive 안 폴더가 아닙니다. OneDrive - GS칼텍스 예울마루 폴더 안에서만 선택 가능','error');
-      console.warn('[pwPickFolder] resolve null', {root: rootHandle.name, child: childHandle.name});
+      // 자식 폴더가 등록된 root의 자손이 아님 = OneDrive root 밖의 폴더 (다른 OneDrive 계정 또는 로컬)
+      showToast('"' + childHandle.name + '" 폴더가 등록된 OneDrive root 안에 없어요. OneDrive - GS칼텍스 예울마루 폴더 안에서만 선택 가능','error');
+      console.warn('[pwPickFolder] resolve null — child not in root', {root: rootHandle.name, child: childHandle.name});
       return;
     }
     // 4. 최종 경로 조립
