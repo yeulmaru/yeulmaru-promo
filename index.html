@@ -4085,6 +4085,14 @@ function renderPwStep(){
     // 완료
     document.getElementById('pw-steplabel').textContent='';
     bar.style.width='100%';
+    // admin은 신청 단계가 없으므로 안내 화면 생략 — 즉시 닫기 + 짧은 토스트
+    if(userRole==='admin'){
+      setTimeout(function(){
+        try{ closePromoWizard(); }catch(e){}
+        try{ showToast('등록 완료 ("예정" 상태)'); }catch(e){}
+      }, 0);
+      return;
+    }
     body.innerHTML='<div class="pw-done"><div class="emo">📮</div><div class="msg">신청이 완료되었어요!</div><div class="sub">「신청 중」 상태로 등록됐어요. 관리자가 접수하면 「예정」으로 바뀝니다.</div></div>';
     document.getElementById('pw-acts').innerHTML='<button class="m-btn save" onclick="closePromoWizard()" style="margin-left:auto">확인</button>';
   }
