@@ -8756,7 +8756,7 @@ function openModal(dateKey,rec,opts){
     if(typeof closeModal === 'function') closeModal();
     return;
   }
-  document.getElementById('modal-form').style.display='';
+  { const _mf=document.getElementById('modal-form'); if(_mf)_mf.style.display=''; }
   document.getElementById('modal-view').style.display='none';
   document.getElementById('m-title').textContent=rec?'콘텐츠 변경':'새 콘텐츠 등록';
   document.getElementById('m-meta').textContent=`${m}월 ${d}일 (${dn}요일)`;
@@ -8891,7 +8891,7 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
   html+='<div class="mv-row"><span class="lbl">담당 부서</span><span class="val">'+escapeHtml(dept||'-')+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">담당자</span><span class="val">'+escapeHtml(author||'-')+'</span></div>';
   
-  document.getElementById('modal-form').style.display='none';
+  // modal-form은 DEPRECATED로 제거됨 → modal-view만 표시 (null.style 에러 방지)
   document.getElementById('modal-view').style.display='';
   document.getElementById('modal-view').innerHTML=html;
   // 스크롤 위치 리셋 (네비게이션 시 새 콘텐츠 보이게)
