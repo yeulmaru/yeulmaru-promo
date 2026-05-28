@@ -1406,7 +1406,7 @@ async function tryLogin(){
       document.getElementById('login').style.display='none';
       document.getElementById('app').style.display='';
       initApp();
-      setTimeout(function(){if(typeof showToast==='function')showToast(userName+(isSubAdmin?' 님 환영합니다 (관리자)':' 님 환영합니다'),'success');},300);
+      setTimeout(function(){if(typeof showToast==='function')showToast(userName+(isSubAdmin?' 님 (관리자)':' 님'),'success');},300);
       return;
     }
     // 모두 실패
