@@ -2493,7 +2493,7 @@ function markMsgRead(id){
     if(rec && rec._rowIndex != null){
       try {
         closeMsgBox();
-        const _dk = (rec['날짜']||'').toString();
+        const _dk = (typeof getRecDateKey==='function') ? getRecDateKey(rec) : (rec['날짜']||'').toString();
         if(typeof openScheduleRow === 'function'){
           openScheduleRow(_dk, rec._rowIndex);
           return;
