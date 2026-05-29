@@ -3516,31 +3516,21 @@ async function holdPromoFromBoard(rowIndex){
 async function reapplyPromoRequest(rowIndex){
   const rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec){showToast('신청을 찾을 수 없어요','error');return;}
-  const _curSt=(rec['진행 상태']||'').toString();if(_curSt!=='취소' && _curSt!=='보류'){showToast('취소 또는 보류 상태에서만 재신청할 수 있어요','error');return;}
-  // 권한 — 본인 또는 admin
+  const _curSt=(rec['진행 상태']||'').toString();
+  if(_curSt!=='보류'){showToast('보류 상태에서만 재신청할 수 있어요','error');return;}
   let myAppl='';try{myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
-  if(userRole!=='admin' && !_isMineRec(rec,myAppl)){
-    showToast('본인 신청만 재신청할 수 있어요','error');return;
-  }
-  const ok=await showConfirm('"'+escapeHtml(rec['콘텐츠 제목']||'')+'"\n\n다시 신청 중으로 변경할까요?',{title:'재신청'});
-  if(!ok)return;
+  if(userRole!=='admin' && !_isMineRec(rec,myAppl)){showToast('본인 신청만 재신청할 수 있어요','error');return;}
+  const _ca=canApprove(rec,rowIndex);
+  if(!_ca.ok){showToast(_ca.reason,'error');return;}
+  const rR=await _renderCancelReasonModal(1,{title:'재신청',subtitle:'재신청 사유를 입력해 주세요.',labelText:'재신청 사유',placeholder:'예: 일정 조정 완료, 재검토 요청',buttonLabel:'재신청',buttonColor:'#3B82F6'});
+  if(!rR)return;
   showOverlayLoad('재신청 처리 중...');
   try{
-    const ts=new Date().toISOString().slice(0,16).replace('T',' ');
-    const oldMemo=(rec['비고']||'').toString();
-    const newMemo='[재신청 '+ts+']'+(oldMemo?'\n\n'+oldMemo:'');
-    const row = buildRecordRow(rec, {'진행 상태':'신청 중','비고':newMemo});
-    await api('PATCH','/api/records/'+rowIndex,{values: row});
+    const row=buildRecordRow(rec,{'진행 상태':'신청 중','재신청사유':rR});
+    await api('PATCH','/api/records/'+rowIndex,{values:row});
     showToast('재신청 완료');
-    await syncReload(0);
-    if(typeof renderPromoBoard==='function')renderPromoBoard();
-    render();
-  }catch(e){
-    console.error('[reapplyPromoRequest]',e);
-    showToast('재신청 실패: '+e.message,'error');
-  }finally{
-    if(typeof hideOverlayLoad==='function')hideOverlayLoad();
-  }
+    await syncReload(0);if(typeof renderPromoBoard==='function')renderPromoBoard();render();
+  }catch(e){console.error('[reapply]',e);showToast('재신청 실패: '+(e.message||e),'error');}finally{hideOverlayLoad();}
 }
 
 // 단건 취소 + 사유
