@@ -474,3 +474,21 @@ cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang
 - **해결**: 신원·세션 전부 sessionStorage. 확인 콘솔:
   `console.log('role:',sessionStorage.getItem('role'),'| myApplicant:',sessionStorage.getItem('myApplicant'),'| localStorage잔재:',localStorage.getItem('myApplicant'))`
   → localStorage잔재가 `null`이어야 정상.
+
+
+---
+
+## 세션 로그 — 2026-05-29 (2단계 상태머신 + Q1/Q2 완료)
+
+**환경 돌파**: cmd 셸 + py -X utf8 -i REPL로 한글·긴코드 무손상 패치 확립. 회사 PC에서 GitHub API GET/PUT 직접(방화벽 없음, 세웅 보안담당). PowerShell stdin 미전달 문제 해결.
+
+**완료 커밋**:
+- 503276e3 hold (재신청건 보류시도->취소AA, 일반보류->Y컬럼, refSummary fix)
+- 47646c4f reapply (보류상태만+canApprove재검증+Z컬럼)
+- e0ad92c9 cancel 단건+bulk (AA컬럼, 비고prepend제거)
+- 9d0589ef Q1 과거날짜 신청차단
+- 24763969 Q2 문자 D±1 2연일 차단
+
+**진행중 Q-3**: 오른쪽 사이드바 프로그램 우클릭 메뉴 '홍보현황'(openPromoBoardForProgram @501259) / '조회'(openProgramView @497464). 좌클릭 onclick 핸들러 @492107 확정 필요. 상세는 인계파일 260529_yeulmaru-promo_handoff 참조.
+
+**잔여**: 3단계(PR_MANAGERS 전원알림, 조회모달 Y/Z/AA 표시분리), 그룹A(진행상태 스텝/모두읽음/모달X복귀).
