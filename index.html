@@ -3537,7 +3537,6 @@ async function reapplyPromoRequest(rowIndex){
 async function cancelWithReason(rowIndex){
   const rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec){showToast('신청을 찾을 수 없어요','error');return;}
-  // 신청자=본인이면 사유 입력 모달 생략 — 단순 confirm만
   let _myApplForCancel='';
   try{ _myApplForCancel = sessionStorage.getItem('myApplicant')||''; }catch(e){}
   if(!_myApplForCancel && typeof isSuperAdmin==='function' && isSuperAdmin()) _myApplForCancel='황세웅';
@@ -3553,30 +3552,14 @@ async function cancelWithReason(rowIndex){
   }
   showOverlayLoad('취소 처리 중...');
   try{
-    const ts=new Date().toISOString().slice(0,16).replace('T',' ');
-    const oldMemo=(rec['비고']||'').toString();
-    const newMemo = _isSelfCancel
-      ? oldMemo  // 본인 취소 — 비고 변경 없음
-      : ('[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:''));
-    const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
+    const row = buildRecordRow(rec, {'진행 상태':'취소','취소사유':reason});
     await api('PATCH','/api/records/'+rowIndex,{values: row});
-    // 메시지함 hook — 본인 취소가 아니면 (admin이 취소한 경우) 게시담당자에게 중요 메시지
     if(!_isSelfCancel){
       try{
-        const _refSum = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
-        pushMessage({
-          recipient: rec['신청자'] || '',
-          type: '중요',
-          trigger: '예정→취소',
-          before: rec['진행 상태'] || '예정',
-          after: '취소',
-          reason: reason,
-          refNo: rec['No'] || rec['NO'] || '',
-          refSummary: _refSum.trim()
-        });
+        pushMessage({recipient: rec['신청자'] || '',type: '중요',trigger: '취소',before: rec['진행 상태'] || '예정',after: '취소',reason: reason,refNo: rec['No'] || rec['NO'] || '',refSummary: (getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});
       }catch(_e){ console.error('[pushMessage]', _e); }
     }
-    showToast('취소 처리 완료 (사유 저장됨)');
+    showToast('취소 처리 완료');
     await syncReload(0);
     if(typeof renderPromoBoard==='function')renderPromoBoard();
     render();
@@ -3601,9 +3584,7 @@ async function bulkCancelPending(){
     try{
       const rec=records.find(function(r){return r._rowIndex===rowIndex;});
       if(!rec){failed++;continue;}
-      const oldMemo=(rec['비고']||'').toString();
-      const newMemo='[취소 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
-      const row = buildRecordRow(rec, {'진행 상태':'취소','비고':newMemo});
+      const row = buildRecordRow(rec, {'진행 상태':'취소','취소사유':reason});
       await api('PATCH','/api/records/'+rowIndex,{values: row});
       success++;
       showOverlayLoad('일괄 취소 중... ('+(i+1)+'/'+ids.length+')');
