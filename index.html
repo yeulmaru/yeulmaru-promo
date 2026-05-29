@@ -967,7 +967,6 @@ function renderSpecialMarquee(d,nm,past){
     const endT=parsed.e;
     // 표시 type: 시간 없으면 '휴무' 우선, type 있으면 그대로
     let typeStr=it.type||'';
-    if(!startT)typeStr='휴무';
     const isRed=!!redTypes[typeStr];
     const typeCol=past?'var(--past-text)':(isRed?'#E24B4A':'var(--accent)');
     const personStr=it.person?' '+it.person:'';
