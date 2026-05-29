@@ -971,7 +971,8 @@ function renderSpecialMarquee(d,nm,past){
     const isRed=!!redTypes[typeStr];
     const typeCol=past?'var(--past-text)':(isRed?'#E24B4A':'var(--accent)');
     const personStr=it.person?' '+it.person:'';
-    const endStr=endT?'~'+endT:'';
+    const _isMD=it.start&&it.end&&it.start!==it.end;
+    const endStr=endT?'~'+endT:(_isMD?'~18:00':'');
     const tipParts=[typeStr];
     if(it.person)tipParts.push(it.person);
     if(it.label)tipParts.push(it.label);
@@ -2241,7 +2242,7 @@ function openSpecialView(rowIndex){
       dateStr = dateStr + ' ~ ' + endRaw;
     }
   }
-  const timeFull = timeStr ? (endTimeStr ? (timeStr + ' ~ ' + endTimeStr) : timeStr) : '';
+  const _spv=_parseSpTime(it.time||'');let _spvE=_spv.e;if(!_spvE&&it.start&&it.end&&it.start!==it.end)_spvE='18:00';const timeFull=_spv.s?(_spvE?(_spv.s+' ~ '+_spvE):_spv.s):(timeStr?(endTimeStr?(timeStr+' ~ '+endTimeStr):timeStr):'');
   const typeStr = it.type || '-';
   const personStr = it.person || '-';
   const labelStr = it.label || '';
