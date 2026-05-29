@@ -4640,10 +4640,14 @@ function _checkKakaoConflict(date,opts){
   })||null;
 }
 function _checkSmsConflict(dateKey,excludeRowIdx){
+  const _fmt=function(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');};
+  const _cd=[dateKey];
+  const _dm=new Date(dateKey+'T00:00:00');_dm.setDate(_dm.getDate()-1);_cd.push(_fmt(_dm));
+  const _dp=new Date(dateKey+'T00:00:00');_dp.setDate(_dp.getDate()+1);_cd.push(_fmt(_dp));
   return (records||[]).find(function(r){
     if(excludeRowIdx&&r._rowIndex===excludeRowIdx)return false;
     const y=r['연도'],m=String(r['월']||'').padStart(2,'0'),dd=String(r['일']||'').padStart(2,'0');
-    if((y+'-'+m+'-'+dd)!==dateKey)return false;
+    if(_cd.indexOf(y+'-'+m+'-'+dd)<0)return false;
     const p1=r['플랫폼 1']||'',p2=r['플랫폼 2']||'';
     return (/문자|SMS/i.test(p1)||/문자|SMS/i.test(p2))&&(r['진행 상태']||'')!=='취소';
   })||null;
