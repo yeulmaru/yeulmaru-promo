@@ -6848,6 +6848,7 @@ function allManagersConflict(dateKey, time){
 
 function canApplyOnDate(dateKey){
   // dateKey = "YYYY-MM-DD"
+  if(typeof getTodayKey==='function' && dateKey < getTodayKey())return{ok:false,reason:'지난 날짜에는 신청할 수 없어요'};
   if(!APPLY_SETTINGS.접수ON)return{ok:false,reason:'접수가 닫혀있습니다'};
   const ymArr=getApplyMonths();
   if(!ymArr.length)return{ok:false,reason:'접수월이 설정되지 않았습니다'};
