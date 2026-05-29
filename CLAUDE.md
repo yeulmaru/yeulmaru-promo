@@ -346,6 +346,41 @@ cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang
 
 ## 변경 이력
 
+### 2026-05-27 ~ 28 (세션 12~13)
+
+**메시지함/알림 시스템 완성**
+- pushMessage recipient: `게시 담당자`→`신청자` 통일 (5개 hook: approve/hold/cancel/complete/reject). 관리자에게 잘못 뜨던 알림을 실제 신청자에게 전달.
+- 메시지 클릭 → `openScheduleRow`로 콘텐츠 상세 모달 진입 + 비고 사유 강조(`formatMemoCell`)
+- `markMsgRead`: 읽음 처리 + badge 감소 + navigate (refNo로 record 매칭)
+- `rejectPromo`: 사유 입력(`_renderCancelReasonModal`) + 신청자 메시지 푸시 추가 (기존 빈 hook 완성, trigger 신청→반려)
+
+**변경 컬럼 재신청**
+- `reapplyPromoRequest`: 취소 OR 보류 둘 다 허용 (`_curSt`)
+- 변경 컬럼에 `canMineReapply` 블록 (일반 사용자 본인 취소/보류 → "↩ 재신청" 버튼)
+
+**버그 fix**
+- `markMsgRead` onclick 백슬래시 3→1 (클릭 무동작 → 정상). HTML onclick에 `\'` 들어가 JS SyntaxError 나던 것.
+- `markMsgRead` dateKey: `rec['날짜']`(없는 컬럼)→`getRecDateKey(rec)` (모달 진입 빈값 에러)
+- `renderReadOnlyView`: `modal-form` null 참조 제거 (콘텐츠 조회 "null.style" 에러). modal-form은 DEPRECATED로 삭제됐는데 참조 잔존.
+- `approvePromoFromBoard`: `rec`→`r` 변수 (ReferenceError, pushMessage 실패하던 것)
+- `_msgApiCall`: 401도 60초 throttle (콘솔 noise 제거)
+- dead code 정리: 담당자 일정 드래그 핸들러의 잘못 복붙된 pushMessage 제거
+
+**헤더 UI**
+- "홍보 계획표" 부제(`nav-sub`) 제거, 실시간 시계(`id=kst`) 제거
+- 환영 메시지 "님 환영합니다"→"님" (헤더 `_wel` + 로그인 토스트 둘 다)
+
+**B-1 MSAL OneDrive 폴더 트리**
+- `_MSAL_CONFIG` + `_msalFetchOneDriveChildren` + `openFolderTreeModal` (PublicClientApplication, PKCE, Files.Read)
+- Azure AD `yeulmaru_dashboard` 앱에 **SPA 플랫폼** + redirectUri 등록 (`https://yeulmaru.github.io/yeulmaru-promo/`, trailing slash 필수). Web 플랫폼 아님(CORS).
+- MSAL CDN 2.35.0 + 이중 fallback (alcdn.msauth → msftauth → jsdelivr). v3부터 CDN 미지원.
+- Brave Shields ON 시 popup `user_cancelled` → Shields OFF로 우회.
+
+**Worker(src/index.js) 백업** (474815d)
+- `checkAdmin`(서브admin 인증 + 5분 매니저 캐시 `getManagersCached`), `autoCancelStalePending`(보류 3일 자동취소 cron, `scheduled` 핸들러), `isFlagOn`
+- 로컬에만 있던 Worker 기능을 GitHub에 백업. 로컬 클론(OneDrive)↔GitHub 88 behind 해소·완전 동기화.
+
+
 ### 2026-05-24 ~ 25 (세션 10~11)
 | commit | 내용 |
 |---|---|
