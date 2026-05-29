@@ -3409,7 +3409,10 @@ function buildRecordRow(rec, overrides){
     pick('결과_첨부URL'),
     pick('결과_비고'),
     pick('직전 상태'),
-    pick('상태 변경 KST')
+    pick('상태 변경 KST'),
+    pick('보류사유'),
+    pick('재신청사유'),
+    pick('취소사유')
   ];
 }
 
@@ -5005,7 +5008,10 @@ async function submitPromoRequest(){
       '',  // U: 결과_첨부URL
       '',  // V: 결과_비고
       '',  // W: 직전 상태 (등록 시점은 빈값)
-      nowKstStr()  // X: 상태 변경 KST
+      nowKstStr(),  // X: 상태 변경 KST
+      '',
+      '',
+      ''
     ];
     await api('POST','/api/records',{values:row});
     // ⚠️ myApplicant는 절대 _pwData.applicant(게시 담당자, P열)로 덮어쓰지 않음.
