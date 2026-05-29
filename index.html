@@ -3486,46 +3486,30 @@ async function holdPromoFromBoard(rowIndex){
   if(userRole!=='admin'){showToast('관리자만 보류 처리할 수 있어요','error');return;}
   const rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec){showToast('신청을 찾을 수 없어요','error');return;}
-  const reason=await _renderCancelReasonModal(1,{
-    title:'신청 보류',
-    subtitle:'보류 사유를 입력해 주세요. 신청자가 확인 후 재신청할 수 있습니다.',
-    labelText:'보류 사유',
-    placeholder:'예: 일정 충돌 — 다른 날짜로 변경 후 재신청해 주세요',
-    buttonLabel:'보류 처리',
-    buttonColor:'#F59E0B'
-  });
+  const _reSon=(rec['재신청사유']||'').toString().trim();
+  if(_reSon){
+    const cR=await _renderCancelReasonModal(1,{title:'재신청 건 취소',subtitle:'이미 재신청된 건이에요. 보류 대신 취소 처리됩니다.',labelText:'취소 사유',placeholder:'예: 일정 확정 불가',buttonLabel:'취소 처리',buttonColor:'#EF4444'});
+    if(!cR)return;
+    showOverlayLoad('취소 처리 중...');
+    try{
+      const row=buildRecordRow(rec,{'진행 상태':'취소','취소사유':cR});
+      await api('PATCH','/api/records/'+rowIndex,{values:row});
+      try{pushMessage({recipient:rec['신청자']||rec['게시 담당자']||'',type:'중요',trigger:'재신청취소',before:'신청 중',after:'취소',reason:cR,refNo:rec['No']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});}catch(_e){}
+      await syncReload(0);if(typeof renderPromoBoard==='function')renderPromoBoard();render();
+      showToast('재신청 건이 취소됐어요');
+    }catch(e){showToast('취소 실패: '+(e.message||e),'error');}finally{hideOverlayLoad();}
+    return;
+  }
+  const reason=await _renderCancelReasonModal(1,{title:'신청 보류',subtitle:'보류 사유를 입력해 주세요. 신청자가 확인 후 재신청할 수 있어요.',labelText:'보류 사유',placeholder:'예: 일정 충돌 - 다른 날짜로 재신청 부탁',buttonLabel:'보류 처리',buttonColor:'#F59E0B'});
   if(!reason)return;
   showOverlayLoad('보류 처리 중...');
   try{
-    const ts=new Date().toISOString().slice(0,16).replace('T',' ');
-    const oldMemo=(rec['비고']||'').toString();
-    const newMemo='[보류 사유 '+ts+'] '+reason+(oldMemo?'\n\n'+oldMemo:'');
-    const row = buildRecordRow(rec, {'진행 상태':'보류','비고':newMemo});
-    await api('PATCH','/api/records/'+rowIndex,{values: row});
-    // 메시지함 hook (중요: 신청중→보류)
-    try{
-      const _rs2 = (rec['날짜']||'') + ' ' + (rec['플랫폼 1']||'') + ' ' + (rec['콘텐츠 제목']||'');
-      pushMessage({
-        recipient: rec['신청자']||'',
-        type: '중요',
-        trigger: '신청중→보류',
-        before: '신청 중',
-        after: '보류',
-        reason: (typeof reason !== 'undefined' ? reason : ''),
-        refNo: rec['No']||rec['NO']||'',
-        refSummary: _rs2.trim()
-      });
-    }catch(_e){ console.error('[pushMessage hold]', _e); }
-    showToast('보류 처리 완료 (사유 저장됨)');
-    await syncReload(0);
-    if(typeof renderPromoBoard==='function')renderPromoBoard();
-    render();
-  }catch(e){
-    console.error('[holdPromoFromBoard]',e);
-    showToast('보류 실패: '+e.message,'error');
-  }finally{
-    if(typeof hideOverlayLoad==='function')hideOverlayLoad();
-  }
+    const row=buildRecordRow(rec,{'진행 상태':'보류','보류사유':reason});
+    await api('PATCH','/api/records/'+rowIndex,{values:row});
+    try{pushMessage({recipient:rec['신청자']||rec['게시 담당자']||'',type:'중요',trigger:'신청보류',before:'신청 중',after:'보류',reason:reason,refNo:rec['No']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});}catch(_e){}
+    await syncReload(0);if(typeof renderPromoBoard==='function')renderPromoBoard();render();
+    showToast('보류 처리됐어요');
+  }catch(e){showToast('보류 실패: '+(e.message||e),'error');}finally{hideOverlayLoad();}
 }
 
 // 재신청 — user 본인 또는 admin. 보류 → 신청 중
