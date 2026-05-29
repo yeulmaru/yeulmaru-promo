@@ -4,7 +4,7 @@
 > GS칼텍스 예울마루 직원이 홍보 콘텐츠 신청·관리를 위해 사용하는 단일파일 웹앱.  
 > 기존 엑셀+VBA 매크로 워크플로우를 대체.  
 >   
-> **Last updated**: 2026-05-25 (KST)
+> **Last updated**: 2026-05-29 (KST)
 
 > ⚠️ **대화 시작 시 첨부 룰**: yeulmaru-promo 작업할 때 이 파일을 채팅창에 첨부하면 매번 설명 안 해도 됨. 노뮤트 프로젝트와 동일 패턴.
 
@@ -154,7 +154,13 @@ POST   /api/records                  → records 시트 전용 (위 sheet/record
 
 ### `records` (신청 내역)
 컬럼 순서:  
-NO, 입력시간(KST), 날짜, 연도, 월, 일, 요일, 플랫폼1, 플랫폼2, 콘텐츠구분, 프로그램, 담당부서, 콘텐츠제목, 콘텐츠형식, 콘텐츠내용, 게시담당자, 진행상태, 비고
+A=NO, B=입력시간(KST), C=날짜, D=연도, E=월, F=일, G=요일, H=플랫폼1, I=플랫폼2, J=콘텐츠구분, K=프로그램, L=담당부서, M=콘텐츠제목, N=콘텐츠형식, O=콘텐츠내용, **P=게시담당자**, Q=진행상태, R=비고, **S=신청자**, T=결과_링크, U=결과_첨부URL, V=결과_비고, W=직전상태, X=상태변경KST
+
+> ⚠️ **신청자(S) ≠ 게시담당자(P)** — 자주 헷갈림 (다음 Claude 필독)
+> - **`신청자`(S)** = 실제 신청한 본인 (= `sessionStorage.myApplicant`). UI 표시·메시지 recipient·"내 신청" 필터 전부 **이 컬럼** 기준.
+> - **`게시 담당자`(P)** = 게시 담당자 지정값(`상관 없음` 또는 특정 담당자). 신청자와 별개.
+> - 본인 판별 = `_isMineRec(rec, myAppl)`: 신청자(S) 우선, 빈값/`관리자`면 게시담당자(P) fallback.
+> - 호버 툴팁·우클릭 안내·콘텐츠 조회 모달 전부 **신청자(S)** 표시 (2026-05-29 수정 — 이전엔 P 표시 버그).
 
 ### `PROMO_SPECIAL` (담당자 특별 일정)
 ```js
@@ -170,20 +176,37 @@ NO, 입력시간(KST), 날짜, 연도, 월, 일, 요일, 플랫폼1, 플랫폼2,
 }
 ```
 
+> **시간(`time`) 처리** (2026-05-29):
+> - `time` 빈값 = 종일. `'HH:MM'`만 = 시작시각만(종료 미정).
+> - **멀티데이(시작≠종료) + 종료시각 없음** → 캘린더 칸·모달 모두 `~18:00`으로 끊어 표시.
+> - 시작시각 없어도(종일) **유형 그대로 표시** (이전 `typeStr='휴무'` 강제 제거).
+> - 모달(`openSpecialView`)은 `it.time` 별도 컬럼을 읽어 시간 표시 (이전엔 start/end 공백분리만 봐서 시간 안 뜨던 버그 수정).
+> - special 시트 컬럼: `#, 입력시간(KST), 시리얼, 시작일, 종료일, 시간, 유형, 내용, 담당자, 작성자, 비고`
+
 ### `MANAGERS` / `PR_MANAGERS`
 - `MANAGERS`: 전체 담당자 (휴직 X)
 - `PR_MANAGERS = MANAGERS.filter(m => isFlagOn(m['홍보여부']))` — 홍보 담당자만
 
 ## 6. 인증 / 권한
 
-### 로그인
-- PIN 4자리 → Worker `/api/login` → `{ok, role: 'admin'|'user'}`
-- `sessionStorage.pw`, `sessionStorage.role`
-- 현재 **공유 PIN 방식** (모두 같은 PIN). 개별 user PIN 없음.
+### 로그인 (개별 PIN + 관리자여부)
+- 담당자 시트의 **개별 4자리 PIN**으로 로그인 (이전 "공유 PIN"에서 전환).
+- **슈퍼admin**: PIN `0511` = Worker `ADMIN_PASSWORD`. `/api/auth` 직접 통과 → `role=admin`, `subAdminPin` 없음 (신원 없는 최고권한).
+- **서브admin**: 담당자 PIN + `관리자여부=true` → `role=admin` + `sessionStorage.subAdminPin=PIN`. Worker엔 `X-Sub-Admin-PIN` 헤더로 인증 (`checkAdmin`).
+- **일반 user**: 담당자 PIN + `관리자여부=false` → `role=user`.
+- 비번 최초 설정: `/api/auth/set-password` (PIN으로 1회, 이미 설정 시 거부).
+- 담당자 PIN(예): 황세웅 `2486`, 심희은 `4650`, 슈퍼admin `0511`.
+
+### 🔑 신원·세션 저장 — 전부 sessionStorage (2026-05-29 변경, ★중요)
+**`role` / `pw` / `subAdminPin` / `myApplicant`(이름) / `myUserDept`(부서) 모두 `sessionStorage`.** (이전엔 myApplicant/myUserDept만 localStorage라 문제)
+- **왜**: `localStorage`=origin 전체(모든 탭) 공유, `sessionStorage`=탭별 격리. 섞어 쓰면 *탭A 관리자 / 탭B 일반사용자* 로그인 시 이름(localStorage)만 전파되고 권한(sessionStorage)은 탭별로 남아 **"OOO 님 [관리자]"** 신원 오염 발생.
+- 전부 sessionStorage 통일 → 탭별 완전 격리. 한 브라우저 멀티계정 테스트도 안 섞임.
+- 페이지 로드 시 `localStorage`의 myApplicant/myUserDept 잔재 자동 제거(오염원 청소).
+- 헤더 role 배지(`updateRoleTag`)는 `userRole`(=`sessionStorage.role`) 기준.
 
 ### 본인 식별
-- `localStorage.myApplicant` (게시자명 string)
-- 현재 자유 입력 — 검증 없음 (개선 여지)
+- `sessionStorage.myApplicant` (담당자명 string). 로그인 시 PIN→담당자명으로 저장.
+- `_isMineRec(rec, myAppl)`로 본인 신청 판별 (신청자 S 기준).
 
 ## 7. 핵심 함수
 
@@ -346,6 +369,26 @@ cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang
 
 ## 변경 이력
 
+### 2026-05-29 (세션 16)
+
+**신청자 표시 버그 수정 (게시담당자 P → 신청자 S)** — `ee37c65`
+- 캘린더 호버 툴팁("OOO 님이 신청 중") `게시담당자`→`신청자` (이전 "상관 없음 님이…" 오표시 원인)
+- 호버 툴팁 본인 판별 `(게시담당자===myAppl)` → `_isMineRec`(S 기준)
+- 우클릭 "남의 일정 안내"도 `게시담당자`→`신청자`
+- 콘텐츠 조회 모달(`renderReadOnlyView`)에 **신청자 row 추가** (일시 위, S열)
+- DB 점검(47건): 신청자(S) 오염 **0건** — 표시 버그였고 데이터는 정상
+
+**담당자 일정 표시 개선** — `1c16fdc`, `c4590b4`
+- 멀티데이(시작≠종료)+종료시각 없음 → 캘린더 칸·모달 `~18:00`로 끊어 표시
+- 특별일정 모달(`openSpecialView`)이 `it.time` 컬럼 읽도록 수정 (시간 안 뜨던 버그)
+- 시작시각 없는 종일 일정 `typeStr='휴무'` 강제 제거 → 유형 그대로
+- 교육(`_rowIndex=9`) time `09:00`→`09:00 - 18:00` 데이터 보강
+
+**신원 sessionStorage 격리** — `046907f`
+- myApplicant/myUserDept를 localStorage→sessionStorage 이전 (탭간 신원 오염 방지) + localStorage 잔재 청소
+
+---
+
 ### 2026-05-27 ~ 28 (세션 12~13)
 
 **메시지함/알림 시스템 완성**
@@ -423,3 +466,11 @@ cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang
 ### Untracked 로컬 파일 (현재 로컬에만 있는 것)
 - `README.md`, `_CLAUDE.md.local`, `index.js`, `index2.html`, `통합 문서1.xlsm`
 - git에 포함 안 됨 (의도된 분리). 동기화에 영향 X.
+
+
+### 신원이 탭마다 섞일 때 (2026-05-29 해결)
+- **증상**: 한 브라우저서 admin+일반user 번갈아 로그인 → "나민혁 님 [관리자]" 등 이름/권한 불일치
+- **원인**(해결 전): `myApplicant`=localStorage(공유) vs `role`=sessionStorage(탭별) → 이름만 탭 간 전파
+- **해결**: 신원·세션 전부 sessionStorage. 확인 콘솔:
+  `console.log('role:',sessionStorage.getItem('role'),'| myApplicant:',sessionStorage.getItem('myApplicant'),'| localStorage잔재:',localStorage.getItem('myApplicant'))`
+  → localStorage잔재가 `null`이어야 정상.
