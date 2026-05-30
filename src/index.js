@@ -401,6 +401,81 @@ var index_default = {
         return json({ ok: false, error: "Wrong password" }, env, 401);
       }
 
+      // === PIN 초기 설정 (MS 이메일 기반, 인증 헤더 불요) ===
+      // MS 인증으로 받은 이메일을 받아 그 row의 PIN(빈 값)만 설정. 이미 있으면 거부.
+      // 인증은 클라이언트의 MS 로그인 결과(account.username == email)로 보장됨.
+      if (url.pathname === "/api/auth/set-pin" && request.method === "POST") {
+        try {
+          const { email, pin } = await request.json();
+          if (!email || !pin) {
+            return json({ error: "이메일과 PIN이 필요해요" }, env, 400);
+          }
+          if (!/^\d{4}$/.test(String(pin).trim())) {
+            return json({ error: "PIN은 4자리 숫자여야 해요" }, env, 400);
+          }
+          const token = await getToken(env);
+          const { headers, rows } = await handleGetSheet(token, "담당자");
+          const target = String(email).trim().toLowerCase();
+          const matchedRow = rows.find((r) => {
+            const rEmail = String(r["이메일"] || "").trim().toLowerCase();
+            return rEmail !== "" && rEmail === target && !isFlagOn(r["휴직여부"]);
+          });
+          if (!matchedRow) {
+            return json({ error: "등록되지 않은 이메일이거나 휴직 중인 계정이에요" }, env, 403);
+          }
+          const existingPin = String(matchedRow["PIN"] || "").trim();
+          if (existingPin) {
+            return json({ error: "이미 PIN이 설정된 계정이에요. 관리자에게 초기화 요청하세요." }, env, 409);
+          }
+          const values = headers.map((h) => {
+            if (h === "PIN") return String(pin).trim();
+            return matchedRow[h] !== void 0 && matchedRow[h] !== null ? matchedRow[h] : "";
+          });
+          await handleUpdateSheetRow(token, "담당자", matchedRow._rowIndex, { values }, "user", "manager");
+          managerCache = { rows: null, expires: 0 };
+          return json({ ok: true, name: matchedRow["담당자"] || "" }, env);
+        } catch (e) {
+          console.error("[set-pin]", e);
+          return json({ error: e.message }, env, 500);
+        }
+      }
+
+      // === PIN 초기화 (관리자 전용) ===
+      // 슈퍼/서브 admin → 대상 이메일 row의 PIN 비움. 대상은 그 후 다시 set-pin 흐름으로 진입.
+      if (url.pathname === "/api/auth/reset-pin" && request.method === "POST") {
+        try {
+          const token = await getToken(env);
+          const auth = await checkAdmin(request, env, token);
+          if (!auth.admin) {
+            return json({ error: "관리자만 PIN을 초기화할 수 있어요" }, env, 403);
+          }
+          const { targetEmail } = await request.json();
+          if (!targetEmail) {
+            return json({ error: "targetEmail이 필요해요" }, env, 400);
+          }
+          const { headers, rows } = await handleGetSheet(token, "담당자");
+          const target = String(targetEmail).trim().toLowerCase();
+          const matchedRow = rows.find((r) => String(r["이메일"] || "").trim().toLowerCase() === target);
+          if (!matchedRow) {
+            return json({ error: "대상 이메일을 찾을 수 없어요" }, env, 404);
+          }
+          const values = headers.map((h) => {
+            if (h === "PIN") return "";
+            return matchedRow[h] !== void 0 && matchedRow[h] !== null ? matchedRow[h] : "";
+          });
+          await handleUpdateSheetRow(token, "담당자", matchedRow._rowIndex, { values }, "admin", "manager");
+          managerCache = { rows: null, expires: 0 };
+          return json({
+            ok: true,
+            name: matchedRow["담당자"] || "",
+            by: auth.super ? "super" : (auth.userName || "sub")
+          }, env);
+        } catch (e) {
+          console.error("[reset-pin]", e);
+          return json({ error: e.message }, env, 500);
+        }
+      }
+
       // === 비밀번호 초기 저장 / 재설정 (PIN 기반, 인증 헤더 불요) ===
       // user가 자기 PIN으로 인증 → 비번 설정. admin only PATCH 정책 우회.
       // PIN이 담당자 시트의 활성 row와 매칭되면 그 row의 비번/계정여부 컬럼만 업데이트.
