@@ -917,6 +917,66 @@ const MENUS=[
   {label:'연간 일정',id:'annual'},
 ];
 
+// === 플랫폼 트리 데이터 (Phase A1) ===
+const PLATFORM_TREE = {
+  offline: {
+    label: '오프라인',
+    icon: '📡',
+    children: {
+      external: {
+        label: '관외',
+        icon: '🌍',
+        items: [
+          { id:'lamp-suncheon-gwangyang', name:'가로등 현수기 (순천·광양)', type:'lamp-banner-print', status:'active' }
+        ]
+      },
+      internal: {
+        label: '관내',
+        icon: '🏙️',
+        items: [
+          { id:'lamp-yeosu', name:'가로등 현수기 (여수시내)', type:'lamp-banner-print', status:'active', note:'배치도 제공 예정' },
+          { id:'did-partners-network', name:'DID - 협력 기관 및 상가', type:'did-network', status:'active', count:30, view:'map-yeosu' },
+          { id:'board-ungcheon', name:'전광판 (웅천·신월 사거리)', type:'electronic-board', status:'pending' },
+          { id:'apt-ad', name:'APT 광고', type:'apt-ad', status:'pending' },
+          { id:'signboard-friendwater', name:'입간판 (웅천친수공원)', type:'signboard', status:'active', slots:[{id:'s1',ratio:'1:1'},{id:'s2',ratio:'1:1'}] }
+        ]
+      },
+      mangma: {
+        label: '망마',
+        icon: '🏛️',
+        items: [
+          { id:'board-mangma-4f', name:'전광판 (4F 입구)', type:'electronic-board', status:'active', venue:'망마' },
+          { id:'board-mangma-concert', name:'전광판 (공연 시 운영)', type:'electronic-board-conditional', status:'active', venue:'망마',
+            locations:[ {id:'ticket', name:'대극장 매표소'}, {id:'lobby', name:'대극장 로비'} ] },
+          { id:'did-mangma', name:'DID', type:'did', status:'active', venue:'망마',
+            locations:[ {id:'7f',name:'7층'}, {id:'4f',name:'4층'}, {id:'3f',name:'3층'} ] }
+        ]
+      },
+      jangdo: {
+        label: '장도',
+        icon: '🌉',
+        items: [
+          { id:'did-jangdo', name:'DID', type:'did', status:'active', venue:'장도',
+            locations:[ {id:'jinseom-bridge', name:'진섬다리 입구'},
+                        {id:'jangdo-entrance', name:'장도 입구', signageUrl:'https://yeulmaru-signage.pages.dev', deviceType:'samsung-tizen', isUrlLauncher:true} ] },
+          { id:'lamp-jangdo', name:'가로등 현수기 (장도)', type:'lamp-banner-print', status:'active', note:'배치도 제공 예정' }
+        ]
+      }
+    }
+  },
+  online: {
+    label: '온라인',
+    icon: '🌐',
+    items: [
+      { id:'instagram', name:'인스타그램', type:'external', url:'https://instagram.com/yeulmaru' },
+      { id:'kakao', name:'카카오', type:'external', url:'https://pf.kakao.com/_yeulmaru' },
+      { id:'blog', name:'블로그', type:'external', url:'https://blog.naver.com/yeulmaru' },
+      { id:'youtube', name:'유튜브', type:'external', url:'https://youtube.com/@yeulmaru' },
+      { id:'homepage', name:'홈페이지', type:'external', url:'https://yeulmaru.org' }
+    ]
+  }
+};
+
 let PERFS=[];
 function getPerfs(d){var k=dk(d),now=new Date();now.setHours(0,0,0,0);return PERFS.filter(function(p){return k>=p.s&&k<=p.e}).map(function(p){var sd=new Date(p.s);sd.setHours(0,0,0,0);var ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});var diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});});}
 function getExhibitStatus(d){
@@ -1041,7 +1101,7 @@ if(!cperfs.length)return'';
 var out='';
 for(var i=0;i<cperfs.length;i++){var perf=cperfs[i],fn=perf.f||perf.n,sn=perf.n,dd=perf.dday,lb=perf.t==='e'?'전':perf.t==='a'?'교':perf.t==='r'?'대':'공';
 var nameHtml='<span class="pf">'+fn+'</span><span class="ps">'+sn+'</span>';
-// 좌클릭: 프로그램 조회 모달  /  우클릭: 정보 박스 — data-perf-name + this 패턴으로 사이드바와 통일 (escape 안전)
+// 좌클릭: 홍보 현황 모달  /  우클릭: 정보 박스 — data-perf-name + this 패턴으로 사이드바와 통일 (escape 안전)
 var safeFn=escapeHtml(fn);
 var dataAttr=' data-perf-name="'+safeFn+'"';
 var clickAttr=!past?dataAttr+' onclick="event.stopPropagation();openProgramView(this.dataset.perfName)" title="클릭: 조회 / 우클릭: 빠른 정보"':dataAttr;
@@ -1847,7 +1907,7 @@ function buildNav(){
       if(m.id==='annual'){openAnnualCalendar();return;}
       if(m.id==='admin'){openAdminPanel();return;}
       if(m.id==='schedule'){openPromoBoard();return;}
-      if(m.id==='platform'){showComingSoon('플랫폼 현황');return;}
+      if(m.id==='platform'){openPlatformBoard();return;}
       if(m.id==='promo'){openPromoWizard();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
@@ -1894,6 +1954,201 @@ function openAnnualCalendar(){
 function closeAnnualCalendar(){
   const el=document.getElementById('annual-calendar');
   if(el)el.innerHTML='';
+}
+// === 플랫폼 현황 — 트리뷰 풀스크린 모달 (Phase A1) ===
+let _platformState = null;
+function openPlatformBoard(){
+  _platformState = {
+    expanded: new Set(['offline','online','offline.external','offline.internal','offline.mangma','offline.jangdo']),
+    selected: null,
+    nodes: _buildPlatformNodes(),
+    escHandler: null
+  };
+  let el = document.getElementById('platform-board');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'platform-board';
+    document.body.appendChild(el);
+  }
+  const html = '<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePlatformBoard)">'
+    + '<div class="modal platform-modal" style="width:96vw;max-width:1400px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff">'
+    + '<button class="modal-x" onclick="closePlatformBoard()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button>'
+    + '<div style="padding:18px 24px;border-bottom:1px solid #eee;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">🗺️ <span>플랫폼 현황</span></div>'
+    + '<div style="display:flex;flex:1;overflow:hidden;min-height:0">'
+    + '<div id="platform-tree" style="width:340px;flex-shrink:0;min-width:220px;border-right:1px solid #eee;overflow:auto;padding:12px 8px;background:#fafafa"></div>'
+    + '<div id="platform-detail" style="flex:1;overflow:auto;padding:24px;min-width:0"></div>'
+    + '</div></div></div>';
+  el.innerHTML = html;
+  renderPlatformTree();
+  renderPlatformDetail();
+  _platformState.escHandler = function(e){ if(e.key === 'Escape') closePlatformBoard(); };
+  document.addEventListener('keydown', _platformState.escHandler);
+}
+function closePlatformBoard(){
+  if(_platformState && _platformState.escHandler){
+    document.removeEventListener('keydown', _platformState.escHandler);
+  }
+  _platformState = null;
+  const el = document.getElementById('platform-board');
+  if(el) el.innerHTML = '';
+}
+function _buildPlatformNodes(){
+  const nodes = {};
+  for(const gKey in PLATFORM_TREE){
+    const g = PLATFORM_TREE[gKey];
+    if(g.children){
+      for(const sKey in g.children){
+        const s = g.children[sKey];
+        for(const it of (s.items||[])){
+          const id = gKey + '.' + sKey + '.' + it.id;
+          nodes[id] = { item: it, parentLabel: g.label + ' › ' + s.label };
+          if(it.locations){
+            for(const loc of it.locations){
+              const lid = id + '::' + loc.id;
+              nodes[lid] = { item: it, location: loc, parentLabel: g.label + ' › ' + s.label + ' › ' + it.name };
+            }
+          }
+        }
+      }
+    }
+    if(g.items){
+      for(const it of g.items){
+        const id = gKey + '.' + it.id;
+        nodes[id] = { item: it, parentLabel: g.label };
+      }
+    }
+  }
+  return nodes;
+}
+function renderPlatformTree(){
+  const c = document.getElementById('platform-tree');
+  if(!c || !_platformState) return;
+  let h = '';
+  for(const gKey of Object.keys(PLATFORM_TREE)){
+    const g = PLATFORM_TREE[gKey];
+    const gOpen = _platformState.expanded.has(gKey);
+    h += _platformTreeRow({ id: gKey, depth: 0, label: g.label, icon: g.icon, hasChildren: true, open: gOpen, selectable: false });
+    if(!gOpen) continue;
+    if(g.children){
+      for(const sKey of Object.keys(g.children)){
+        const s = g.children[sKey];
+        const sId = gKey + '.' + sKey;
+        const sOpen = _platformState.expanded.has(sId);
+        h += _platformTreeRow({ id: sId, depth: 1, label: s.label, icon: s.icon, hasChildren: true, open: sOpen, selectable: false });
+        if(!sOpen) continue;
+        for(const it of (s.items||[])){
+          h += _platformItemRows(it, gKey + '.' + sKey, 2);
+        }
+      }
+    }
+    if(g.items){
+      for(const it of g.items){
+        h += _platformItemRows(it, gKey, 1);
+      }
+    }
+  }
+  c.innerHTML = h;
+}
+function _platformItemRows(it, parentPath, depth){
+  const id = parentPath + '.' + it.id;
+  const pending = it.status === 'pending';
+  const hasLocs = it.locations && it.locations.length > 0;
+  let h = '';
+  if(hasLocs){
+    const open = _platformState.expanded.has(id);
+    h += _platformTreeRow({ id: id, depth: depth, label: it.name, hasChildren: true, open: open, selectable: true, pending: pending });
+    if(open){
+      for(const loc of it.locations){
+        h += _platformTreeRow({ id: id + '::' + loc.id, depth: depth + 1, label: loc.name, hasChildren: false, selectable: true, pending: pending });
+      }
+    }
+  } else {
+    h += _platformTreeRow({ id: id, depth: depth, label: it.name, hasChildren: false, selectable: true, pending: pending, external: it.type === 'external' });
+  }
+  return h;
+}
+function _platformTreeRow(o){
+  const sel = _platformState.selected === o.id;
+  const bg = sel ? 'var(--accent)' : 'transparent';
+  const fg = sel ? '#fff' : (o.pending ? '#aaa' : '#222');
+  const op = o.pending ? '0.6' : '1';
+  const indent = 8 + o.depth * 16;
+  const arrowChar = o.hasChildren ? (o.open ? '▼' : '▶') : '';
+  const arrow = o.hasChildren
+    ? '<span onclick="event.stopPropagation();togglePlatformNode(\'' + o.id + '\')" style="display:inline-block;width:16px;cursor:pointer;color:' + (sel ? '#fff' : '#888') + ';font-size:10px;text-align:center">' + arrowChar + '</span>'
+    : '<span style="display:inline-block;width:16px"></span>';
+  const icon = o.icon ? '<span style="margin-right:4px">' + o.icon + '</span>' : '';
+  const ext = o.external ? ' <span style="font-size:11px;color:' + (sel ? '#fff' : '#888') + '">↗</span>' : '';
+  const badge = o.pending ? ' <span style="font-size:10px;background:#eee;color:#888;padding:1px 6px;border-radius:8px;margin-left:4px">미진행</span>' : '';
+  const click = o.selectable
+    ? 'onclick="selectPlatformNode(\'' + o.id + '\')"'
+    : 'onclick="togglePlatformNode(\'' + o.id + '\')"';
+  const hover = sel ? '' : ' onmouseenter="this.style.background=\'var(--peach-light)\'" onmouseleave="this.style.background=\'transparent\'"';
+  return '<div class="ptree-row" data-id="' + o.id + '" ' + click + hover + ' style="display:flex;align-items:center;padding:6px 8px 6px ' + indent + 'px;cursor:pointer;border-radius:6px;background:' + bg + ';color:' + fg + ';opacity:' + op + ';margin:1px 0;font-size:13px">' + arrow + icon + '<span style="flex:1">' + escapeHtml(o.label) + ext + badge + '</span></div>';
+}
+function togglePlatformNode(id){
+  if(!_platformState) return;
+  if(_platformState.expanded.has(id)) _platformState.expanded.delete(id);
+  else _platformState.expanded.add(id);
+  renderPlatformTree();
+}
+function selectPlatformNode(id){
+  if(!_platformState) return;
+  _platformState.selected = id;
+  renderPlatformTree();
+  renderPlatformDetail();
+}
+function renderPlatformDetail(){
+  const c = document.getElementById('platform-detail');
+  if(!c || !_platformState) return;
+  if(!_platformState.selected){
+    c.innerHTML = '<div style="color:#888;text-align:center;padding:80px 20px;font-size:14px;line-height:1.6">좌측에서 매체를 선택해 주세요</div>';
+    return;
+  }
+  const node = _platformState.nodes[_platformState.selected];
+  if(!node){ c.innerHTML = ''; return; }
+  const it = node.item;
+  const loc = node.location;
+  const displayName = loc ? (it.name + ' — ' + loc.name) : it.name;
+  const pending = it.status === 'pending';
+  const typeStr = (loc && loc.deviceType) || it.type || '미정의';
+  let body = '';
+  if(pending){
+    body = '<div style="padding:24px;background:#f5f5f5;border-radius:12px;color:#888;text-align:center;font-size:13px">미진행 — 추후 추가 예정</div>';
+  } else if(it.type === 'external'){
+    body = '<div style="margin-bottom:16px;padding:16px;background:#fafafa;border-radius:12px"><div style="font-size:12px;color:#888;margin-bottom:6px">URL</div><div style="word-break:break-all;font-size:13px">' + escapeHtml(it.url) + '</div></div>'
+      + '<button data-url="' + escapeHtml(it.url) + '" onclick="window.open(this.getAttribute(\'data-url\'),\'_blank\',\'noopener\')" style="padding:10px 20px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">↗ 새 탭으로 열기</button>';
+  } else if(loc && loc.isUrlLauncher && loc.deviceType === 'samsung-tizen'){
+    body = '<div style="padding:20px;background:var(--peach-light);border-radius:12px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:8px">사이니지 관리 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666">디바이스: 삼성 타이젠 (URL Launcher 모드)</div></div>'
+      + '<div style="padding:16px;background:#fafafa;border-radius:12px"><div style="font-size:12px;color:#888;margin-bottom:6px">현재 표시 URL</div><div style="word-break:break-all;font-size:13px">' + escapeHtml(loc.signageUrl) + '</div></div>';
+  } else if(it.type === 'did-network'){
+    body = '<div style="padding:20px;background:#f0f4ff;border-radius:12px"><div style="font-weight:700;margin-bottom:8px">여수시 지도 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666;line-height:1.6">협력 기관 ' + (it.count || 30) + '개의 위치를 여수시 지도에 표시할 예정입니다</div></div>';
+  } else if(it.type === 'did'){
+    body = '<div style="padding:20px;background:#f0f4ff;border-radius:12px"><div style="font-weight:700;margin-bottom:8px">자체 API 연동 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666;line-height:1.6">DID 사이니지 콘텐츠 관리 인터페이스가 추가될 예정입니다</div></div>';
+  } else if(it.type === 'lamp-banner-print' || it.type === 'signboard'){
+    let slots = '';
+    if(it.slots && it.slots.length){
+      slots = '<div style="margin-top:16px;padding:16px;background:#fafafa;border-radius:12px"><div style="font-size:12px;color:#888;margin-bottom:8px">슬롯 정보</div>' + it.slots.map(function(s){ return '<span style="display:inline-block;margin:4px 8px 4px 0;padding:6px 12px;background:#fff;border:1px solid #eee;border-radius:8px;font-size:12px">' + escapeHtml(s.id) + ' · ' + escapeHtml(s.ratio) + '</span>'; }).join('') + '</div>';
+    }
+    body = '<div style="padding:20px;background:var(--peach-light);border-radius:12px"><div style="font-weight:700;margin-bottom:8px">시안 등록 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666;line-height:1.6">SharePoint 연동으로 시안 파일 업로드/관리 인터페이스가 추가될 예정입니다</div></div>' + slots;
+    if(it.note){
+      body += '<div style="margin-top:12px;padding:10px 14px;background:#fffbe6;border-left:3px solid #f5c518;font-size:12px;color:#666;border-radius:4px">' + escapeHtml(it.note) + '</div>';
+    }
+  } else if(it.type === 'electronic-board' || it.type === 'electronic-board-conditional'){
+    body = '<div style="padding:20px;background:#f0f4ff;border-radius:12px"><div style="font-weight:700;margin-bottom:8px">전광판 운영 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666;line-height:1.6">전광판 송출 콘텐츠 관리 인터페이스가 추가될 예정입니다</div></div>';
+  } else {
+    body = '<div style="padding:20px;background:#fafafa;border-radius:12px;color:#888;font-size:13px">상세 정보가 아직 정의되지 않았습니다</div>';
+  }
+  c.innerHTML =
+    '<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #eee">'
+    + '<div style="font-size:11px;color:#888;margin-bottom:4px">' + escapeHtml(node.parentLabel) + '</div>'
+    + '<div style="font-size:20px;font-weight:700">' + escapeHtml(displayName) + '</div>'
+    + '<div style="margin-top:10px;font-size:11px;color:#888">타입: <span style="color:#222">' + escapeHtml(typeStr) + '</span>'
+    + (it.venue ? ' · 위치: <span style="color:#222">' + escapeHtml(it.venue) + '</span>' : '')
+    + ' · 상태: <span style="color:' + (pending ? '#aaa' : '#22a06b') + ';font-weight:600">' + (pending ? '미진행' : '운영중') + '</span></div>'
+    + '</div>'
+    + body
+    + '<div style="margin-top:24px"><button disabled style="padding:10px 20px;background:#eee;color:#aaa;border:0;border-radius:10px;cursor:not-allowed;font-weight:600;font-size:13px">[관리] (Phase A2)</button></div>';
 }
 // === 프로그램 외부 링크 열기 — 확인 다이얼로그 후 새 창 ===
 async function openPerfUrl(url, perfName){

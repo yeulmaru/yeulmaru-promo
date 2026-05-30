@@ -367,7 +367,41 @@ cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang
 
 ---
 
+## 외부 API
+
+### Naver Cloud Platform Maps API (Phase A2 협력기관 30개 여수시 지도)
+- **위치**: NCP Console > **Services > VPC > Maps > Application** ⚠️ (AI·NAVER API 아님)
+- **Application 이름**: yeulmaru-promo
+- **Client ID**: `12kxk8z3z0` (Dynamic Map, public — JS 코드에 노출 OK)
+- **Client Secret**: NCP 콘솔에서 별도 확인 (server-side API에만 필요)
+- **등록된 Web URL**:
+  - `https://yeulmaru.github.io/yeulmaru-promo`
+  - `https://yeulmaru.github.io/yeulmaru-promo/`
+- **무료 한도**: 월 100만 호출 (충분)
+- **사용 예시**:
+```html
+<script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=12kxk8z3z0"></script>
+```
+- **주의**: `AI·NAVER API > Application`에 만든 동명 yeulmaru-promo (Client ID `sgzrzp8ucm`)는 CAPTCHA·Search Trend용이라 Maps 호출 시 429 에러. 안 씀.
+
+---
+
 ## 변경 이력
+
+### 2026-05-29 (세션 17 — Phase A1)
+
+**플랫폼 현황 트리뷰 풀스크린 모달**
+- `showComingSoon('플랫폼 현황')` placeholder → `openPlatformBoard()`로 교체
+- `PLATFORM_TREE` const 추가 (오프라인 4그룹: 관외/관내/망마/장도, 온라인 5채널)
+- `openPlatformBoard` / `closePlatformBoard` 모달 일체 (+255 lines, 9514→9769)
+- 트리 펼침/접힘, 좌340 트리 + 우측 상세, 타입별 분기 (external/samsung-tizen/did/did-network/lamp-banner-print/signboard/electronic-board/pending)
+- ESC/배경/X 닫기, pending opacity 0.6 + 미진행 뱃지
+
+**Q3 — 캘린더 perf badge 좌클릭 매핑 정정** — `e0408d9`
+- 좌클릭 `openPromoBoardForProgram` → `openProgramView` (handoff 의도: 조회 모달)
+- `data-perf-name` + `this` 패턴으로 사이드바와 통일 (escape 안전, 사이드바 L8700 패턴 차용)
+- 셀 onclick/oncontextmenu에 `event.target.closest('.perf-badge')` 방어 가드 추가
+- duplicate `style` 속성 제거 (cursorStyle 분리)
 
 ### 2026-05-29 (세션 16)
 
