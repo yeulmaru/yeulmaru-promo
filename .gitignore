@@ -32,6 +32,8 @@ Thumbs.db
 *.key
 *.pem
 *.token
+_ncp_secret.txt
+_*_secret.txt
 
 # Build output
 dist/

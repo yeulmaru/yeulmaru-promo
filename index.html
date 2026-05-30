@@ -977,6 +977,44 @@ const PLATFORM_TREE = {
   }
 };
 
+// === 협력기관 DID 데이터 (Phase A2-1, 좌표는 NCP Geocoding 결과) ===
+const DID_PARTNERS = [
+  // 설치완료 — 외부 11
+  { id:'Y0005', name:'갤러리 노마드', addr:'전남 여수시 새터로 82', mgr:'', tel:'010-8620-4000', email:'', photo:'갤러리노마드_2.jpg', status:'설치완료', lat:34.7629106, lng:127.6752686 },
+  { id:'Y0012', name:'선소당', addr:'전남 여수시 선소로 17', mgr:'', tel:'010-8604-9934', email:'', photo:'선소당DID.jpg', status:'설치완료', lat:34.7571968, lng:127.6637296 },
+  { id:'Y0013', name:'투썸플레이스 여수학동점', addr:'전남 여수시 선소로 19', mgr:'', tel:'010-8604-9934', email:'', photo:'투썸DID.jpg', status:'설치완료', lat:34.7571198, lng:127.663865 },
+  { id:'Y0014', name:'여수시청 민원실 1', addr:'전남 여수시 시청로 1', mgr:'김순미 주무관', tel:'061-659-3313', email:'soonmi4u@korea.kr', photo:'DID_여수시청1.jpg', status:'설치완료', lat:34.7604249, lng:127.662313 },
+  { id:'Y0015', name:'여수시청 민원실 2', addr:'전남 여수시 시청로 1', mgr:'김순미 주무관', tel:'061-659-3313', email:'soonmi4u@korea.kr', photo:'DID_여수시청3.jpg', status:'설치완료', lat:34.7604249, lng:127.662313 },
+  { id:'Y0016', name:'여수시청 민원실 3', addr:'전남 여수시 시청로 1', mgr:'김순미 주무관', tel:'061-659-3313', email:'soonmi4u@korea.kr', photo:'DID_여수시청2.jpg', status:'설치완료', lat:34.7604249, lng:127.662313 },
+  { id:'Y0017', name:'청음악기', addr:'전남 여수시 새터로 86', mgr:'', tel:'010-2682-5344', email:'', photo:'청음악기_1.jpg', status:'설치완료', lat:34.7631436, lng:127.675747 },
+  { id:'Y0020', name:'드롭탑', addr:'전남 여수시 소호로 403', mgr:'', tel:'010-5487-5068', email:'', photo:'DID_드롭탑.jpg', status:'설치완료', lat:34.7391492, lng:127.6496773 },
+  { id:'Y0023', name:'여수한국병원 1', addr:'전남 여수시 여천체육공원길 10 1층', mgr:'', tel:'010-2951-6094', email:'', photo:'DID_한국병원2.jpg', status:'설치완료', lat:34.7612841, lng:127.6749639 },
+  { id:'Y0024', name:'여수한국병원 2', addr:'전남 여수시 여천체육공원길 10 1층', mgr:'', tel:'010-2951-6094', email:'', photo:'DID_한국병원3.jpg', status:'설치완료', lat:34.7612841, lng:127.6749639 },
+  { id:'Y0025', name:'여수한국병원 3', addr:'전남 여수시 여천체육공원길 10 1층', mgr:'', tel:'010-2951-6094', email:'', photo:'DID_한국병원1.jpg', status:'설치완료', lat:34.7612841, lng:127.6749639 },
+  // 설치완료 — 예울마루 내부 4 (본관 좌표 공유)
+  { id:'Y0003', name:'예울마루 1 (6층 좌측 사무실)', addr:'전남 여수시 예울마루로 100', mgr:'', tel:'', email:'', photo:'사무실좌측정수기옆.jpg', status:'설치완료', lat:34.7506153, lng:127.6654125, internal:true },
+  { id:'Y0006', name:'예울마루 3 (6층 우측 사무실)', addr:'전남 여수시 예울마루로 100', mgr:'', tel:'', email:'', photo:'사무실우측프린터가옆.jpg', status:'설치완료', lat:34.7506153, lng:127.6654125, internal:true },
+  { id:'Y0021', name:'예울마루 2 (7층 전시실)', addr:'전남 여수시 예울마루로 100', mgr:'', tel:'', email:'', photo:'7층전시실.jpg', status:'설치완료', lat:34.7506153, lng:127.6654125, internal:true },
+  { id:'Y0018', name:'예울마루 4 (장도 전시실)', addr:'전남 여수시 예울마루로 100', mgr:'', tel:'', email:'', photo:'', status:'설치완료', lat:34.7506153, lng:127.6654125, internal:true },
+  // 예정 9
+  { id:'Y0001', name:'MBC 미용실', addr:'', mgr:'', tel:'', email:'', photo:'', status:'예정', lat:null, lng:null },
+  { id:'Y0007', name:'나무병원 1', addr:'전남 여수시 도원로 164-1', mgr:'김재겸 원무과장', tel:'010-4676-0729', email:'csnamuh@naver.com', photo:'', status:'예정', lat:34.7607119, lng:127.6493301 },
+  { id:'Y0008', name:'나무병원 2', addr:'전남 여수시 도원로 164-1', mgr:'김재겸 원무과장', tel:'010-4676-0729', email:'csnamuh@naver.com', photo:'', status:'예정', lat:34.7607119, lng:127.6493301 },
+  { id:'Y0019', name:'진솔한 치과의원 1 (5층)', addr:'전남 여수시 시청로 15', mgr:'이현영 행정원장', tel:'010-5899-7030', email:'', photo:'', status:'예정', lat:34.7631666, lng:127.6624931 },
+  { id:'Y0026', name:'진솔한 치과의원 2 (6층)', addr:'전남 여수시 시청로 15', mgr:'이현영 행정원장', tel:'010-5899-7030', email:'', photo:'', status:'예정', lat:34.7631666, lng:127.6624931 },
+  { id:'Y0022', name:'여수시 청소년문화의집', addr:'전남 여수시 문수8길 12', mgr:'강형규 관장', tel:'010-4504-1015', email:'', photo:'', status:'예정', lat:34.7541352, lng:127.6952658 },
+  { id:'Y0027', name:'예울병원 1', addr:'전남 여수시 신월로 114', mgr:'정형곤 업무과장', tel:'010-4664-3286', email:'', photo:'', status:'예정', lat:34.7479571, lng:127.6804198 },
+  { id:'Y0028', name:'예울병원 2', addr:'전남 여수시 신월로 114', mgr:'정형곤 업무과장', tel:'010-4664-3286', email:'', photo:'', status:'예정', lat:34.7479571, lng:127.6804198 },
+  { id:'Y0029', name:'예울병원 3', addr:'전남 여수시 신월로 114', mgr:'정형곤 업무과장', tel:'010-4664-3286', email:'', photo:'', status:'예정', lat:34.7479571, lng:127.6804198 },
+  // 미설치/빈자리 6 — 지도/리스트에 표시 안 함 (status로 필터)
+  { id:'Y0002', name:'(미설치)', addr:'', status:'미설치' },
+  { id:'Y0004', name:'(미설치)', addr:'', status:'미설치' },
+  { id:'Y0009', name:'(미설치)', addr:'', status:'미설치' },
+  { id:'Y0010', name:'(미설치)', addr:'', status:'미설치' },
+  { id:'Y0011', name:'(미설치)', addr:'', status:'미설치' },
+  { id:'Y0030', name:'(미설치)', addr:'', status:'미설치' }
+];
+
 let PERFS=[];
 function getPerfs(d){var k=dk(d),now=new Date();now.setHours(0,0,0,0);return PERFS.filter(function(p){return k>=p.s&&k<=p.e}).map(function(p){var sd=new Date(p.s);sd.setHours(0,0,0,0);var ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});var diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});});}
 function getExhibitStatus(d){
@@ -1981,7 +2019,14 @@ function openPlatformBoard(){
   el.innerHTML = html;
   renderPlatformTree();
   renderPlatformDetail();
-  _platformState.escHandler = function(e){ if(e.key === 'Escape') closePlatformBoard(); };
+  _platformState.escHandler = function(e){
+    if(e.key !== 'Escape') return;
+    // 내부 모달(DID 지도 / 협력기관 상세)이 열려있으면 그쪽이 먼저 닫히게 양보
+    const inner1 = document.getElementById('did-partners-map');
+    const inner2 = document.getElementById('did-partner-detail');
+    if((inner1 && inner1.children.length) || (inner2 && inner2.children.length)) return;
+    closePlatformBoard();
+  };
   document.addEventListener('keydown', _platformState.escHandler);
 }
 function closePlatformBoard(){
@@ -1990,6 +2035,279 @@ function closePlatformBoard(){
   }
   _platformState = null;
   const el = document.getElementById('platform-board');
+  if(el) el.innerHTML = '';
+}
+// === 협력기관 DID 지도 (Phase A2-1) ===
+let _didMapState = null;
+function _didCounts(){
+  let done=0, pending=0, notInstalled=0;
+  for(const p of DID_PARTNERS){
+    if(p.status==='설치완료') done++;
+    else if(p.status==='예정') pending++;
+    else if(p.status==='미설치') notInstalled++;
+  }
+  return {done, pending, notInstalled};
+}
+function _loadNaverMaps(cb){
+  if(window.naver && window.naver.maps){ cb(); return; }
+  let s = document.getElementById('naver-maps-script');
+  if(s){
+    s.addEventListener('load', cb);
+    return;
+  }
+  s = document.createElement('script');
+  s.id = 'naver-maps-script';
+  s.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=12kxk8z3z0';
+  s.onload = () => cb();
+  s.onerror = () => {
+    // fallback: 구 파라미터명
+    const sf = document.createElement('script');
+    sf.id = 'naver-maps-script-fb';
+    sf.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=12kxk8z3z0';
+    sf.onload = () => cb();
+    sf.onerror = () => { showToast('네이버 지도 로드 실패','error'); };
+    document.head.appendChild(sf);
+  };
+  document.head.appendChild(s);
+}
+function openDidPartnersMap(){
+  _didMapState = {
+    filter: 'all',
+    map: null,
+    markers: [],
+    infoWindow: null,
+    selectedId: null,
+    escHandler: null
+  };
+  let el = document.getElementById('did-partners-map');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'did-partners-map';
+    document.body.appendChild(el);
+  }
+  const counts = _didCounts();
+  const html = '<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeDidPartnersMap)">'
+    + '<div class="modal" style="width:96vw;max-width:1400px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff">'
+    + '<button class="modal-x" onclick="closeDidPartnersMap()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:20">✕</button>'
+    + '<div style="padding:16px 24px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:14px;flex-shrink:0;flex-wrap:wrap">'
+    + '<div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px">🗺️ <span>협력기관 DID 지도</span></div>'
+    + '<div style="font-size:12px;color:#666">설치완료 '+counts.done+' · 예정 '+counts.pending+' · 미설치 '+counts.notInstalled+'</div>'
+    + '<div style="margin-left:auto;display:flex;gap:6px">'
+    + '<button onclick="filterDidPartners(\'all\')" data-did-filter="all" class="did-filter-btn">전체</button>'
+    + '<button onclick="filterDidPartners(\'done\')" data-did-filter="done" class="did-filter-btn">설치완료</button>'
+    + '<button onclick="filterDidPartners(\'pending\')" data-did-filter="pending" class="did-filter-btn">예정</button>'
+    + '</div></div>'
+    + '<div style="display:flex;flex:1;overflow:hidden;min-height:0">'
+    + '<div id="did-partners-list" style="width:320px;flex-shrink:0;min-width:260px;border-right:1px solid #eee;overflow:auto;padding:8px;background:#fafafa"></div>'
+    + '<div id="did-partners-mapdiv" style="flex:1;min-width:0;background:#e7eaef;position:relative"></div>'
+    + '</div></div></div>';
+  el.innerHTML = html;
+  if(!document.getElementById('did-partners-style')){
+    const ss = document.createElement('style');
+    ss.id = 'did-partners-style';
+    ss.textContent = '.did-filter-btn{padding:6px 12px;border:1.5px solid #eee;background:#fff;color:#666;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}.did-filter-btn:hover{border-color:var(--accent);color:var(--accent)}.did-filter-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}.did-list-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:#fff;transition:all .12s;border:1px solid transparent}.did-list-item:hover{background:var(--peach-light);border-color:var(--peach)}.did-list-item.on{background:var(--accent);color:#fff;border-color:var(--accent)}.did-list-item.on .did-li-addr{color:rgba(255,255,255,0.85)}.did-li-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}.did-li-addr{font-size:11px;color:#888;margin-top:3px}.did-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}.did-status-dot.done{background:#22a06b}.did-status-dot.pending{background:#FFC107}';
+    document.head.appendChild(ss);
+  }
+  _renderDidPartnersList();
+  _markDidFilterBtn();
+  _loadNaverMaps(_initDidMap);
+  _didMapState.escHandler = function(e){
+    if(e.key !== 'Escape') return;
+    const inner = document.getElementById('did-partner-detail');
+    if(inner && inner.children.length) return;
+    closeDidPartnersMap();
+  };
+  document.addEventListener('keydown', _didMapState.escHandler);
+}
+function closeDidPartnersMap(){
+  if(_didMapState && _didMapState.escHandler){
+    document.removeEventListener('keydown', _didMapState.escHandler);
+  }
+  if(_didMapState && _didMapState.markers){
+    _didMapState.markers.forEach(m => m.setMap && m.setMap(null));
+  }
+  if(_didMapState && _didMapState.infoWindow){
+    try{ _didMapState.infoWindow.close(); }catch(e){}
+  }
+  _didMapState = null;
+  const el = document.getElementById('did-partners-map');
+  if(el) el.innerHTML = '';
+}
+function _initDidMap(){
+  if(!_didMapState) return;
+  const div = document.getElementById('did-partners-mapdiv');
+  if(!div) return;
+  const center = new naver.maps.LatLng(34.760, 127.668);
+  const map = new naver.maps.Map(div, {
+    center: center,
+    zoom: 13,
+    mapTypeControl: false,
+    scaleControl: true,
+    logoControl: true,
+    mapDataControl: false,
+    zoomControl: true,
+    zoomControlOptions: { position: naver.maps.Position.TOP_LEFT }
+  });
+  _didMapState.map = map;
+  _didMapState.infoWindow = new naver.maps.InfoWindow({ borderWidth: 0, anchorSize: new naver.maps.Size(10, 10), pixelOffset: new naver.maps.Point(0, -10) });
+  _addDidMarkers();
+}
+function _visibleDidPartners(){
+  const f = _didMapState ? _didMapState.filter : 'all';
+  return DID_PARTNERS.filter(p => {
+    if(p.status === '미설치') return false;
+    if(f === 'done') return p.status === '설치완료';
+    if(f === 'pending') return p.status === '예정';
+    return true;
+  });
+}
+function _groupByCoord(items){
+  const groups = {};
+  for(const p of items){
+    if(p.lat == null || p.lng == null) continue;
+    const k = p.lat.toFixed(5) + ',' + p.lng.toFixed(5);
+    if(!groups[k]) groups[k] = [];
+    groups[k].push(p);
+  }
+  return groups;
+}
+function _offsetCoord(lat, lng, i, n){
+  if(n <= 1) return [lat, lng];
+  const angle = (i / n) * 2 * Math.PI;
+  const r = 0.00018;
+  return [lat + r * Math.cos(angle), lng + r * Math.sin(angle)];
+}
+function _addDidMarkers(){
+  if(!_didMapState || !_didMapState.map) return;
+  _didMapState.markers.forEach(m => m.setMap && m.setMap(null));
+  _didMapState.markers = [];
+  const items = _visibleDidPartners();
+  const groups = _groupByCoord(items);
+  for(const key in groups){
+    const grp = groups[key];
+    grp.forEach((p, i) => {
+      const off = _offsetCoord(p.lat, p.lng, i, grp.length);
+      const color = p.status === '설치완료' ? '#22a06b' : '#FFC107';
+      const marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(off[0], off[1]),
+        map: _didMapState.map,
+        title: p.name,
+        icon: {
+          content: '<div style="width:18px;height:18px;border-radius:50%;background:'+color+';border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer"></div>',
+          anchor: new naver.maps.Point(9, 9)
+        }
+      });
+      naver.maps.Event.addListener(marker, 'click', function(){ _openDidInfoWindow(p, marker); });
+      marker._partnerId = p.id;
+      _didMapState.markers.push(marker);
+    });
+  }
+}
+function _openDidInfoWindow(p, marker){
+  if(!_didMapState || !_didMapState.infoWindow) return;
+  const stColor = p.status === '설치완료' ? '#22a06b' : '#FFC107';
+  const content = '<div style="padding:10px 14px;min-width:180px;font-family:inherit">'
+    + '<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#222">'+escapeHtml(p.name)+'</div>'
+    + '<div style="font-size:11px;color:'+stColor+';font-weight:700;margin-bottom:8px">'+escapeHtml(p.status)+'</div>'
+    + '<button onclick="openDidPartnerDetail(\''+p.id+'\')" style="padding:6px 12px;background:var(--accent);color:#fff;border:0;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">상세 보기</button>'
+    + '</div>';
+  _didMapState.infoWindow.setContent(content);
+  _didMapState.infoWindow.open(_didMapState.map, marker);
+  _didMapState.selectedId = p.id;
+  _renderDidPartnersList();
+}
+function filterDidPartners(f){
+  if(!_didMapState) return;
+  _didMapState.filter = f;
+  _markDidFilterBtn();
+  _renderDidPartnersList();
+  if(_didMapState.map) _addDidMarkers();
+}
+function _markDidFilterBtn(){
+  if(!_didMapState) return;
+  const f = _didMapState.filter;
+  document.querySelectorAll('.did-filter-btn').forEach(b => { b.classList.toggle('on', b.dataset.didFilter === f); });
+}
+function _renderDidPartnersList(){
+  const c = document.getElementById('did-partners-list');
+  if(!c) return;
+  const items = _visibleDidPartners();
+  if(!items.length){
+    c.innerHTML = '<div style="color:#888;text-align:center;padding:40px 16px;font-size:12px">표시할 항목이 없어요</div>';
+    return;
+  }
+  let h = '';
+  for(const p of items){
+    const sel = _didMapState.selectedId === p.id;
+    const dotCls = p.status === '설치완료' ? 'done' : 'pending';
+    const addr = p.addr || '주소 미정';
+    const noCoord = p.lat == null;
+    h += '<div class="did-list-item'+(sel ? ' on' : '')+'" onclick="_didListClick(\''+p.id+'\')">'
+      + '<div class="did-li-name"><span class="did-status-dot '+dotCls+'"></span>'+escapeHtml(p.name)+'</div>'
+      + '<div class="did-li-addr">'+escapeHtml(addr)+(noCoord ? ' <span style="color:#bbb">· 지도 미표시</span>' : '')+'</div>'
+      + '</div>';
+  }
+  c.innerHTML = h;
+}
+function _didListClick(id){
+  if(!_didMapState) return;
+  const p = DID_PARTNERS.find(x => x.id === id);
+  if(!p) return;
+  _didMapState.selectedId = id;
+  _renderDidPartnersList();
+  if(p.lat != null && p.lng != null && _didMapState.map){
+    const marker = _didMapState.markers.find(m => m._partnerId === id);
+    if(marker){
+      _didMapState.map.panTo(marker.getPosition());
+      _openDidInfoWindow(p, marker);
+    } else {
+      _didMapState.map.panTo(new naver.maps.LatLng(p.lat, p.lng));
+    }
+  } else {
+    openDidPartnerDetail(id);
+  }
+}
+function openDidPartnerDetail(id){
+  const p = DID_PARTNERS.find(x => x.id === id);
+  if(!p) return;
+  let el = document.getElementById('did-partner-detail');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'did-partner-detail';
+    document.body.appendChild(el);
+  }
+  const stColor = p.status === '설치완료' ? '#22a06b' : (p.status === '예정' ? '#FFC107' : '#bbb');
+  const photoBox = p.photo
+    ? '<div style="width:100%;min-height:140px;background:#f0f0f0;border:1px dashed #ccc;border-radius:12px;margin-bottom:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:12px;padding:20px 10px;text-align:center;line-height:1.6">📷 사진<br><span style="font-size:11px;color:#aaa;margin-top:6px">'+escapeHtml(p.photo)+'</span><span style="font-size:10px;color:#bbb;margin-top:2px">(경로 확정 후 연동)</span></div>'
+    : '<div style="width:100%;min-height:100px;background:#f5f5f5;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:11px">사진 없음</div>';
+  const naverMapUrl = p.addr ? 'https://map.naver.com/v5/search/' + encodeURIComponent(p.addr) : '';
+  const escHandler = function(e){
+    if(e.key !== 'Escape') return;
+    closeDidPartnerDetail();
+  };
+  const html = '<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeDidPartnerDetail)">'
+    + '<div class="modal" style="width:auto;min-width:340px;max-width:480px;padding:24px 28px;position:relative">'
+    + '<button class="modal-x" onclick="closeDidPartnerDetail()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button>'
+    + '<div style="font-size:11px;color:#888;margin-bottom:4px">'+escapeHtml(p.id)+'</div>'
+    + '<div style="font-size:18px;font-weight:700;margin-bottom:14px;padding-right:36px">'+escapeHtml(p.name)+'</div>'
+    + photoBox
+    + (p.addr ? '<div style="margin-bottom:8px;font-size:13px">📍 '+escapeHtml(p.addr)+'</div>' : '<div style="margin-bottom:8px;font-size:13px;color:#bbb">📍 주소 미정</div>')
+    + (p.mgr ? '<div style="margin-bottom:8px;font-size:13px">🧑 '+escapeHtml(p.mgr)+'</div>' : '')
+    + (p.tel ? '<div style="margin-bottom:8px;font-size:13px">📞 <a href="tel:'+escapeHtml(p.tel)+'" style="color:var(--accent);text-decoration:none">'+escapeHtml(p.tel)+'</a></div>' : '')
+    + (p.email ? '<div style="margin-bottom:8px;font-size:13px">✉️ <a href="mailto:'+escapeHtml(p.email)+'" style="color:var(--accent);text-decoration:none">'+escapeHtml(p.email)+'</a></div>' : '')
+    + '<div style="margin-top:14px;display:inline-block;padding:4px 10px;background:'+stColor+';color:#fff;border-radius:8px;font-size:11px;font-weight:700">'+escapeHtml(p.status)+'</div>'
+    + (naverMapUrl ? '<div style="margin-top:16px"><a href="'+naverMapUrl+'" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent);text-decoration:none">↗ 네이버 지도에서 보기</a></div>' : '')
+    + '</div></div>';
+  el.innerHTML = html;
+  el._escHandler = escHandler;
+  document.addEventListener('keydown', escHandler);
+}
+function closeDidPartnerDetail(){
+  const el = document.getElementById('did-partner-detail');
+  if(el && el._escHandler){
+    document.removeEventListener('keydown', el._escHandler);
+    el._escHandler = null;
+  }
   if(el) el.innerHTML = '';
 }
 function _buildPlatformNodes(){
@@ -2122,7 +2440,9 @@ function renderPlatformDetail(){
     body = '<div style="padding:20px;background:var(--peach-light);border-radius:12px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:8px">사이니지 관리 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666">디바이스: 삼성 타이젠 (URL Launcher 모드)</div></div>'
       + '<div style="padding:16px;background:#fafafa;border-radius:12px"><div style="font-size:12px;color:#888;margin-bottom:6px">현재 표시 URL</div><div style="word-break:break-all;font-size:13px">' + escapeHtml(loc.signageUrl) + '</div></div>';
   } else if(it.type === 'did-network'){
-    body = '<div style="padding:20px;background:#f0f4ff;border-radius:12px"><div style="font-weight:700;margin-bottom:8px">여수시 지도 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666;line-height:1.6">협력 기관 ' + (it.count || 30) + '개의 위치를 여수시 지도에 표시할 예정입니다</div></div>';
+    const _c = _didCounts();
+    body = '<div style="padding:20px;background:#f0f4ff;border-radius:12px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:8px">협력기관 DID 지도</div><div style="font-size:12px;color:#666;line-height:1.6">설치완료 '+_c.done+' · 예정 '+_c.pending+' · 미설치 '+_c.notInstalled+' · 총 '+(_c.done+_c.pending+_c.notInstalled)+'대</div></div>'
+      + '<button onclick="openDidPartnersMap()" style="padding:10px 20px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">🗺️ 지도 + 리스트 열기</button>';
   } else if(it.type === 'did'){
     body = '<div style="padding:20px;background:#f0f4ff;border-radius:12px"><div style="font-weight:700;margin-bottom:8px">자체 API 연동 (Phase A2 준비 중)</div><div style="font-size:12px;color:#666;line-height:1.6">DID 사이니지 콘텐츠 관리 인터페이스가 추가될 예정입니다</div></div>';
   } else if(it.type === 'lamp-banner-print' || it.type === 'signboard'){
