@@ -752,6 +752,8 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
     </div>
     <div id="login-msg"></div>
     <div id="login-load"></div>
+    <button type="button" onclick="msLogin()" style="width:100%;margin-top:16px;padding:12px;background:#fff;border:1.5px solid rgba(74,77,231,0.3);color:#444;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .12s" onmouseover="this.style.borderColor='var(--accent)';this.style.background='#FAFAFE'" onmouseout="this.style.borderColor='rgba(74,77,231,0.3)';this.style.background='#fff'"><svg width="18" height="18" viewBox="0 0 23 23"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>Microsoft 계정으로 로그인</button>
+    <div style="font-size:11px;color:#aaa;margin-top:10px;text-align:center;line-height:1.6">재방문이면 PIN만 입력<br>처음·다른 기기면 먼저 Microsoft 로그인</div>
   </div>
 </div>
 
@@ -1413,148 +1415,290 @@ function _resolvePwdInputOk(){
   _resolvePwdInput(v);
 }
 
+// STEP3: MS(email)+PIN auth — super=manager account / staff=own MS + sheet PIN
+const SUPER_EMAIL = 'manager@gscf.or.kr';
 let _loggingIn = false;
+
 async function tryLogin(){
   if(_loggingIn) return;
   _loggingIn = true;
   try {
-  const pin=Array.from(pins).map(p=>p.value).join('');if(pin.length!==4){_loggingIn=false;return;}
-  document.getElementById('login-msg').textContent='';
-  document.getElementById('login-load').textContent='확인 중...';
-  try{
-    // === 1차: Worker /api/auth (0510=user, 0511=admin 공유 PIN) ===
-    const r=await fetch(`${API}/api/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pin})});
-    const d=await r.json();
-    if(d.ok){
-      password=pin;userRole=d.role||'user';
-      sessionStorage.setItem('pw',pin);sessionStorage.setItem('role',userRole);
-      // 슈퍼 admin / 공유 user — 개인 신원 없음, subAdminPin 제거
-      try{sessionStorage.removeItem('myUserDept');sessionStorage.removeItem('subAdminPin');}catch(e){}
-      document.getElementById('login').style.display='none';
-      document.getElementById('app').style.display='';
-      initApp();
-      return;
-    }
-    // === 2차: 담당자 시트 J열(PIN) 매칭 — 개별 사용자 식별 ===
-    // 0510으로 임시 인증해서 담당자 시트 로드
-    password='0510';userRole='user';
-    if(!MANAGERS||!MANAGERS.length) await loadManagers();
-    // 컬럼 이름 fallback — 시트 헤더가 PIN/Pin/PIN(4자리)/pin 등 어떤 변형이든 매칭
-    function _getCol(rec, candidates){
-      for(let i=0;i<candidates.length;i++){
-        const k=candidates[i];
-        if(rec[k]!==undefined && rec[k]!==null && rec[k]!=='') return rec[k];
-      }
-      // case-insensitive 매칭
-      const keys=Object.keys(rec);
-      for(let i=0;i<candidates.length;i++){
-        const c=candidates[i].toLowerCase();
-        for(let j=0;j<keys.length;j++){
-          if(keys[j].toLowerCase().replace(/[\s\(\)0-9]/g,'')===c.replace(/[\s\(\)0-9]/g,'')) return rec[keys[j]];
-        }
-      }
-      return '';
-    }
-    const PIN_KEYS=['PIN','Pin','pin','PIN(4자리)','PIN 4자리','핀'];
-    const PWD_KEYS=['비밀번호','password','Password','PASSWORD','pwd','PWD','패스워드'];
-    const STATUS_KEYS=['계정여부','계정상태','status','Status','계정','활성여부'];
-    // 활성 계정만 PIN 매칭 — 비활성 계정의 PIN은 시스템이 완전히 무시
-    const matched=(MANAGERS||[]).find(function(m){
-      return isFlagOn(_getCol(m,STATUS_KEYS)) && _getCol(m,PIN_KEYS).toString().trim()===pin;
-    });
-    if(matched){
-      // 활성 계정만 매칭됐으므로 비활성 차단 로직 불필요
-      // 매칭 성공 — 비밀번호 검증/설정 단계
-      const userName=matched['담당자']||'';
-      const userDept=matched['담당부서']||'';
-      // 비밀번호 처리 — String 강제 + trim + 한글 NFC 정규화 (저장/로드 일관성)
-      const storedPwd=String(_getCol(matched,PWD_KEYS)||'').trim().normalize('NFC');
-      document.getElementById('login-load').textContent='';
-      let pwdOk=false;
-      if(!storedPwd){
-        // 첫 접속 — 비밀번호 설정 (2번 입력)
-        const newPwdRaw=await _promptPasswordSetup(userName);
-        if(!newPwdRaw){
-          // 취소
-          password='';sessionStorage.removeItem('pw');
-          pins.forEach(p=>{p.value=''});pins[0].focus();
-          return;
-        }
-        // 저장 전 정규화 — trim + NFC (한글 일관성)
-        const newPwd=String(newPwdRaw).trim().normalize('NFC');
-        // 새 endpoint 호출 — PIN 기반 인증, admin 권한 없이 비번 첫 저장 가능
-        // (manager 시트 직접 PATCH는 Worker 정책상 admin only이므로 우회)
-        try{
-          const r = await fetch(API + '/api/auth/set-password', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ pin: pin, newPassword: newPwd })
-          });
-          if(!r.ok){
-            const errBody = await r.json().catch(()=>({error:'알 수 없는 오류'}));
-            throw new Error(errBody.error || ('HTTP '+r.status));
-          }
-          pwdOk=true;
-          // 메모리에서도 즉시 반영
-          matched['비밀번호']=newPwd;
-          matched['계정여부']='1';
-        }catch(e){
-          console.error('[password save]',e);
-          showToast('비밀번호 저장 실패: '+e.message,'error');
-          password='';sessionStorage.removeItem('pw');
-          return;
-        }
-      } else {
-        // 기존 사용자 — 비밀번호 입력
-        const inputPwdRaw=await _promptPasswordInput(userName);
-        if(!inputPwdRaw){
-          password='';sessionStorage.removeItem('pw');
-          pins.forEach(p=>{p.value=''});pins[0].focus();
-          return;
-        }
-        // 입력값도 동일하게 정규화 후 비교
-        const inputPwd=String(inputPwdRaw).trim().normalize('NFC');
-        if(inputPwd!==storedPwd){
-          password='';sessionStorage.removeItem('pw');
-          document.getElementById('login-msg').textContent='비밀번호가 일치하지 않아요';
-          pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
-          return;
-        }
-        pwdOk=true;
-      }
-      if(!pwdOk){password='';sessionStorage.removeItem('pw');return;}
-      // 인증 성공 — 세션 저장 + initApp
-      // 관리자여부=true면 서브 admin: role='admin' + subAdminPin 저장 (Worker 헤더용)
-      const isSubAdmin=isFlagOn(matched['관리자여부']);
-      const sessRole=isSubAdmin?'admin':'user';
-      sessionStorage.setItem('pw','0510');
-      sessionStorage.setItem('role',sessRole);
-      if(isSubAdmin){sessionStorage.setItem('subAdminPin',String(pin));}
-      else{sessionStorage.removeItem('subAdminPin');}
-      password='0510';
-      userRole=sessRole;
+    const pin=Array.from(pins).map(p=>p.value).join('');
+    if(pin.length!==4){_loggingIn=false;return;}
+    document.getElementById('login-msg').textContent='';
+    document.getElementById('login-load').textContent='확인 중...';
+
+    // 0511 비상 백도어 (MS 없이 진입, 락아웃 복구용)
+    if(pin==='0511'){
       try{
-        sessionStorage.setItem('myApplicant',userName);
-        sessionStorage.setItem('myUserDept',userDept);
-      }catch(e){}
-      document.getElementById('login').style.display='none';
-      document.getElementById('app').style.display='';
-      initApp();
-      setTimeout(function(){if(typeof showToast==='function')showToast(userName+(isSubAdmin?' 님 (관리자)':' 님'),'success');},300);
+        const r=await fetch(`${API}/api/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pin})});
+        const d=await r.json();
+        if(r.ok && d.ok){
+          password=pin;userRole=d.role||'admin';
+          sessionStorage.setItem('pw',pin);sessionStorage.setItem('role',userRole);
+          sessionStorage.setItem('myApplicant','ADMIN');
+          try{sessionStorage.removeItem('myUserDept');sessionStorage.removeItem('subAdminPin');}catch(e){}
+          _enterApp();return;
+        }
+      }catch(e){console.error('[0511]',e);}
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').textContent='비상 인증 실패';
+      pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
       return;
     }
-    // 모두 실패
-    password='';sessionStorage.removeItem('pw');
-    document.getElementById('login-load').textContent='';
-    document.getElementById('login-msg').textContent='비밀번호가 틀립니다';
-    pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
-  }catch(e){
-    console.error(e);
+
+    // MS 계정 이메일 (silent, 팝업 없음)
+    const email = await _msalGetEmailSilent();
+    if(!email){
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').innerHTML='먼저 <b>MS 로그인</b>을 해주세요';
+      pins.forEach(p=>{p.value=''});pins[0].focus();
+      return;
+    }
+    await _authWithEmail(email, pin);
+  } catch(e){
+    console.error('[tryLogin]',e);
     document.getElementById('login-load').textContent='';
     document.getElementById('login-msg').textContent='서버 연결 실패';
-  }
   } finally { _loggingIn = false; }
 }
+
+function _enterApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='';
+  initApp();
+}
+
+// 시트 컬럼 fallback (헤더 변형 매칭)
+function _authGetCol(rec, candidates){
+  for(let i=0;i<candidates.length;i++){
+    const k=candidates[i];
+    if(rec[k]!==undefined && rec[k]!==null && rec[k]!=='') return rec[k];
+  }
+  const keys=Object.keys(rec);
+  for(let i=0;i<candidates.length;i++){
+    const cc=candidates[i].toLowerCase().replace(/[\s\(\)0-9]/g,'');
+    for(let j=0;j<keys.length;j++){
+      if(keys[j].toLowerCase().replace(/[\s\(\)0-9]/g,'')===cc) return rec[keys[j]];
+    }
+  }
+  return '';
+}
+const _EMAIL_KEYS=['이메일','email','Email','EMAIL','메일','e-mail','E-Mail'];
+const _PIN_KEYS=['PIN','Pin','pin','PIN(4자리)','PIN 4자리','핀'];
+const _LEAVE_KEYS=['휴직여부','휴직','onLeave','leave'];
+
+// MS 이메일 + PIN 인증 (재방문: PIN 입력 경로)
+async function _authWithEmail(email, pin){
+  // 슈퍼admin (manager 계정)
+  if(email === SUPER_EMAIL){
+    if(pin !== '0510'){
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').textContent='PIN이 일치하지 않습니다';
+      pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
+      return;
+    }
+    document.getElementById('login-load').textContent='';
+    const secret = await _promptSuperSecret();
+    if(!secret){ pins.forEach(p=>{p.value=''});pins[0].focus(); return; }
+    document.getElementById('login-load').textContent='확인 중...';
+    try{
+      const r=await fetch(`${API}/api/auth/super`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:SUPER_EMAIL,pin:'0510',secret:secret})});
+      const d=await r.json();
+      if(r.ok && d.ok){
+        password='0510';userRole='admin';
+        sessionStorage.setItem('pw','0510');sessionStorage.setItem('role','admin');
+        sessionStorage.setItem('myApplicant',d.name||'ADMIN');
+        try{sessionStorage.removeItem('myUserDept');sessionStorage.removeItem('subAdminPin');}catch(e){}
+        _enterApp();
+        setTimeout(function(){if(typeof showToast==='function')showToast('슈퍼관리자','success');},300);
+        return;
+      }
+    }catch(e){console.error('[super]',e);}
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='인증 실패';
+    pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
+    return;
+  }
+
+  // 일반/서브admin
+  if(!MANAGERS||!MANAGERS.length){ password='0510'; await loadManagers(); }
+  const matched=(MANAGERS||[]).find(function(m){
+    return String(_authGetCol(m,_EMAIL_KEYS)||'').trim().toLowerCase()===email;
+  });
+  if(!matched){
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='등록되지 않은 계정입니다. 관리자에게 문의하세요';
+    pins.forEach(p=>{p.value=''});pins[0].focus();
+    return;
+  }
+  if(isFlagOn(_authGetCol(matched,_LEAVE_KEYS))){
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='휴직 상태 계정입니다. 관리자에게 문의하세요';
+    pins.forEach(p=>{p.value=''});pins[0].focus();
+    return;
+  }
+  const storedPin=String(_authGetCol(matched,_PIN_KEYS)||'').trim();
+  const userName=matched['담당자']||'';
+
+  // 최초 — PIN 미설정
+  if(!storedPin){
+    document.getElementById('login-load').textContent='';
+    const newPin = await _promptNewPin(userName);
+    if(!newPin){ pins.forEach(p=>{p.value=''});pins[0].focus(); return; }
+    document.getElementById('login-load').textContent='확인 중...';
+    try{
+      const r=await fetch(`${API}/api/auth/set-pin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,pin:newPin})});
+      const d=await r.json();
+      if(!r.ok || !d.ok){ throw new Error(d.error||('HTTP '+r.status)); }
+    }catch(e){
+      console.error('[set-pin]',e);
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').textContent='PIN 설정 실패: '+e.message;
+      return;
+    }
+    _enterAsManager(matched, newPin, userName); return;
+  }
+
+  // 기존 — PIN 비교
+  if(storedPin !== pin){
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='PIN이 일치하지 않습니다';
+    pins.forEach(p=>{p.value='';p.classList.add('err')});pins[0].focus();
+    return;
+  }
+  _enterAsManager(matched, pin, userName);
+}
+
+function _enterAsManager(matched, pin, userName){
+  const userDept=matched['담당부서']||'';
+  const isSubAdmin=isFlagOn(matched['관리자여부']);
+  const sessRole=isSubAdmin?'admin':'user';
+  sessionStorage.setItem('pw','0510');
+  sessionStorage.setItem('role',sessRole);
+  if(isSubAdmin){sessionStorage.setItem('subAdminPin',String(pin));}else{sessionStorage.removeItem('subAdminPin');}
+  password='0510';userRole=sessRole;
+  try{sessionStorage.setItem('myApplicant',userName);sessionStorage.setItem('myUserDept',userDept);}catch(e){}
+  _enterApp();
+  setTimeout(function(){if(typeof showToast==='function')showToast(userName+(isSubAdmin?' 님 (관리자)':' 님'),'success');},300);
+}
+
+// MS 로그인 버튼 (토큰 無 → popup) — 첫 방문/다른 기기
+async function msLogin(){
+  if(_loggingIn) return;
+  _loggingIn = true;
+  try {
+    document.getElementById('login-msg').textContent='';
+    document.getElementById('login-load').textContent='Microsoft 로그인 중...';
+    const email = await _msalLoginEmail();
+    if(!email){ document.getElementById('login-load').textContent=''; _loggingIn=false; return; }
+
+    if(email === SUPER_EMAIL){
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').innerHTML='슈퍼관리자 — PIN <b>0510</b> 입력 후 진행';
+      pins.forEach(p=>{p.value=''});pins[0].focus();
+      _loggingIn=false; return;
+    }
+
+    if(!MANAGERS||!MANAGERS.length){ password='0510'; await loadManagers(); }
+    const matched=(MANAGERS||[]).find(function(m){
+      return String(_authGetCol(m,_EMAIL_KEYS)||'').trim().toLowerCase()===email;
+    });
+    if(!matched){
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').textContent='등록되지 않은 계정입니다. 관리자에게 문의하세요';
+      _loggingIn=false; return;
+    }
+    if(isFlagOn(_authGetCol(matched,_LEAVE_KEYS))){
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').textContent='휴직 상태 계정입니다. 관리자에게 문의하세요';
+      _loggingIn=false; return;
+    }
+    const storedPin=String(_authGetCol(matched,_PIN_KEYS)||'').trim();
+    const userName=matched['담당자']||'';
+    if(!storedPin){
+      document.getElementById('login-load').textContent='';
+      const newPin = await _promptNewPin(userName);
+      if(!newPin){ _loggingIn=false; return; }
+      document.getElementById('login-load').textContent='확인 중...';
+      try{
+        const r=await fetch(`${API}/api/auth/set-pin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,pin:newPin})});
+        const d=await r.json();
+        if(!r.ok || !d.ok){ throw new Error(d.error||('HTTP '+r.status)); }
+      }catch(e){
+        console.error('[set-pin]',e);
+        document.getElementById('login-load').textContent='';
+        document.getElementById('login-msg').textContent='PIN 설정 실패: '+e.message;
+        _loggingIn=false; return;
+      }
+      _enterAsManager(matched, newPin, userName);
+    } else {
+      document.getElementById('login-load').textContent='';
+      document.getElementById('login-msg').textContent='PIN을 입력해 주세요';
+      pins.forEach(p=>{p.value=''});pins[0].focus();
+    }
+  } catch(e){
+    console.error('[msLogin]',e);
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').textContent='로그인 실패';
+  } finally { _loggingIn = false; }
+}
+
+// 슈퍼admin 2차 비밀번호 입력 모달
+function _promptSuperSecret(){
+  const p = new Promise(function(resolve){
+    const inpSt='width:100%;padding:11px 44px 11px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;letter-spacing:2px;text-align:center';
+    const eyeSt='position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;color:#888;padding:6px;line-height:1;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:color .12s';
+    const eyeIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const html='<div class="modal-bg show" id="super-sec-modal" style="z-index:99999" onclick="if(event.target===this)_resolveSuperSec(null)"><div class="modal" style="max-width:360px;padding:24px;text-align:left;position:relative"><button class="modal-x" onclick="_resolveSuperSec(null)" title="닫기">✕</button><h3 style="margin:0 0 4px">슈퍼관리자 인증</h3><div style="font-size:12px;color:#888;margin-bottom:14px">2차 비밀번호를 입력해 주세요.</div><div style="position:relative"><input id="super-sec-in" type="password" autocomplete="off" maxlength="40" style="'+inpSt+'"><button type="button" onclick="_togglePwdVisibility(\'super-sec-in\', this)" title="보기" style="'+eyeSt+'">'+eyeIcon+'</button></div><div id="super-sec-msg" style="font-size:11px;color:#E24B4A;margin-top:8px;min-height:14px"></div><div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button onclick="_resolveSuperSec(null)" class="m-btn cancel">취소</button><button onclick="_resolveSuperSecOk()" class="m-btn save">확인</button></div></div></div>';
+    let el=document.getElementById('super-sec-modal');
+    if(el)el.remove();
+    document.body.insertAdjacentHTML('beforeend',html);
+    window._superSecResolver=resolve;
+    setTimeout(function(){const i=document.getElementById('super-sec-in');if(i)i.focus();},80);
+    document.getElementById('super-sec-in').addEventListener('keydown',function(ev){if(ev.key==='Enter')_resolveSuperSecOk();});
+  });
+  return p;
+}
+function _resolveSuperSec(val){
+  const el=document.getElementById('super-sec-modal');
+  if(el)el.remove();
+  if(window._superSecResolver){window._superSecResolver(val);window._superSecResolver=null;}
+}
+function _resolveSuperSecOk(){
+  const v=document.getElementById('super-sec-in').value;
+  if(!v){document.getElementById('super-sec-msg').textContent='2차 비밀번호를 입력해 주세요';return;}
+  _resolveSuperSec(v);
+}
+
+// 최초 PIN 설정 모달 (4자리)
+function _promptNewPin(userName){
+  const p = new Promise(function(resolve){
+    const inpSt='width:100%;padding:13px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:20px;outline:none;box-sizing:border-box;font-family:inherit;letter-spacing:10px;text-align:center';
+    const html='<div class="modal-bg show" id="newpin-modal" style="z-index:99999" onclick="if(event.target===this)_resolveNewPin(null)"><div class="modal" style="max-width:340px;padding:24px;text-align:left;position:relative"><button class="modal-x" onclick="_resolveNewPin(null)" title="닫기">✕</button><h3 style="margin:0 0 4px">'+escapeHtml(userName)+' 님</h3><div style="font-size:12px;color:#888;margin-bottom:14px">처음 로그인이에요. 사용할 PIN 4자리를 정해 주세요.</div><input id="newpin-in" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" style="'+inpSt+'"><div id="newpin-msg" style="font-size:11px;color:#E24B4A;margin-top:8px;min-height:14px"></div><div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button onclick="_resolveNewPin(null)" class="m-btn cancel">취소</button><button onclick="_resolveNewPinOk()" class="m-btn save">설정</button></div></div></div>';
+    let el=document.getElementById('newpin-modal');
+    if(el)el.remove();
+    document.body.insertAdjacentHTML('beforeend',html);
+    window._newPinResolver=resolve;
+    setTimeout(function(){const i=document.getElementById('newpin-in');if(i)i.focus();},80);
+    const inp=document.getElementById('newpin-in');
+    inp.addEventListener('input',function(){this.value=this.value.replace(/[^0-9]/g,'');});
+    inp.addEventListener('keydown',function(ev){if(ev.key==='Enter')_resolveNewPinOk();});
+  });
+  return p;
+}
+function _resolveNewPin(val){
+  const el=document.getElementById('newpin-modal');
+  if(el)el.remove();
+  if(window._newPinResolver){window._newPinResolver(val);window._newPinResolver=null;}
+}
+function _resolveNewPinOk(){
+  const v=document.getElementById('newpin-in').value;
+  if(!/^[0-9]{4}$/.test(v)){document.getElementById('newpin-msg').textContent='숫자 4자리를 입력해 주세요';return;}
+  if(v==='0510'||v==='0511'){document.getElementById('newpin-msg').textContent='사용할 수 없는 PIN이에요';return;}
+  _resolveNewPin(v);
+}
+
 (function(){try{localStorage.removeItem('myApplicant');localStorage.removeItem('myUserDept');}catch(e){}const s=sessionStorage.getItem('pw');if(s){password=s;userRole=sessionStorage.getItem('role')||'user';document.getElementById('login').style.display='none';document.getElementById('app').style.display='';initApp();}})();
 
 async function api(method,path,body){
@@ -5940,6 +6084,34 @@ async function _msalGetToken(){
     showToast('Microsoft 로그인 실패: ' + (e.errorCode || e.message),'error');
     return null;
   }
+}
+
+// ═══ STEP3: MS 계정 이메일 헬퍼 (신원=이메일) ═══
+async function _msalGetEmailSilent(){
+  const inst = await _msalGet();
+  if(!inst) return null;
+  try{
+    const accounts = inst.getAllAccounts();
+    if(accounts.length > 0) return ((accounts[0].username)||'').trim().toLowerCase();
+  }catch(e){console.warn('[msal email silent]',e);}
+  return null;
+}
+async function _msalLoginEmail(){
+  const inst = await _msalGet();
+  if(!inst) return null;
+  try {
+    const res = await inst.loginPopup({scopes: _MSAL_SCOPES, prompt: 'select_account'});
+    return ((res.account && res.account.username)||'').trim().toLowerCase();
+  } catch(e){
+    console.error('[msal login email]', e);
+    showToast('Microsoft 로그인 실패: ' + (e.errorCode || e.message),'error');
+    return null;
+  }
+}
+async function _msalLogout(){
+  const inst = await _msalGet();
+  if(!inst) return;
+  try { await inst.logoutPopup(); } catch(e){ console.warn('[msal logout]', e); }
 }
 
 // PIN 로그인 직후 호출 — MS 토큰 미리 확보 (조용한 버전)
