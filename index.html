@@ -1506,8 +1506,8 @@ async function _authWithEmail(email, pin){
       const r=await fetch(`${API}/api/auth/super`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:SUPER_EMAIL,pin:'0510',secret:secret})});
       const d=await r.json();
       if(r.ok && d.ok){
-        password='0510';userRole='admin';
-        sessionStorage.setItem('pw','0510');sessionStorage.setItem('role','admin');
+        password='0511';userRole='admin';
+        sessionStorage.setItem('pw','0511');sessionStorage.setItem('role','admin');
         sessionStorage.setItem('myApplicant',d.name||'ADMIN');
         try{sessionStorage.removeItem('myUserDept');sessionStorage.removeItem('subAdminPin');}catch(e){}
         _enterApp();
@@ -2099,10 +2099,14 @@ async function submitRolePrompt(){
   }
 }
 async function logout(){
-  const ok=await showConfirm('로그아웃할까요?');
+  const ok=await showConfirm('로그아웃할까요? 이 기기의 Microsoft 계정 로그인도 함께 해제됩니다.');
   if(!ok)return;
   sessionStorage.removeItem('pw');
   sessionStorage.removeItem('role');
+  sessionStorage.removeItem('subAdminPin');
+  sessionStorage.removeItem('myApplicant');
+  sessionStorage.removeItem('myUserDept');
+  try{ await _msalLogout(); }catch(e){console.warn('[logout msal]',e);}
   location.reload();
 }
 
@@ -8435,11 +8439,12 @@ function buildSheetListHtml(slug,rows){
     html+='<td style="text-align:right;white-space:nowrap">';
     // manager 시트 — 비밀번호 초기화 버튼 (사용자에게 전달할 PIN/비밀번호 관리)
     if(slug==='manager'){
-      const _hasPwd = !!(r['비밀번호']||'');
+      const _hasPin = !!(r['PIN']||'');
       const _userName = escapeHtml(r['담당자']||'사용자');
-      const _btnTitle = _hasPwd?'비밀번호 초기화 — 사용자 다음 접속 시 새로 설정':'비밀번호 미설정 (사용자가 첫 접속 시 설정)';
-      const _btnStyle = _hasPwd?'background:#fff8f3;color:#b35a30;border:1.5px solid #e5c4a8':'background:#f5f5f5;color:#aaa;border:1.5px solid #e0e0e0';
-      html+='<button class="adm-btn" style="'+_btnStyle+';margin-right:4px" '+(_hasPwd?'':'disabled')+' onclick="resetUserPassword('+r._rowIndex+',\''+_userName.replace(/'/g,"\\'")+'\')" title="'+_btnTitle+'">🔑 초기화</button>';
+      const _email = (r['이메일']||'').trim();
+      const _btnTitle = _hasPin?'PIN 초기화 — 사용자 다음 접속 때 새로 설정':'PIN 미설정 (사용자가 첫 접속 때 설정)';
+      const _btnStyle = _hasPin?'background:#fff8f3;color:#b35a30;border:1.5px solid #e5c4a8':'background:#f5f5f5;color:#aaa;border:1.5px solid #e0e0e0';
+      html+='<button class="adm-btn" style="'+_btnStyle+';margin-right:4px" '+((_hasPin&&_email)?'':'disabled')+' onclick="resetUserPin('+r._rowIndex+',\''+_userName.replace(/'/g,"\\'")+'\',\''+_email.replace(/'/g,"\\'")+'\')" title="'+_btnTitle+'">\uD83D\uDD11 PIN 초기화</button>';
     }
     if(cfg.inlineEdit){
       html+='<button id="save-'+slug+'-'+r._rowIndex+'" class="adm-btn save-row" onclick="saveInlineRow(\''+slug+'\','+r._rowIndex+')" disabled>저장</button>';
@@ -8461,25 +8466,21 @@ function markRowDirty(slug,rowIndex){
   }
 }
 
-// === 비밀번호 초기화 (관리자가 manager 시트에서 호출) ===
-async function resetUserPassword(rowIndex, userName){
-  const ok = await showConfirm('<b>'+escapeHtml(userName||'사용자')+'</b> 님의 비밀번호를 초기화할까요?', {title:'🔑 비밀번호 초기화', html:true, okText:'초기화', danger:true});
+// === PIN 초기화 (관리자가 manager 시트에서 호출, reset-pin 엔드포인트) ===
+async function resetUserPin(rowIndex, userName, email){
+  if(!email){showToast('이메일이 없는 계정이에요','error');return;}
+  const ok = await showConfirm('<b>'+escapeHtml(userName||'사용자')+'</b> 님의 PIN을 초기화할까요?', {title:'\uD83D\uDD11 PIN 초기화', html:true, okText:'초기화', danger:true});
   if(!ok) return;
-  const rec = (_sheetCache['manager']||[]).find(r=>r._rowIndex===rowIndex);
-  if(!rec){showToast('사용자를 찾을 수 없어요','error');return;}
   showOverlayLoad('초기화 중...');
   try{
-    // 비밀번호 빈값으로 + 나머지는 그대로
-    const mRow = buildManagerRow(rec, {'비밀번호':''});
-    await api('PATCH', '/api/sheet/manager/'+rowIndex, {values: mRow});
-    showToast(userName+' 님 비밀번호 초기화 완료. 다음 접속 시 새로 설정합니다.');
-    // 캐시 갱신
+    await api('POST', '/api/auth/reset-pin', {targetEmail: email});
+    showToast(userName+' 님 PIN 초기화 완료. 다음 접속 때 새로 설정합니다');
     MANAGERS = [];
     await loadManagers();
-    PR_MANAGERS = MANAGERS.filter(m=>isFlagOn(m['홍보여부']));
+    PR_MANAGERS = MANAGERS.filter(m=>isFlagOn(m['정보활용']));
     await renderSheetList('manager');
   }catch(e){
-    console.error('[resetUserPassword]', e);
+    console.error('[resetUserPin]', e);
     showToast('초기화 실패: '+e.message,'error');
   }finally{
     if(typeof hideOverlayLoad==='function')hideOverlayLoad();
