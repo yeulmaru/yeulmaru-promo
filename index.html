@@ -1469,6 +1469,7 @@ async function tryLogin(){
 function _enterApp(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='';
+  try{ if(typeof _loginEmail!=='undefined' && _loginEmail) localStorage.setItem('lastLoginEmail', _loginEmail); }catch(e){}
   _locked=false; initApp(); if(typeof _bindIdleEvents==='function'){ _bindIdleEvents(); resetIdleTimer(); }
 }
 
@@ -6188,8 +6189,14 @@ async function _msalGetEmailSilent(){
     const act = inst.getActiveAccount();
     if(act) return ((act.username)||'').trim().toLowerCase();
     const accounts = inst.getAllAccounts();
-    if(accounts.length === 1) return ((accounts[0].username)||'').trim().toLowerCase();
-    // 계정 여러 개인데 active 미설정 → 모호하므로 null (명시적 MS 로그인 유도)
+    if(!accounts || accounts.length === 0) return null;
+    let pick = null;
+    try{
+      const last = (localStorage.getItem('lastLoginEmail')||'').trim().toLowerCase();
+      if(last) pick = accounts.find(a => ((a.username)||'').trim().toLowerCase() === last);
+    }catch(e){}
+    if(!pick && accounts.length === 1) pick = accounts[0];
+    if(pick){ inst.setActiveAccount(pick); return ((pick.username)||'').trim().toLowerCase(); }
   }catch(e){console.warn('[msal email silent]',e);}
   return null;
 }
