@@ -1426,6 +1426,7 @@ async function tryLogin(){
   if(_loggingIn) return;
   _loggingIn = true;
   try {
+    if(!_loginEmail){ document.getElementById('login-msg').textContent='먼저 Microsoft 인증이 필요합니다'; _loggingIn=false; return; }
     const pin=Array.from(pins).map(p=>p.value).join('');
     if(pin.length!==4){_loggingIn=false;return;}
     document.getElementById('login-msg').textContent='';
@@ -1612,7 +1613,10 @@ async function initLoginScreen(){
 async function goToPinStep(){
   if(_loginEmail === SUPER_EMAIL){ _enterPinInputStep(); return; }
   const step=document.getElementById('account-step');
-  if(step)step.innerHTML='<div style="color:#999;font-size:13px;padding:24px 0">계정 확인 중...</div>';
+  if(step)step.innerHTML='<div style="color:#999;font-size:13px;padding:24px 0">Microsoft 인증 확인 중...</div>';
+  const v=await _msalEnsureToken(_loginEmail);
+  if(!v){ showToast('Microsoft 인증이 필요합니다','error'); initLoginScreen(); return; }
+  _loginEmail=v;
   if(!MANAGERS||!MANAGERS.length){ password='0510'; try{await loadManagers();}catch(e){} }
   const matched=(MANAGERS||[]).find(function(m){return String(_authGetCol(m,_EMAIL_KEYS)||'').trim().toLowerCase()===_loginEmail;});
   if(!matched){ if(typeof showToast==='function')showToast('등록되지 않은 계정입니다. 관리자에게 문의하세요','error'); initLoginScreen(); return; }
@@ -1652,7 +1656,7 @@ async function switchMsAccount(){
   if(_loggingIn)return; _loggingIn=true;
   try{
     const email=await _msalLoginEmail();
-    if(email){ _loginEmail=email; goToPinStep(false); }
+    if(email){ _loginEmail=email; goToPinStep(); }
   }finally{ _loggingIn=false; }
 }
 async function msLogin(){
@@ -1664,7 +1668,7 @@ async function msLogin(){
     const email = await _msalLoginEmail();
     if(!email){ if(typeof initLoginScreen==='function')initLoginScreen(); _loggingIn=false; return; }
     _loginEmail = email;
-    goToPinStep(false);
+    goToPinStep();
   } catch(e){
     console.error('[msLogin]',e);
     if(typeof initLoginScreen==='function')initLoginScreen();
@@ -2076,7 +2080,7 @@ function showRoleTagMsg(msg){
   if(!m){
     m=document.createElement('span');
     m.className='role-tag-msg';
-    m.style.cssText='position:absolute;top:calc(100% + 6px);right:0;background:#c0392b;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.18);transition:opacity .2s;pointer-events:none';
+    m.style.cssText='position:absolute;top:calc(100% + 6px);right:0;background:#f0f0f0;color:#888;font-size:11px;font-weight:600;padding:5px 10px;border-radius:8px;white-space:nowrap;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:opacity .2s;pointer-events:none';
     tag.appendChild(m);
   }
   m.textContent=msg;
@@ -6176,20 +6180,19 @@ async function _msalGetToken(){
     return res.accessToken;
   } catch(e){
     console.error('[msal popup failed]', e);
-    showToast('Microsoft 로그인 실패: ' + (e.errorCode || e.message),'error');
+    showToast('Microsoft 계정 로그인에 실패하였습니다','error');
     return null;
   }
 }
 
 // ═══ STEP3: MS 계정 이메일 헬퍼 (신원=이메일) ═══
 async function _msalGetEmailSilent(){
+  // 표시용 이메일 반환 (인증 아님 — 진입 권한은 _msalEnsureToken에서 토큰으로 검증)
   const inst = await _msalGet();
   if(!inst) return null;
   try{
-    // 1) active account
     const act = inst.getActiveAccount();
     if(act) return ((act.username)||'').trim().toLowerCase();
-    // 2) 앱 캐시 계정 (lastLoginEmail 우선 → 없으면 가장 최근 iat)
     const accounts = inst.getAllAccounts();
     if(accounts && accounts.length){
       let pick=null;
@@ -6198,16 +6201,17 @@ async function _msalGetEmailSilent(){
       if(!pick) pick=accounts.slice().sort(function(a,b){var ta=(a.idTokenClaims&&a.idTokenClaims.iat)||0,tb=(b.idTokenClaims&&b.idTokenClaims.iat)||0;return tb-ta;})[0];
       if(pick){ inst.setActiveAccount(pick); return ((pick.username)||'').trim().toLowerCase(); }
     }
-    // 3) 앱 캐시가 비었을 때 — 브라우저 SSO 세션으로 팝업 없이 시도
-    try{
-      const opts={scopes:_MSAL_SCOPES};
-      const last=(localStorage.getItem('lastLoginEmail')||'').trim().toLowerCase();
-      if(last) opts.loginHint=last;
-      const r=await inst.ssoSilent(opts);
-      if(r && r.account){ inst.setActiveAccount(r.account); return ((r.account.username)||'').trim().toLowerCase(); }
-    }catch(e){ console.warn('[ssoSilent failed]', e.errorCode||e.message); }
   }catch(e){console.warn('[msal email silent]',e);}
-  try{ var _ll=(localStorage.getItem('lastLoginEmail')||'').trim().toLowerCase(); if(_ll){ console.log('[silent] MSAL 실패 → lastLoginEmail fallback:', _ll); return _ll; } }catch(e){}
+  // MSAL 캐시 비었으면 lastLoginEmail (표시 전용, 진입 권한 아님)
+  try{ var _ll=(localStorage.getItem('lastLoginEmail')||'').trim().toLowerCase(); if(_ll) return _ll; }catch(e){}
+  return null;
+}
+async function _msalEnsureToken(hintEmail){
+  const inst=await _msalGet(); if(!inst) return null;
+  let acc=inst.getActiveAccount();
+  if(!acc){ const accs=inst.getAllAccounts(); if(hintEmail) acc=accs.find(a=>((a.username)||'').trim().toLowerCase()===hintEmail); if(!acc && accs.length===1) acc=accs[0]; }
+  if(acc){ try{ await inst.acquireTokenSilent({scopes:_MSAL_SCOPES, account:acc}); inst.setActiveAccount(acc); return ((acc.username)||'').trim().toLowerCase(); }catch(e){ console.warn('[ensureToken silent]', e.errorCode||e.message); } }
+  try{ const res=await inst.loginPopup({scopes:_MSAL_SCOPES, prompt:'select_account', loginHint:hintEmail||undefined}); if(res&&res.account){ inst.setActiveAccount(res.account); return ((res.account.username)||'').trim().toLowerCase(); } }catch(e){ console.warn('[ensureToken popup]', e.errorCode||e.message); }
   return null;
 }
 async function _msalLoginEmail(){
@@ -6219,7 +6223,7 @@ async function _msalLoginEmail(){
     return ((res.account && res.account.username)||'').trim().toLowerCase();
   } catch(e){
     console.error('[msal login email]', e);
-    showToast('Microsoft 로그인 실패: ' + (e.errorCode || e.message),'error');
+    showToast('Microsoft 계정 로그인에 실패하였습니다','error');
     return null;
   }
 }
