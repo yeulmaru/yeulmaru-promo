@@ -1468,6 +1468,7 @@ async function tryLogin(){
 }
 
 function _enterApp(){
+  window._pinActive=false;
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='';
   try{ if(typeof _loginEmail!=='undefined' && _loginEmail) localStorage.setItem('lastLoginEmail', _loginEmail); }catch(e){}
@@ -1598,7 +1599,7 @@ function _enterAsManager(matched, pin, userName){
 // MS 로그인 버튼 (토큰 無 → popup) — 첫 방문/다른 기기
 let _loginEmail='';
 async function initLoginScreen(){
-  if(Date.now()-(window._pinShownAt||0)<2500){console.log('[initLogin] BLOCKED: too soon after PIN');return;}
+  if(window._pinActive){console.log('[initLogin] blocked: pin active');return;}
   console.log('[initLogin] CALLED from:',new Error().stack.split('\n').slice(1,4).join(' | '));
   const step=document.getElementById('account-step');
   if(!step)return;
@@ -1666,7 +1667,7 @@ async function goToPinStep(skipEnsure){
   }catch(err){ console.error('[goToPin] UNCAUGHT:',err); if(typeof showToast==='function')showToast('로그인 처리 중 오류가 발생했습니다','error'); if(typeof initLoginScreen==='function')initLoginScreen(); }
 }
 function _enterPinInputStep(){
-  window._pinShownAt=Date.now();
+  window._pinActive=true;
   console.log('[pinInput] ENTER');
   const a=document.getElementById('account-step'); if(a)a.style.display='none';
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='';
@@ -1679,7 +1680,7 @@ function _enterPinInputStep(){
   console.log('[pinInput] DONE account=',a?a.style.display:'null','pin=',ps?ps.style.display:'null');
   setTimeout(function(){var _a=document.getElementById('account-step'),_p=document.getElementById('pin-step');console.log('[pinInput] +500ms account=',_a?_a.style.display:'null','pin=',_p?_p.style.display:'null');},500);
 }function backToAccountStep(){
-  if(Date.now()-(window._pinShownAt||0)<2500){console.log('[backToAccount] ignored: too soon after PIN shown');return;}
+  if(window._pinActive && !(window.event&&window.event.isTrusted)){console.log('[backToAccount] synthetic click blocked');return;} window._pinActive=false;
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='none';
   const a=document.getElementById('account-step'); if(a)a.style.display='';
   pins.forEach(function(x){x.value='';x.classList.remove('err');});
