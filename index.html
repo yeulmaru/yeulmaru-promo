@@ -1492,6 +1492,7 @@ function _authGetCol(rec, candidates){
 const _EMAIL_KEYS=['이메일','email','Email','EMAIL','메일','e-mail','E-Mail'];
 const _PIN_KEYS=['PIN','Pin','pin','PIN(4자리)','PIN 4자리','핀'];
 const _LEAVE_KEYS=['휴직여부','휴직','onLeave','leave'];
+const _ACTIVE_KEYS=['계정여부','활성','계정사용','active','사용여부','계정상태'];
 
 // MS 이메일 + PIN 인증 (재방문: PIN 입력 경로)
 async function _authWithEmail(email, pin){
@@ -1541,6 +1542,12 @@ async function _authWithEmail(email, pin){
     document.getElementById('login-load').textContent='';
     document.getElementById('login-msg').textContent='휴직 상태 계정입니다. 관리자에게 문의하세요';
     pins.forEach(p=>{p.value=''});pins[0].focus();
+    return;
+  }
+  if(!isFlagOn(_authGetCol(matched,_ACTIVE_KEYS))){
+    document.getElementById('login-load').textContent='';
+    document.getElementById('login-msg').innerHTML='<div style="line-height:1.5">본 프로그램에 접근 권한이 없습니다<br>관리자에게 문의해주세요</div>';
+    pins.forEach(p=>{p.value=''});if(pins[0])pins[0].focus();
     return;
   }
   const storedPin=String(_authGetCol(matched,_PIN_KEYS)||'').trim();
@@ -1621,6 +1628,14 @@ async function goToPinStep(){
   const matched=(MANAGERS||[]).find(function(m){return String(_authGetCol(m,_EMAIL_KEYS)||'').trim().toLowerCase()===_loginEmail;});
   if(!matched){ if(typeof showToast==='function')showToast('등록되지 않은 계정입니다. 관리자에게 문의하세요','error'); initLoginScreen(); return; }
   if(isFlagOn(_authGetCol(matched,_LEAVE_KEYS))){ if(typeof showToast==='function')showToast('휴직 상태 계정입니다. 관리자에게 문의하세요','error'); initLoginScreen(); return; }
+  if(!isFlagOn(_authGetCol(matched,_ACTIVE_KEYS))){
+    const step=document.getElementById('account-step');
+    if(step){ step.style.display='';
+      step.innerHTML='<div style="font-size:14px;color:#e24b4a;font-weight:700;margin-bottom:6px">본 프로그램에 접근 권한이 없습니다</div><div style="font-size:12px;color:#888;margin-bottom:18px">관리자에게 문의해주세요</div><button type="button" onclick="initLoginScreen()" style="width:100%;padding:10px;background:none;border:0;color:#999;font-size:12px;cursor:pointer;text-decoration:underline">다른 계정으로</button>';
+    }
+    const ps=document.getElementById('pin-step'); if(ps)ps.style.display='none';
+    return;
+  }
   const storedPin=String(_authGetCol(matched,_PIN_KEYS)||'').trim();
   const userName=matched['담당자']||'';
   if(!storedPin){
@@ -2199,7 +2214,7 @@ function lockScreen(){
   const a=document.getElementById('account-step'); if(a)a.style.display='none';
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='';
   const pa=document.getElementById('pin-account'); if(pa)pa.innerHTML='<b style="color:var(--accent)">'+escapeHtml(_loginEmail||'')+'</b>';
-  const lm=document.getElementById('login-msg'); if(lm){ lm.textContent='30분간 입력이 없어 잠금되었습니다'; lm.style.color='#e53935'; }
+  const lm=document.getElementById('login-msg'); if(lm){ lm.textContent='30분간 입력이 없어 잠금되었습니다'; lm.style.color='#e53935'; lm.style.fontSize='11px'; lm.style.marginTop='6px'; }
   const ll=document.getElementById('login-load'); if(ll)ll.textContent='';
   pins.forEach(function(x){x.value='';x.classList.remove('err');});
   if(pins[0])pins[0].focus();
