@@ -526,3 +526,47 @@ cd "C:\Users\$env:USERNAME\OneDrive - GS칼텍스 예울마루\DAX\Sewoong Hwang
 **진행중 Q-3**: 오른쪽 사이드바 프로그램 우클릭 메뉴 '홍보현황'(openPromoBoardForProgram @501259) / '조회'(openProgramView @497464). 좌클릭 onclick 핸들러 @492107 확정 필요. 상세는 인계파일 260529_yeulmaru-promo_handoff 참조.
 
 **잔여**: 3단계(PR_MANAGERS 전원알림, 조회모달 Y/Z/AA 표시분리), 그룹A(진행상태 스텝/모두읽음/모달X복귀).
+
+
+---
+
+## 작업 로그 — 2026-05-31 (세션 20: 로그인 무한루프 + PIN 우회 백도어 대수술)
+
+집 PC(Hwang), Desktop Commander + 직접 수정. 로그인 흐름의 두 가지 치명 버그를 **콘솔 진단으로 추적·수정**. 최종 HEAD = `377ee4a`.
+
+### 버그 A — 로그인 후 PIN 입력칸이 안 뜨고 "Microsoft 인증 확인 중" 무한
+원인이 여러 겹이었음(하나씩 벗겨냄):
+
+1. **TDZ 크래시**: reload 후 페이지 로드 IIFE가 `goToPinStep()`을 즉시 호출 → 그 시점엔 `MANAGERS`(let) 선언 전 → `ReferenceError: Cannot access 'MANAGERS' before initialization` → goToPinStep 즉사. **수정**: IIFE의 `_resumePin` 분기에서 `setTimeout(function(){goToPinStep(true)},0)`로 한 틱 미룸 (커밋 7f90d8f).
+2. **COOP 후폭풍 회피 → reload 방식 도입**: MSAL `loginPopup` 직후 같은 페이지에서 화면을 PIN칸으로 전환하면 COOP(`Cross-Origin-Opener-Policy would block window.closed`) 잔여가 화면을 흔듦. → `switchMsAccount`/`msLogin`/`_doSwitchUser`는 loginPopup 성공 시 `localStorage._resumePin=email` 저장 후 **`location.reload()`**. reload된 깨끗한 페이지의 IIFE가 `_resumePin` 보고 loginPopup 없이 바로 PIN칸 재개 (커밋 b08b77a).
+3. **fadeUp은 범인 아니었음**: `.login-card{animation:fadeUp}` opacity 0→1 의심했으나, `[pinFix]` 진단 로그로 `login.disp=flex op=1 card.op=1 vis=visible` 확인 → opacity/display 정상인데도 안 보였음 = CSS 문제 아님. (방어용 강제표시 폴백만 _enterPinInputStep에 남겨둠.)
+4. **진짜 A 범인 = backToAccountStep이 화면 재렌더 안 함**: `[계정 다시 선택]`(backToAccountStep)이 `account-step.style.display=''`로 보이게만 하고 innerHTML을 계정목록으로 다시 안 그림 → goToPin이 넣어둔 "Microsoft 인증 확인 중" 문구가 그대로 남아 멈춤. **수정**: backToAccountStep 끝에서 `initLoginScreen()` 호출 → 계정목록 재렌더 (커밋 377ee4a).
+
+### 버그 B — PIN 없이 통과되는 백도어 (보안)
+- **원인**: `goToPinStep`/`_authWithEmail`이 관리자목록(`loadManagers`) 불러오려고 PIN 검증 **전에** `password='0510'`(SUPER 백도어 비번)을 박음. PIN 안 맞추고 취소해도 안 비워져 → 전역 `password=0510` 살아있는 한 모든 api가 관리자로 통과. 또 한 번 로그인하면 `sessionStorage.pw='0510'`이 남아 재진입 시 IIFE가 PIN 검증 없이 `initApp()`.
+- **수정** (커밋 eff5171):
+  - `_fullLogout()` 헬퍼 신설: `password=''`, `userRole='user'`, sessionStorage의 `pw/role/myApplicant/myUser/subAdminPin` 전부 제거.
+  - `backToAccountStep` 진입 시 `_fullLogout()` 호출.
+  - `msLogin` 취소 분기에서 `_fullLogout()`.
+  - `goToPinStep`에서 loadManagers 끝나면 즉시 `password=''` 복구 (검증 전 백도어 비번 잔존 차단).
+  - => 로그아웃/취소 후 재진입 시 MS인증+PIN 둘 다 다시 요구 (정상 보안 동작).
+
+### 검증 결과 (시크릿창)
+- OK: ems1130 선택 → PIN칸 정상
+- OK: [계정 다시 선택] → 계정목록 복귀 → 재선택 → PIN칸
+- OK: 로그아웃 후 재진입 → PIN 다시 요구 (우회 차단 확인)
+
+### 남은 정리거리 (다음 세션, 기능엔 무해)
+- **미정리 진단 로그** (콘솔에만, 사용자엔 안 보임): `[goToPin]`, `[pinInput] ENTER/DONE`, `[pinFix]`, `[DIAG-0ms]/[DIAG-500ms]`, `[backToAccount]`, `[fullLogout]`, `[initLogin] CALLED`, MutationObserver `[pinGuard]`.
+- **A 폴백** (_enterPinInputStep의 login/card 강제표시 + `[pinFix]` 로그): 실제 효과 불확실하나 무해. 정리 시 빼고 테스트.
+- **`_pinGuardInstalled` MutationObserver / `_pinActive` 가드**: 두더지잡기 흔적. reload 방식 도입 후엔 사실상 불필요할 수 있음 — 빼기 전 반드시 테스트.
+- **백업 파일** `index.html.bak_260531` (untracked, 수정 전 스냅샷): 정리 확정되면 삭제.
+- 정리 커밋은 "로그 한 줄씩 빼고 → 시크릿창 테스트" 반복으로 안전하게. 한 번에 다 빼지 말 것.
+
+### 커밋 흐름 (이 세션)
+`e9d967e`(진단) → `7f90d8f`(TDZ setTimeout) → `b08b77a`(reload 방식) → `eff5171`(버그B 로그아웃 + A 폴백) → `377ee4a`(backToAccount 재렌더) = 현재 HEAD.
+
+### 이 세션에서 배운 디버깅 원칙
+- 추측 패치 금지. **콘솔 진단 로그 먼저 박고 → 사용자가 시크릿창 캡처 → 원인 확정 → 수정**. (Claude는 브라우저 콘솔 못 봄 → 사용자 핑퐁 필수.)
+- "DOM상 block/visible인데 화면 안 보임" 모순은 **상위 컨테이너 / 재렌더 누락 / 다른 함수의 되돌림**을 의심.
+- 커밋 작게, 한 변경 후 즉시 테스트. 새 설계 충동이 와도 원인 특정되면 보통 10줄 안쪽 수정으로 끝.
