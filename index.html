@@ -1511,7 +1511,7 @@ async function _authWithEmail(email, pin){
         sessionStorage.setItem('myApplicant',d.name||'ADMIN');
         try{sessionStorage.removeItem('myUserDept');sessionStorage.removeItem('subAdminPin');}catch(e){}
         _enterApp();
-        setTimeout(function(){if(typeof showToast==='function')showToast('슈퍼관리자','success');},300);
+        setTimeout(function(){if(typeof showToast==='function')showToast('슈퍼 관리자 권한으로 접속하셨습니다','success');},300);
         return;
       }
     }catch(e){console.error('[super]',e);}
@@ -1580,7 +1580,7 @@ function _enterAsManager(matched, pin, userName){
   password='0510';userRole=sessRole;
   try{sessionStorage.setItem('myApplicant',userName);sessionStorage.setItem('myUserDept',userDept);}catch(e){}
   _enterApp();
-  setTimeout(function(){if(typeof showToast==='function')showToast(userName+(isSubAdmin?' 님 (관리자)':' 님'),'success');},300);
+  setTimeout(function(){if(typeof showToast==='function')showToast('<span style="color:var(--accent);font-weight:700">'+escapeHtml(userName)+'</span>님'+(isSubAdmin?' (관리자)':'')+' 접속을 환영합니다','success',true);},300);
 }
 
 // MS 로그인 버튼 (토큰 無 → popup) — 첫 방문/다른 기기
@@ -1595,7 +1595,7 @@ async function msLogin(){
 
     if(email === SUPER_EMAIL){
       document.getElementById('login-load').textContent='';
-      document.getElementById('login-msg').innerHTML='슈퍼관리자 — PIN <b>0510</b> 입력 후 진행';
+      document.getElementById('login-msg').textContent='PIN을 입력해 주세요';
       pins.forEach(p=>{p.value=''});pins[0].focus();
       _loggingIn=false; return;
     }
@@ -10175,11 +10175,11 @@ function confirmResolve(v){
 }
 
 let _toastTimer=null;
-function showToast(msg,type){
+function showToast(msg,type,html){
   type=type||'success';
   var t=document.getElementById('toast');
   if(!t){console.warn('toast element not found');return;}
-  t.textContent=msg;
+  if(html){t.innerHTML=msg;}else{t.textContent=msg;}
   t.className='toast '+type;
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){t.classList.add('show');});
