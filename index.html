@@ -1665,6 +1665,7 @@ async function goToPinStep(skipEnsure){
   }catch(err){ console.error('[goToPin] UNCAUGHT:',err); if(typeof showToast==='function')showToast('로그인 처리 중 오류가 발생했습니다','error'); if(typeof initLoginScreen==='function')initLoginScreen(); }
 }
 function _enterPinInputStep(){
+  window._pinShownAt=Date.now();
   console.log('[pinInput] ENTER');
   const a=document.getElementById('account-step'); if(a)a.style.display='none';
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='';
@@ -1677,6 +1678,7 @@ function _enterPinInputStep(){
   console.log('[pinInput] DONE account=',a?a.style.display:'null','pin=',ps?ps.style.display:'null');
   setTimeout(function(){var _a=document.getElementById('account-step'),_p=document.getElementById('pin-step');console.log('[pinInput] +500ms account=',_a?_a.style.display:'null','pin=',_p?_p.style.display:'null');},500);
 }function backToAccountStep(){
+  if(Date.now()-(window._pinShownAt||0)<1000){console.log('[backToAccount] ignored: too soon after PIN shown');return;}
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='none';
   const a=document.getElementById('account-step'); if(a)a.style.display='';
   pins.forEach(function(x){x.value='';x.classList.remove('err');});
