@@ -1622,6 +1622,7 @@ async function initLoginScreen(){
       +'<button type="button" onclick="msLogin()" style="width:100%;padding:12px;background:#fff;border:1.5px solid rgba(74,77,231,0.3);color:#444;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="18" height="18" viewBox="0 0 23 23"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>Microsoft 계정으로 로그인</button>';
   }
 }
+function _fullLogout(){ try{password='';userRole='user';['pw','role','myApplicant','myUser','subAdminPin'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){} console.log('[fullLogout] done'); }
 async function goToPinStep(skipEnsure){
   console.log('[goToPin] start skipEnsure=',skipEnsure,'_loginEmail=',_loginEmail,'MANAGERS=',MANAGERS?MANAGERS.length:'null');
   try{
@@ -1635,7 +1636,7 @@ async function goToPinStep(skipEnsure){
     if(!v){ showToast('Microsoft 인증이 필요합니다','error'); initLoginScreen(); return; }
     _loginEmail=v;
   }
-  if(!MANAGERS||!MANAGERS.length){ password='0510'; console.log('[goToPin] loadManagers...'); try{await Promise.race([loadManagers(),new Promise(function(_,rj){setTimeout(function(){rj(new Error('loadManagers_timeout'))},8000)})]);console.log('[goToPin] loadManagers done count=',MANAGERS?MANAGERS.length:0);}catch(e){console.error('[goToPin] loadManagers fail:',e);} }
+  if(!MANAGERS||!MANAGERS.length){ password='0510'; console.log('[goToPin] loadManagers...'); try{await Promise.race([loadManagers(),new Promise(function(_,rj){setTimeout(function(){rj(new Error('loadManagers_timeout'))},8000)})]);console.log('[goToPin] loadManagers done count=',MANAGERS?MANAGERS.length:0);}catch(e){console.error('[goToPin] loadManagers fail:',e);} password=''; }
   const matched=(MANAGERS||[]).find(function(m){return String(_authGetCol(m,_EMAIL_KEYS)||'').trim().toLowerCase()===_loginEmail;});
   console.log('[goToPin] matched=',matched?matched['담당자']:'null','계정여부=',matched?_authGetCol(matched,_ACTIVE_KEYS):'N/A');
   if(!matched){ if(typeof showToast==='function')showToast('등록되지 않은 계정입니다. 관리자에게 문의하세요','error'); initLoginScreen(); return; }
@@ -1671,7 +1672,7 @@ async function goToPinStep(skipEnsure){
 function _enterPinInputStep(){
   window._pinActive=true;
   if(!window._pinGuardInstalled){window._pinGuardInstalled=true;var _ga=document.getElementById('account-step');if(_ga){new MutationObserver(function(){if(window._pinActive && _ga.style.display!=='none'){console.trace('[pinGuard] account restored - culprit stack below');_ga.style.display='none';var _gp=document.getElementById('pin-step');if(_gp)_gp.style.display='';}}).observe(_ga,{attributes:true,attributeFilter:['style']});}}
-  console.log('[pinInput] ENTER');
+  console.log('[pinInput] ENTER');try{var _lg=document.getElementById('login');if(_lg){_lg.style.display='flex';_lg.style.opacity='1';_lg.style.visibility='visible';}var _lc=document.querySelector('.login-card');if(_lc){_lc.style.opacity='1';_lc.style.visibility='visible';_lc.style.animation='none';}var _ap=document.getElementById('app');if(_ap)_ap.style.display='none';console.log('[pinFix] login.disp=',_lg?getComputedStyle(_lg).display:'na','op=',_lg?getComputedStyle(_lg).opacity:'na','card.op=',_lc?getComputedStyle(_lc).opacity:'na','card.vis=',_lc?getComputedStyle(_lc).visibility:'na');}catch(e){console.error('[pinFix]',e);}
   const a=document.getElementById('account-step'); if(a)a.style.display='none';
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='';
   const pa=document.getElementById('pin-account');
@@ -1708,7 +1709,7 @@ function _enterPinInputStep(){
   },500);
 }function backToAccountStep(){
   console.log('[backToAccount] _pinActive=',window._pinActive,'isTrusted=',window.event&&window.event.isTrusted,'| pw=',sessionStorage.getItem('pw'),'| password=',password,'| _loginEmail=',_loginEmail);
-  if(window._pinActive && !(window.event&&window.event.isTrusted)){console.log('[backToAccount] synthetic click blocked');return;} window._pinActive=false;
+  if(window._pinActive && !(window.event&&window.event.isTrusted)){console.log('[backToAccount] synthetic click blocked');return;} window._pinActive=false; _fullLogout();
   const ps=document.getElementById('pin-step'); if(ps)ps.style.display='none';
   const a=document.getElementById('account-step'); if(a)a.style.display='';
   pins.forEach(function(x){x.value='';x.classList.remove('err');});
@@ -1730,7 +1731,7 @@ async function msLogin(){
     const step=document.getElementById('account-step');
     if(step)step.innerHTML='<div style="color:#999;font-size:13px;padding:10px 0">Microsoft 로그인 중...</div>';
     const email = await _msalLoginEmail();
-    if(!email){ if(typeof initLoginScreen==='function')initLoginScreen(); _loggingIn=false; return; }
+    if(!email){ _fullLogout(); if(typeof initLoginScreen==='function')initLoginScreen(); _loggingIn=false; return; }
     try{localStorage.setItem('_resumePin',email);}catch(e){} location.reload();
   } catch(e){
     console.error('[msLogin]',e);
