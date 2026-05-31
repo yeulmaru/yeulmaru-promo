@@ -6065,11 +6065,11 @@ async function _msalGet(){
 async function _msalGetToken(){
   const inst = await _msalGet();
   if(!inst) return null;
-  // 1. silent — 이미 로그인된 계정 사용
-  const accounts = inst.getAllAccounts();
-  if(accounts.length > 0){
+  // 1. silent — active account 우선 (다중계정 대비), 없으면 첫 계정
+  const acc = inst.getActiveAccount() || inst.getAllAccounts()[0];
+  if(acc){
     try {
-      const res = await inst.acquireTokenSilent({scopes: _MSAL_SCOPES, account: accounts[0]});
+      const res = await inst.acquireTokenSilent({scopes: _MSAL_SCOPES, account: acc});
       return res.accessToken;
     } catch(e){
       console.warn('[msal silent failed, fallback to popup]', e.errorCode || e.message);
@@ -6078,6 +6078,7 @@ async function _msalGetToken(){
   // 2. popup — 첫 로그인 또는 silent 실패
   try {
     const res = await inst.loginPopup({scopes: _MSAL_SCOPES, prompt: 'select_account'});
+    if(res && res.account){ inst.setActiveAccount(res.account); }
     return res.accessToken;
   } catch(e){
     console.error('[msal popup failed]', e);
@@ -6091,8 +6092,11 @@ async function _msalGetEmailSilent(){
   const inst = await _msalGet();
   if(!inst) return null;
   try{
+    const act = inst.getActiveAccount();
+    if(act) return ((act.username)||'').trim().toLowerCase();
     const accounts = inst.getAllAccounts();
-    if(accounts.length > 0) return ((accounts[0].username)||'').trim().toLowerCase();
+    if(accounts.length === 1) return ((accounts[0].username)||'').trim().toLowerCase();
+    // 계정 여러 개인데 active 미설정 → 모호하므로 null (명시적 MS 로그인 유도)
   }catch(e){console.warn('[msal email silent]',e);}
   return null;
 }
@@ -6101,6 +6105,7 @@ async function _msalLoginEmail(){
   if(!inst) return null;
   try {
     const res = await inst.loginPopup({scopes: _MSAL_SCOPES, prompt: 'select_account'});
+    if(res && res.account){ inst.setActiveAccount(res.account); }
     return ((res.account && res.account.username)||'').trim().toLowerCase();
   } catch(e){
     console.error('[msal login email]', e);
