@@ -6207,6 +6207,7 @@ async function _msalGetEmailSilent(){
       if(r && r.account){ inst.setActiveAccount(r.account); return ((r.account.username)||'').trim().toLowerCase(); }
     }catch(e){ console.warn('[ssoSilent failed]', e.errorCode||e.message); }
   }catch(e){console.warn('[msal email silent]',e);}
+  try{ var _ll=(localStorage.getItem('lastLoginEmail')||'').trim().toLowerCase(); if(_ll){ console.log('[silent] MSAL 실패 → lastLoginEmail fallback:', _ll); return _ll; } }catch(e){}
   return null;
 }
 async function _msalLoginEmail(){
