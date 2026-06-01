@@ -934,6 +934,7 @@ const MENUS=[
   {label:'홍보 신청',id:'promo'},
   {label:'플랫폼 현황',id:'platform'},
   {label:'사업 현황',id:'business'},
+  {label:'판매 현황',id:'sales'},
   {label:'연간 일정',id:'annual'},
 ];
 
@@ -2137,6 +2138,7 @@ function buildNav(){
       if(m.id==='schedule'){openPromoBoard();return;}
       if(m.id==='platform'){openPlatformBoard();return;}
       if(m.id==='business'){openBusinessBoard();return;}
+      if(m.id==='sales'){openSalesBoard();return;}
       if(m.id==='promo'){openPromoWizard();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
@@ -2185,6 +2187,142 @@ function closeAnnualCalendar(){
 }
 // === 플랫폼 현황 — 트리뷰 풀스크린 모달 (Phase A1) ===
 let _platformState = null;
+// === [DB통합] 판매 현황 (dash 1_판매현황 '실시간 판매현황' 이식 — 프로모 톤) ===
+var _salesState = { master:null, rounds:null, daily:null, escHandler:null, showEnded:false };
+var _SALES_FALLBACK_SEAT = 926;
+function _salesNum(v){ if(v===null||v===undefined||v==='')return null; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+function _salesDate(v){
+  if(v===null||v===undefined||v==='')return null;
+  if(typeof v==='number'){ var s=String(v); if(/^\d{8}$/.test(s))return new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8)); }
+  var s2=String(v); var mm=s2.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); if(mm)return new Date(+mm[1],+mm[2]-1,+mm[3]);
+  var d=new Date(s2); return isNaN(d.getTime())?null:d;
+}
+function _salesNorm(row){ const o={}; for(const k in row){ o[String(k).replace(/\s+/g,'')]=row[k]; } return o; }
+function _salesFmtDates(dates){
+  var ds=dates.slice().sort(function(a,b){return a-b;}); if(!ds.length)return '';
+  var ws=['일','월','화','수','목','금','토'];
+  function f(d){return (d.getMonth()+1)+'.'+d.getDate()+'('+ws[d.getDay()]+')';}
+  var groups=[],cur=[ds[0]];
+  for(var i=1;i<ds.length;i++){ if((ds[i]-cur[cur.length-1])===86400000)cur.push(ds[i]); else {groups.push(cur);cur=[ds[i]];} }
+  groups.push(cur);
+  return groups.map(function(g){var a=g[0],b=g[g.length-1]; if(a.getTime()===b.getTime())return f(a); if(a.getMonth()===b.getMonth())return (a.getMonth()+1)+'.'+a.getDate()+'('+ws[a.getDay()]+')~'+b.getDate()+'('+ws[b.getDay()]+')'; return f(a)+'~'+f(b);}).join(', ');
+}
+function _salesBuild(){
+  var master={};
+  ((_salesState.master&&_salesState.master.rows)||[]).map(_salesNorm).forEach(function(m){
+    var name=String(m['사업명']||'').trim(); if(!name)return;
+    master[name]={기본석:_salesNum(m['기준석'])||_SALES_FALLBACK_SEAT,총회차:_salesNum(m['총회차'])||1,총오픈석:_salesNum(m['총오픈석']),목표:_salesNum(m['목표점유율'])||50,수익성:String(m['수익성']||'').trim(),티켓오픈:_salesDate(m['티켓오픈일']),종료:_salesDate(m['종료일']),시작:_salesDate(m['시작일']),ID:String(m['ID']||'').trim()};
+  });
+  var rounds={};
+  ((_salesState.rounds&&_salesState.rounds.rows)||[]).map(_salesNorm).forEach(function(r){
+    var id=String(r['ID']||'').trim(); var d=_salesDate(r['공연일']); if(!id||!d)return; (rounds[id]=rounds[id]||[]).push(d);
+  });
+  var dmap={};
+  ((_salesState.daily&&_salesState.daily.rows)||[]).map(_salesNorm).forEach(function(r){
+    var name=String(r['공연명']||'').trim(); var bd=_salesNum(r['기준일자']); if(!name||bd===null)return; (dmap[name]=dmap[name]||[]).push(r);
+  });
+  var today=new Date(); today.setHours(0,0,0,0);
+  var perfs=[];
+  Object.keys(dmap).forEach(function(name){
+    var rows=dmap[name].sort(function(a,b){return _salesNum(a['기준일자'])-_salesNum(b['기준일자']);});
+    var snap=rows[rows.length-1];
+    var seats=_salesNum(snap['합계좌석'])||0, money=_salesNum(snap['합계금액'])||0;
+    var diff=null, dv=_salesNum(snap['전일대비(석)']);
+    if(dv!==null&&dv!==0)diff=dv;
+    else if(rows.length>=2)diff=(_salesNum(rows[rows.length-1]['합계좌석'])||0)-(_salesNum(rows[rows.length-2]['합계좌석'])||0);
+    var m=master[name];
+    var base=m?m.기본석:_SALES_FALLBACK_SEAT;
+    var totalOpen=(m&&m.총오픈석)?m.총오픈석:base*((m&&m.총회차)||1);
+    var occ=totalOpen>0?Math.min(seats/totalOpen*100,100):0;
+    var startDate=m?m.시작:null;
+    var dday=startDate?Math.round((startDate-today)/86400000):null;
+    var dateStr='';
+    if(m&&m.ID&&rounds[m.ID])dateStr=_salesFmtDates(rounds[m.ID]);
+    else if(startDate){var ws=['일','월','화','수','목','금','토'];dateStr=(startDate.getMonth()+1)+'.'+startDate.getDate()+'('+ws[startDate.getDay()]+')';}
+    var status='unknown';
+    if(m&&m.티켓오픈&&m.종료){ if(m.티켓오픈<=today&&today<=m.종료)status='active'; else if(today>m.종료)status='ended'; else status='notyet'; }
+    else if(dday!==null){ status=dday>=0?'active':'ended'; }
+    perfs.push({name:name,seats:seats,money:money,diff:diff,occ:occ,totalOpen:totalOpen,dday:dday,dateStr:dateStr,수익성:m?m.수익성:'',startDate:startDate,status:status});
+  });
+  return perfs;
+}
+function openSalesBoard(){
+  let el=document.getElementById('sales-board');
+  if(!el){el=document.createElement('div');el.id='sales-board';document.body.appendChild(el);}
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeSalesBoard)">'
+    +'<div class="modal" style="width:96vw;max-width:1280px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff">'
+    +'<button class="modal-x" onclick="closeSalesBoard()" title="닫기" style="position:absolute;top:14px;right:14px;z-index:10">✕</button>'
+    +'<div style="padding:18px 24px;border-bottom:1px solid #eee;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">📈 <span>판매 현황</span><span style="font-size:11px;color:#aaa;font-weight:500">· 실시간 판매</span></div>'
+    +'<div id="sales-body" style="flex:1;overflow:auto;padding:20px 24px;min-width:0"></div>'
+    +'</div></div>';
+  _salesState.escHandler=function(e){if(e.key==='Escape')closeSalesBoard();};
+  document.addEventListener('keydown',_salesState.escHandler);
+  var body=document.getElementById('sales-body');
+  if(_salesState.master){_salesRender();return;}
+  body.innerHTML='<div style="text-align:center;padding:60px;color:#888;font-size:14px">판매 데이터 불러오는 중…</div>';
+  Promise.all([
+    api('GET','/api/ops?sheet='+encodeURIComponent('일일입력')),
+    api('GET','/api/ops?sheet='+encodeURIComponent('공연마스터')),
+    api('GET','/api/ops?sheet='+encodeURIComponent('회차상세'))
+  ]).then(function(res){ _salesState.daily=res[0];_salesState.master=res[1];_salesState.rounds=res[2];_salesRender(); }).catch(function(e){
+    body.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A">데이터 로드 실패: '+escapeHtml(e.message||String(e))+'</div>';
+  });
+}
+function closeSalesBoard(){ if(_salesState.escHandler)document.removeEventListener('keydown',_salesState.escHandler); var el=document.getElementById('sales-board'); if(el)el.innerHTML=''; }
+function _salesToggleEnded(){ _salesState.showEnded=!_salesState.showEnded; _salesRender(); }
+function _salesDdayColor(d){ if(d===null)return '#555'; if(d<0)return '#999'; if(d<=7)return '#E08600'; if(d<=14)return '#C9A800'; return '#555'; }
+function _salesDdayStr(d){ if(d===null)return ''; if(d===0)return 'D-Day'; return d>0?('D-'+d):('D+'+(-d)); }
+function _salesMoneyMan(v){ if(!v)return '0'; return Math.round(v/10000).toLocaleString(); }
+function _salesKpiCard(label,val,sub){ return '<div style="flex:1;min-width:110px;padding:14px 16px;background:#fafafa;border-radius:12px;border:1px solid #eee"><div style="font-size:11px;color:#888;font-weight:600;margin-bottom:6px">'+label+'</div><div style="font-size:'+(sub?'22':'24')+'px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums">'+val+'</div></div>'; }
+function _salesTable(list,isActive){
+  if(!list.length)return '<div style="color:#888;padding:20px;text-align:center">'+(isActive?'판매중인 공연이 없습니다':'없음')+'</div>';
+  var h='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #eee;color:#888;font-size:11px;text-align:left">';
+  ['공연일','공연명','D-day','판매좌석','전일대비','오픈석','점유율','판매금액(만원)'].forEach(function(c,i){h+='<td style="padding:8px 10px;'+(i>=3?'text-align:right':'')+'">'+c+'</td>';});
+  h+='</tr></thead><tbody>';
+  list.forEach(function(p,idx){
+    var dc=_salesDdayColor(p.dday);
+    var diffStr=(p.diff===null)?'-':(p.diff>0?('+'+p.diff):String(p.diff));
+    var diffCol=(p.diff>0)?'#0F8B4C':((p.diff<0)?'#E5484D':'#999');
+    h+='<tr style="border-bottom:1px solid #f0f0f0;'+(idx%2===1?'background:#fafafa':'')+'">';
+    h+='<td style="padding:8px 10px;white-space:nowrap;color:#555">'+escapeHtml(p.dateStr||'-')+'</td>';
+    h+='<td style="padding:8px 10px;font-weight:600;color:#222">'+escapeHtml(p.name)+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:'+dc+';font-weight:600;white-space:nowrap">'+(isActive?_salesDdayStr(p.dday):'종료')+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:var(--peach-text);font-weight:600;font-variant-numeric:tabular-nums">'+p.seats.toLocaleString()+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:'+diffCol+';font-variant-numeric:tabular-nums">'+diffStr+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:#999;font-variant-numeric:tabular-nums">'+p.totalOpen.toLocaleString()+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums">'+p.occ.toFixed(1)+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:#444;font-variant-numeric:tabular-nums">'+_salesMoneyMan(p.money)+'</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table>'; return h;
+}
+function _salesRender(){
+  var body=document.getElementById('sales-body'); if(!body)return;
+  var perfs=_salesBuild();
+  if(!perfs.length){
+    var note=(_salesState.daily&&_salesState.daily.note)?_salesState.daily.note:'판매 데이터가 없습니다';
+    body.innerHTML='<div style="text-align:center;padding:60px;color:#888;font-size:14px">📭 '+escapeHtml(note)+'<div style="font-size:12px;color:#bbb;margin-top:8px">dash에서 동기화되면 자동 표시됩니다</div></div>'; return;
+  }
+  var active=perfs.filter(function(p){return p.status==='active';}).sort(function(a,b){return (a.startDate&&b.startDate)?(a.startDate-b.startDate):0;});
+  var ended=perfs.filter(function(p){return p.status==='ended';}).sort(function(a,b){return (a.startDate&&b.startDate)?(b.startDate-a.startDate):0;});
+  var avgOcc=active.length?active.reduce(function(a,p){return a+p.occ;},0)/active.length:0;
+  var comm=active.filter(function(p){return p.수익성==='상업성';}), pub=active.filter(function(p){return p.수익성==='공공성';});
+  var avgComm=comm.length?comm.reduce(function(a,p){return a+p.occ;},0)/comm.length:0;
+  var avgPub=pub.length?pub.reduce(function(a,p){return a+p.occ;},0)/pub.length:0;
+  var h='';
+  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">';
+  h+=_salesKpiCard('판매중 공연',active.length+'개')+_salesKpiCard('평균 점유율',avgOcc.toFixed(1)+'%')+_salesKpiCard('상업성',avgComm.toFixed(1)+'%',1)+_salesKpiCard('공공성',avgPub.toFixed(1)+'%',1);
+  h+='</div>';
+  h+='<div style="font-size:14px;font-weight:700;color:#333;margin:6px 0 10px">[1] 공연 현황</div>';
+  h+=_salesTable(active,true);
+  if(ended.length){
+    h+='<div style="margin-top:18px"><button onclick="_salesToggleEnded()" style="padding:7px 14px;border-radius:8px;border:1px solid #ddd;background:#fafafa;font-size:12px;font-weight:600;color:#666;cursor:pointer;font-family:inherit">종료된 공연 '+(_salesState.showEnded?'숨기기 ▲':'보기 ▼')+' ('+ended.length+')</button></div>';
+    if(_salesState.showEnded)h+='<div style="margin-top:10px">'+_salesTable(ended,false)+'</div>';
+  }
+  var sa=(_salesState.daily&&_salesState.daily.syncedAt)?_salesState.daily.syncedAt:null;
+  if(sa)h+='<div style="text-align:right;color:#bbb;font-size:11px;margin-top:12px">동기화: '+escapeHtml(sa)+'</div>';
+  body.innerHTML=h;
+}
 // === [DB통합] 사업 현황 (dash 2_사업현황 '연간 운영현황' 이식 — 프로모 톤) ===
 var _bizState = { raw:null, year:null, types:{}, escHandler:null };
 var _BIZ_TYPE_ORDER = ['기획','대관','기타'];
