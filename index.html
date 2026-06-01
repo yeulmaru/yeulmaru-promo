@@ -933,6 +933,7 @@ const MENUS=[
   {label:'일정 확인 및 관리',id:'schedule'},
   {label:'홍보 신청',id:'promo'},
   {label:'플랫폼 현황',id:'platform'},
+  {label:'사업 현황',id:'business'},
   {label:'연간 일정',id:'annual'},
 ];
 
@@ -2135,6 +2136,7 @@ function buildNav(){
       if(m.id==='admin'){openAdminPanel();return;}
       if(m.id==='schedule'){openPromoBoard();return;}
       if(m.id==='platform'){openPlatformBoard();return;}
+      if(m.id==='business'){openBusinessBoard();return;}
       if(m.id==='promo'){openPromoWizard();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
@@ -2183,6 +2185,121 @@ function closeAnnualCalendar(){
 }
 // === 플랫폼 현황 — 트리뷰 풀스크린 모달 (Phase A1) ===
 let _platformState = null;
+// === [DB통합] 사업 현황 (dash 2_사업현황 '연간 운영현황' 이식 — 프로모 톤) ===
+var _bizState = { raw:null, year:null, types:{}, escHandler:null };
+var _BIZ_TYPE_ORDER = ['기획','대관','기타'];
+function _bizNorm(row){ const o={}; for(const k in row){ o[String(k).replace(/\s+/g,'')] = row[k]; } return o; }
+function _bizNum(v){ if(v===null||v===undefined||v==='')return null; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+function _bizClean(){
+  const raw=(_bizState.raw&&_bizState.raw.rows)||[];
+  let recs=raw.map(_bizNorm).filter(function(r){
+    if(String(r['상태']||'').trim()==='취소공연')return false;
+    if(['교육','특강','기타','연기'].indexOf(String(r['사업구분']||'').trim())>=0)return false;
+    if(String(r['티켓구분']||'').trim()==='무료')return false;
+    const seat=_bizNum(r['기본좌석']),paid=_bizNum(r['발권유료']),yr=_bizNum(r['년도']!=null?r['년도']:r['연도']);
+    return seat!==null&&paid!==null&&yr!==null&&seat>0;
+  });
+  recs.forEach(function(r){
+    r._seat=_bizNum(r['기본좌석']); r._paid=_bizNum(r['발권유료']);
+    r._occ=r._seat>0?r._paid/r._seat*100:0;
+    r._year=Math.trunc(_bizNum(r['년도']!=null?r['년도']:r['연도']));
+    const m=parseInt(String(r['월']||'').replace(/[^0-9]/g,''),10),d=parseInt(String(r['일']||'').replace(/[^0-9]/g,''),10);
+    r._date=(r._year&&!isNaN(m)&&!isNaN(d))?new Date(r._year,m-1,d):null;
+    r._type=String(r['공연구분']||'').trim();
+    r._genre=String(r['장르1']!=null?r['장르1']:(r['세부장르']||'')).trim();
+    r._name=String(r['공연명']||'').trim();
+  });
+  return recs.filter(function(r){return r._date&&r._name;});
+}
+function openBusinessBoard(){
+  let el=document.getElementById('business-board');
+  if(!el){el=document.createElement('div');el.id='business-board';document.body.appendChild(el);}
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeBusinessBoard)">'
+    +'<div class="modal" style="width:96vw;max-width:1200px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff">'
+    +'<button class="modal-x" onclick="closeBusinessBoard()" title="닫기" style="position:absolute;top:14px;right:14px;z-index:10">✕</button>'
+    +'<div style="padding:18px 24px;border-bottom:1px solid #eee;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">📊 <span>사업 현황</span><span style="font-size:11px;color:#aaa;font-weight:500">· 연간 운영현황</span></div>'
+    +'<div id="biz-body" style="flex:1;overflow:auto;padding:20px 24px;min-width:0"></div>'
+    +'</div></div>';
+  _bizState.escHandler=function(e){if(e.key==='Escape')closeBusinessBoard();};
+  document.addEventListener('keydown',_bizState.escHandler);
+  const body=document.getElementById('biz-body');
+  if(_bizState.raw){_bizRender();return;}
+  body.innerHTML='<div style="text-align:center;padding:60px;color:#888;font-size:14px">운영 데이터 불러오는 중…</div>';
+  api('GET','/api/ops').then(function(d){_bizState.raw=d;_bizRender();}).catch(function(e){
+    body.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A">데이터 로드 실패: '+escapeHtml(e.message||String(e))+'</div>';
+  });
+}
+function closeBusinessBoard(){
+  if(_bizState.escHandler)document.removeEventListener('keydown',_bizState.escHandler);
+  const el=document.getElementById('business-board');if(el)el.innerHTML='';
+}
+function _bizSetYear(y){_bizState.year=parseInt(y,10);_bizState.types={};_bizRender();}
+function _bizToggleType(t){_bizState.types[t]=!_bizState.types[t];_bizRender();}
+function _bizCard(label,val){
+  return '<div style="flex:1;min-width:120px;padding:14px 16px;background:#fafafa;border-radius:12px;border:1px solid #eee"><div style="font-size:11px;color:#888;font-weight:600;margin-bottom:6px">'+label+'</div><div style="font-size:22px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums">'+val+'</div></div>';
+}
+function _bizRender(){
+  const body=document.getElementById('biz-body');if(!body)return;
+  const all=_bizClean();
+  if(!all.length){
+    const note=(_bizState.raw&&_bizState.raw.note)?_bizState.raw.note:'표시할 운영 데이터가 없습니다';
+    body.innerHTML='<div style="text-align:center;padding:60px;color:#888;font-size:14px">📭 '+escapeHtml(note)+'<div style="font-size:12px;color:#bbb;margin-top:8px">dash에서 동기화되면 자동 표시됩니다</div></div>';
+    return;
+  }
+  const years=Array.from(new Set(all.map(function(r){return r._year;}))).sort(function(a,b){return b-a;});
+  if(_bizState.year===null||years.indexOf(_bizState.year)<0){
+    const defY=(new Date()).getFullYear()-1;
+    _bizState.year=years.indexOf(defY)>=0?defY:years[0];
+  }
+  const yearAll=all.filter(function(r){return r._year===_bizState.year;});
+  const types=Array.from(new Set(yearAll.map(function(r){return r._type;}).filter(Boolean)));
+  types.sort(function(a,b){return _BIZ_TYPE_ORDER.indexOf(a)-_BIZ_TYPE_ORDER.indexOf(b);});
+  let anyChecked=false;
+  types.forEach(function(t){if(_bizState.types[t]===undefined)_bizState.types[t]=(t==='기획');if(_bizState.types[t])anyChecked=true;});
+  if(!anyChecked&&types.length)_bizState.types[types[0]]=true;
+  const selTypes=types.filter(function(t){return _bizState.types[t];});
+  const yrRecs=yearAll.filter(function(r){return selTypes.indexOf(r._type)>=0;});
+  const gmap={};
+  yrRecs.forEach(function(r){
+    if(!gmap[r._name])gmap[r._name]={name:r._name,occs:[],paid:0,seat:0,cnt:0,start:r._date,end:r._date,genre:r._genre,type:r._type};
+    const g=gmap[r._name];g.occs.push(r._occ);g.paid+=r._paid;g.seat+=r._seat;g.cnt++;
+    if(r._date<g.start)g.start=r._date;if(r._date>g.end)g.end=r._date;
+  });
+  const list=Object.keys(gmap).map(function(k){const g=gmap[k];g.avg=g.occs.reduce(function(a,b){return a+b;},0)/g.occs.length;return g;}).sort(function(a,b){return a.end-b.end;});
+  const WD=['일','월','화','수','목','금','토'];
+  function dfmt(d){return ('0'+(d.getMonth()+1)).slice(-2)+'.'+('0'+d.getDate()).slice(-2)+'('+WD[d.getDay()]+')';}
+  function drange(g){if(g.cnt===1||g.start.getTime()===g.end.getTime())return dfmt(g.end);return dfmt(g.start)+'~'+dfmt(g.end);}
+  let h='';
+  h+='<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<select onchange="_bizSetYear(this.value)" style="padding:7px 12px;border-radius:8px;border:1.5px solid #ddd;font-size:13px;font-family:inherit;background:#fff">';
+  years.forEach(function(y){h+='<option value="'+y+'"'+(y===_bizState.year?' selected':'')+'>'+y+'년</option>';});
+  h+='</select><div style="display:flex;gap:8px;flex-wrap:wrap">';
+  types.forEach(function(t){const on=!!_bizState.types[t];const only=selTypes.length===1&&on;
+    h+='<label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid '+(on?'var(--accent)':'#e0e0e0')+';background:'+(on?'rgba(74,77,231,0.07)':'#fff')+';font-size:12px;font-weight:600;color:'+(on?'var(--accent)':'#888')+';cursor:'+(only?'not-allowed':'pointer')+'"><input type="checkbox" '+(on?'checked':'')+(only?' disabled':'')+' onchange="_bizToggleType(\''+t.replace(/'/g,"\\'")+'\')" style="accent-color:var(--accent)">'+escapeHtml(t)+'</label>';
+  });
+  h+='</div></div>';
+  if(!list.length){h+='<div style="text-align:center;padding:40px;color:#888">해당 연도/분류 데이터가 없습니다</div>';body.innerHTML=h;return;}
+  const total=list.length,avgAll=list.reduce(function(a,g){return a+g.avg;},0)/list.length,maxAll=Math.max.apply(null,list.map(function(g){return g.avg;}));
+  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+_bizCard('총 공연',total+'건')+_bizCard('평균 점유율',avgAll.toFixed(1)+'%')+_bizCard('최고 점유율',maxAll.toFixed(1)+'%')+'</div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #eee;color:#888;font-size:11px;text-align:left">';
+  ['공연일','공연명','장르','회차','판매좌석','오픈석','점유율'].forEach(function(c,i){h+='<td style="padding:8px 10px;'+(i>=3?'text-align:right':'')+'">'+c+'</td>';});
+  h+='</tr></thead><tbody>';
+  list.forEach(function(g,idx){
+    h+='<tr style="border-bottom:1px solid #f0f0f0;'+(idx%2===1?'background:#fafafa':'')+'">';
+    h+='<td style="padding:8px 10px;white-space:nowrap;color:#555">'+drange(g)+'</td>';
+    h+='<td style="padding:8px 10px;font-weight:600;color:#222">'+escapeHtml(g.name)+'</td>';
+    h+='<td style="padding:8px 10px;color:#666;white-space:nowrap">'+escapeHtml(g.genre||'-')+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:#666">'+g.cnt+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:var(--peach-text);font-weight:600;font-variant-numeric:tabular-nums">'+Math.round(g.paid).toLocaleString()+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:#999;font-variant-numeric:tabular-nums">'+Math.round(g.seat).toLocaleString()+'</td>';
+    h+='<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums">'+g.avg.toFixed(1)+'</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  const sa=(_bizState.raw&&_bizState.raw.syncedAt)?_bizState.raw.syncedAt:null;
+  if(sa)h+='<div style="text-align:right;color:#bbb;font-size:11px;margin-top:10px">동기화: '+escapeHtml(sa)+'</div>';
+  body.innerHTML=h;
+}
 function openPlatformBoard(){
   _platformState = {
     expanded: new Set(['offline','online','offline.external','offline.internal','offline.mangma','offline.jangdo']),
