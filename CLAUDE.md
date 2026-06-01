@@ -1,7 +1,7 @@
 # yeulmaru-promo — CLAUDE.md (인계 문서)
 
 > **예울마루 홍보 계획표 웹앱.** GS칼텍스 예울마루 직원이 홍보 콘텐츠 신청·관리하는 단일파일 웹앱. 엑셀+VBA 매크로 대체.
-> **Last updated**: 2026-06-01 (KST) · **현재 HEAD**: `26ac08e`
+> **Last updated**: 2026-06-01 (KST) · **현재 HEAD**: `15a5625`
 >
 > 이 파일은 **매 세션 새 Claude에게 넘기는 인계서**다. 여기 적힌 건 "이미 정해진 사실"이니 다시 캐묻거나 추측으로 뒤집지 말 것. 코드 세부(컬럼순서·함수 시그니처)는 `index.html`을 직접 검색. 과거 전체 이력은 `docs/CLAUDE_full_backup_260601.md`.
 
@@ -32,6 +32,8 @@
 
 ### 🚫 하지 말 것 (전부 실제로 당한 함정)
 - **cmd에서 `cd /d "한글경로"`** → 코드페이지 949 한글 깨짐 → "디렉터리 이름이 잘못되었습니다" → git이 엉뚱한 데서 돌아 `not a git repository`. → **cmd 말고 PowerShell.**
+- **cmd `&&` 체이닝 + 한글경로** → 첫 명령에서 깨지면 뒤 전부 무산. (260601 재확인)
+- **PowerShell `& $git ...` 직접 호출** → stdout이 통째로 안 잡혀 빈 출력. (260601 재확인 — fetch/status/log가 빈 줄로만 나옴) → **반드시 아래 Start-Process + 파일 리다이렉트 패턴.**
 - **PowerShell `& $git ... | Out-String`** (네이티브 exe 파이프) → `CantActivateDocumentInPipeline`, stdout 통째로 안 잡힘.
 - **`git`/`python`/`node`를 PATH로 호출** → 세션 따라 안 잡힘. **항상 풀패스.**
 
@@ -43,11 +45,11 @@ $o="$env:TEMP\g_o.txt"; $e="$env:TEMP\g_e.txt"
 function G([string[]]$x){ Start-Process -FilePath $git -ArgumentList $x -WorkingDirectory $repo -NoNewWindow -Wait -RedirectStandardOutput $o -RedirectStandardError $e; $oc=Get-Content $o -Raw -EA SilentlyContinue; $er=Get-Content $e -Raw -EA SilentlyContinue; if($oc){Write-Output $oc}; if($er){Write-Output ("[err] "+$er)} }
 G @('fetch','origin'); G @('status','--short','-b'); G @('log','--oneline','-3')
 ```
-- push 진행상황은 `[err]`(stderr)로 나와도 정상. 한글 commit은 ASCII 파일에 저장 후 `-F`:
+- push 진행상황·`LF will be replaced by CRLF` 경고는 `[err]`(stderr)로 나와도 정상. 한글 commit은 ASCII 파일에 저장 후 `-F`:
 ```powershell
 Set-Content "$env:TEMP\cmsg.txt" -Value "fix: ..." -Encoding ASCII -NoNewline
 G @('-c','user.name=yeulmaru','-c','user.email=yeulmarulicense@gmail.com','commit','-F',"$env:TEMP\cmsg.txt")
-G @('push')
+G @('push','origin','main')
 ```
 
 ### ✅ index.html 수정 (한글·대용량 무손상, BOM 없이, CRLF 유지)
@@ -58,7 +60,7 @@ $cnt=([regex]::Matches($c,[regex]::Escape($old))).Count   # 반드시 1 확인, 
 $c=$c.Replace($old,$new)
 [IO.File]::WriteAllText($p,$c,(New-Object Text.UTF8Encoding $false))
 ```
-- 큰 교체 전 `Copy-Item $p "$p.bak_YYMMDD"`. 개행 CRLF(``r`n``).
+- 큰 교체 전 `Copy-Item $p "$p.bak_YYMMDD"`. 개행 CRLF(``r`n``). **검증 끝나면 bak 파일 정리** — git 이력으로 복원 가능하므로 쌓아둘 필요 없음.
 
 ### ✅ JS 문법 체크 (커밋 전 — 깨지면 페이지 전체 사망)
 ```powershell
@@ -177,6 +179,11 @@ function 클코프로모 {
 - **우클릭**: role(user/admin) × 대상(빈셀/남신청/본인신청/특별일정)별로 컨텍스트 메뉴 분기.
 - 신청자(S) 기준으로 본인/남 판별 = `_isMineRec(rec, myAppl)`. (※ 게시담당자 P 아님 — 아래 함정)
 
+### 변경 모달 (`_renderChangeMenu`) — 콘텐츠 row 좌클릭 시
+- 변경할 항목(프로그램/제목/일자·시간/플랫폼/비고/[admin]진행상태) 체크박스 + 하단 버튼 2개.
+- **하단 버튼** (260601 추가): 좌측 **[신청 취소]**(빨강 `#e5484d`, 본인 신청 `_isMineRec` + 진행상태가 완료/취소 아닐 때만 조건부 노출 → `cancelPromoRequest(rowIndex)`) + 우측 **[선택한 항목 변경 →]**(`_startChangeWizard(rowIndex)`).
+- admin이 「신청 중」 상태 변경 시 자동 승인 안내 배너 표시.
+
 ### 위저드 (신청/등록)
 - **User 신청**: `openPromoWizard()` → 프로그램 → 콘텐츠제목 → 일자+시간(`canApplyOnDateTime` 검증) → 플랫폼/게시자 → 확인 → `submitPromoRequest`.
 - **Admin 직접등록**: `openAdminWizard()` → 담당자 → 일자+시간 → 플랫폼 → 제목 → `submitAdminEntry`.
@@ -197,13 +204,20 @@ function 클코프로모 {
 
 ---
 
-## ✅ 현재 상태 (2026-06-01, HEAD `26ac08e`)
+## ✅ 현재 상태 (2026-06-01, HEAD `15a5625`)
 
 - **세션20 완료**: 로그인 무한루프 + PIN 우회 백도어 대수술 끝. 안정.
   - 버그A(PIN칸 무한): TDZ(`MANAGERS`)→setTimeout, COOP→reload 방식, `backToAccountStep`이 `initLoginScreen()` 재렌더.
   - 버그B(PIN 우회): 전역 `password='0510'` 잔존 → `_fullLogout()` + loadManagers 후 복구.
-- **남은 정리거리**(기능 무해): 진단로그 떨거지(`[goToPin]/[pinFix]/[DIAG]/[fullLogout]/[backToAccount]/[initLogin]`), `_pinGuard` MutationObserver / `_pinActive` 가드(reload 도입 후 불필요할 수 있음), 백업파일 `index.html.bak_260531`. → **로그 한 줄씩 빼고 시크릿창 테스트** 원칙.
-- **진행중 Q-3**: 캘린더 프로그램 좌클릭 → 조회모달(`openProgramView`) 매핑. 사이드바 좌클릭 onclick(`@492107` 부근) 확정이 인계 포인트.
+- **260601 작업분** (커밋 순서):
+  - `c97f614` 0511 백도어 제거(로그인 PIN칸 + role-switch 에스컬레이션)
+  - `8bf17c3` 중복 PIN 허용(dup-check 제거) + 시트/프로그램 폼 모달 z-index 상향
+  - `9ae917f` user-register 폼 개편(부서/직위 드롭다운, 가로 duty 체크박스, PIN/pw/active 숨김) + 콘텐츠-admin 메뉴 제거
+  - `3c70982` row 삭제 슈퍼admin 전용화(버튼 비활성 + 삭제 시 슈퍼 패스워드 요구)
+  - `b6df0b1` 유휴 자동잠금 1min→10min
+  - **`15a5625` 변경 모달 하단에 [신청 취소] 버튼 추가** (빨강, 본인 신청, 비종결 상태 조건부) ← 최신
+- **남은 정리거리**(기능 무해): 진단로그 떨거지(`[goToPin]/[pinFix]/[DIAG]/[fullLogout]/[backToAccount]/[initLogin]`), `_pinGuard` MutationObserver / `_pinActive` 가드(reload 도입 후 불필요할 수 있음). → **로그 한 줄씩 빼고 시크릿창 테스트** 원칙. (※ index.html.bak_* 백업파일은 260601 전부 정리 완료)
+- **Q-3 (캘린더 프로그램 좌클릭 → 조회모달)**: 사이드바 프로그램 좌클릭은 `openProgramView` 매핑 됨. **캘린더 그리드 안의 프로그램 표시 요소** 좌클릭 → `openProgramView` 매핑이 인계 포인트. (`@492107` 부근 onclick 확정 필요 — 코드 재확인하고 진행)
 - **잔여 기획**: 이메일 알림(Graph `sendMail`, **A안 확정** — Azure AD 앱에 `Mail.Send` 추가 + `/api/notify/mail` 엔드포인트) → Teams 알림(Power Automate Workflows 우선) → 조회모달 Y/Z/AA 표시분리, PR_MANAGERS 전원알림.
 
 ---
