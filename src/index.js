@@ -476,27 +476,7 @@ var index_default = {
         }
       }
 
-      // === 슈퍼admin 인증 (manager 계정 + PIN 상수 + Cloudflare secret) ===
-      // 시트에 manager 행을 두지 않고 코드/secret 으로만 검증.
-      // 모든 실패는 동일 메시지 — 어떤 필드가 틀렸는지 노출 안 함.
-      if (url.pathname === "/api/auth/super" && request.method === "POST") {
-        try {
-          const { email, pin, secret } = await request.json();
-          if (!email || !pin || !secret) {
-            return json({ error: "슈퍼관리자 인증 실패" }, env, 403);
-          }
-          const e = String(email).trim().toLowerCase();
-          const p = String(pin).trim();
-          const s = String(secret);
-          if (e !== "manager@gscf.or.kr") return json({ error: "슈퍼관리자 인증 실패" }, env, 403);
-          if (p !== "0510") return json({ error: "슈퍼관리자 인증 실패" }, env, 403);
-          if (!env.SUPER_2FA || s !== env.SUPER_2FA) return json({ error: "슈퍼관리자 인증 실패" }, env, 403);
-          return json({ ok: true, role: "admin", name: "ADMIN" }, env);
-        } catch (err) {
-          console.error("[auth/super]", err);
-          return json({ error: "슈퍼관리자 인증 실패" }, env, 403);
-        }
-      }
+      // (/api/auth/super 제거됨 — 슈퍼admin 개념 폐기, 권한은 담당자 시트 관리자여부로 고정)
 
       // === 비밀번호 초기 저장 / 재설정 (PIN 기반, 인증 헤더 불요) ===
       // user가 자기 PIN으로 인증 → 비번 설정. admin only PATCH 정책 우회.
