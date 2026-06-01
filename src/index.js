@@ -449,7 +449,41 @@ async function handleMarkMessageRead(token, id) {
 }
 __name(handleMarkMessageRead, "handleMarkMessageRead");
 
-// === [DB통합] 운영 데이터는 KV 미러 사용 (dash가 pandas로 읽어 push → /api/ops). dash 파일은 Graph Workbook API에서 501(unsupportedWorkbook)이라 Worker 직접읽기 폐기. ===
+// === [DB통합/이관] 운영 데이터를 프로모 엑셀(통합 문서1.xlsm)의 "운영_*" 시트에 저장 (source of truth, Workbook API 읽기·쓰기 OK 검증됨). dash 파일은 501이라 dash가 push만 함. ===
+function opsSheetName(s){ return "운영_" + String(s).replace(/[()（）]/g, ""); }
+async function ensureSheet(token, sheetName, headers){
+  const { driveId, itemId } = await findFile(token);
+  const ws = await graphGet(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets`);
+  if (!(ws.value || []).some((w) => w.name === sheetName)){
+    await graphPost(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets/add`, { name: sheetName });
+    if (headers && headers.length){ const lc = colLetter(headers.length); await graphPatch(token, `${sheetPathFor(driveId, itemId, sheetName)}/range(address='A1:${lc}1')`, { values: [headers] }); }
+  }
+  return { driveId, itemId };
+}
+__name(ensureSheet, "ensureSheet");
+// 운영 시트 전체 교체 기록 (텍스트 서식 → 날짜/번호 그대로 보존)
+async function opsWriteSheet(token, slug, headers, rows){
+  const name = opsSheetName(slug);
+  const { driveId, itemId } = await ensureSheet(token, name, headers);
+  let oldRows = 0;
+  try { const ur = await graphGet(token, `${sheetPathFor(driveId, itemId, name)}/usedRange?$select=rowCount`); oldRows = ur.rowCount || 0; } catch (e) {}
+  const cols = (headers && headers.length) ? headers.length : 1;
+  const lastCol = colLetter(cols);
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='A1:${lastCol}1')`, { values: [headers || []] });
+  const order = headers || [];
+  for (let b = 0; b < rows.length; b += 400){
+    const slice = rows.slice(b, b + 400).map((r) => order.map((h) => { const v = r[h]; return (v === null || v === undefined) ? "" : String(v); }));
+    const sr = 2 + b, er = sr + slice.length - 1;
+    const addr = `A${sr}:${lastCol}${er}`;
+    await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { numberFormat: slice.map(() => order.map(() => "@")) });
+    await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { values: slice });
+  }
+  if (oldRows > rows.length + 1){
+    await graphPost(token, `${sheetPathFor(driveId, itemId, name)}/range(address='A${rows.length + 2}:${lastCol}${oldRows}')/clear`, { applyTo: "Contents" });
+  }
+  return { ok: true, sheet: name, count: rows.length };
+}
+__name(opsWriteSheet, "opsWriteSheet");
 
 var index_default = {
   async scheduled(event, env, ctx) {
@@ -662,34 +696,30 @@ var index_default = {
         if (request.method === "PATCH") return json(await handleMarkMessageRead(token, mid), env);
       }
 
-      // === [DB통합] 대시보드 운영 데이터 — KV 멀티시트 미러 (dash가 시트별 push) ===
-      // GET ?sheet=<name> → 해당 시트 {headers,rows,count,syncedAt}. GET (no param) → 시트 인덱스.
-      // POST {sheet,headers,rows} (admin) → KV "ops:<sheet>" 저장 + 인덱스 갱신. 사업현황·판매현황·연간현황·LLM 공용.
+      // === [DB통합/이관] 운영 데이터 — 프로모 엑셀 "운영_*" 시트가 source of truth (Workbook API) ===
+      // GET ?sheet=<name> → 운영_<name> 시트 {headers,rows,count}. GET (no param) → 운영_* 시트 목록.
+      // POST {sheet,headers,rows} (admin) → 운영_<name> 시트 전체 교체. (dash push / 이관 / 일일입력 폼 공용)
       if (url.pathname === "/api/ops") {
         if (request.method === "GET") {
           const sheet = url.searchParams.get("sheet");
           if (sheet) {
-            const cached = await env.ops_kv.get("ops:" + sheet);
-            if (!cached) return json({ sheet, headers: [], rows: [], count: 0, syncedAt: null, note: "아직 동기화 안 됨" }, env);
-            return new Response(cached, { headers: { "Content-Type": "application/json", ...corsHeaders(env) } });
+            try {
+              const { headers, rows } = await handleGetSheet(token, opsSheetName(sheet));
+              return json({ sheet, headers, rows, count: rows.length }, env);
+            } catch (e) {
+              return json({ sheet, headers: [], rows: [], count: 0, note: "시트 없음 (미동기화)" }, env);
+            }
           }
-          const idx = await env.ops_kv.get("ops:__index");
-          return json(idx ? JSON.parse(idx) : { sheets: [] }, env);
+          const { driveId, itemId } = await findFile(token);
+          const ws = await graphGet(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets`);
+          const sheets = (ws.value || []).filter((w) => w.name.indexOf("운영_") === 0).map((w) => ({ name: w.name }));
+          return json({ sheets }, env);
         }
         if (request.method === "POST") {
-          if (role !== "admin") return json({ error: "Admin only (ops push)" }, env, 403);
+          if (role !== "admin") return json({ error: "Admin only (ops write)" }, env, 403);
           const body = await request.json();
-          const sheet = body.sheet;
-          if (!sheet) return json({ error: "sheet name required" }, env, 400);
-          const rows = Array.isArray(body.rows) ? body.rows : [];
-          const syncedAt = (new Date()).toISOString();
-          await env.ops_kv.put("ops:" + sheet, JSON.stringify({ sheet, headers: body.headers || [], rows, count: rows.length, syncedAt }));
-          let idx = { sheets: [] };
-          try { const cur = await env.ops_kv.get("ops:__index"); if (cur) idx = JSON.parse(cur); } catch (e) {}
-          const others = (idx.sheets || []).filter((s) => s.name !== sheet);
-          others.push({ name: sheet, count: rows.length, syncedAt });
-          await env.ops_kv.put("ops:__index", JSON.stringify({ sheets: others }));
-          return json({ ok: true, sheet, count: rows.length }, env);
+          if (!body.sheet) return json({ error: "sheet name required" }, env, 400);
+          return json(await opsWriteSheet(token, body.sheet, body.headers || [], Array.isArray(body.rows) ? body.rows : []), env);
         }
       }
 
