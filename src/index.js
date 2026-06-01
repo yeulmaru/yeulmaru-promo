@@ -484,6 +484,24 @@ async function opsWriteSheet(token, slug, headers, rows){
   return { ok: true, sheet: name, count: rows.length };
 }
 __name(opsWriteSheet, "opsWriteSheet");
+// 운영 시트에 행 추가 (기존 헤더 순서로, 텍스트 보존) — 일일입력 폼용
+async function opsAppendRows(token, slug, rows){
+  const name = opsSheetName(slug);
+  const { driveId, itemId } = await findFile(token);
+  const ur = await graphGet(token, `${sheetPathFor(driveId, itemId, name)}/usedRange`);
+  const vals = ur.values || [];
+  if (!vals.length) throw new Error("sheet empty/missing: " + name);
+  const headers = vals[0].map((h) => String(h == null ? "" : h));
+  const nextRow = vals.length + 1;
+  const lastCol = colLetter(headers.length);
+  const data = rows.map((r) => headers.map((h) => { const v = r[h]; return (v === null || v === undefined) ? "" : String(v); }));
+  const sr = nextRow, er = sr + data.length - 1;
+  const addr = `A${sr}:${lastCol}${er}`;
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { numberFormat: data.map(() => headers.map(() => "@")) });
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { values: data });
+  return { ok: true, sheet: name, appended: data.length, fromRow: sr };
+}
+__name(opsAppendRows, "opsAppendRows");
 
 var index_default = {
   async scheduled(event, env, ctx) {
@@ -719,7 +737,9 @@ var index_default = {
           if (role !== "admin") return json({ error: "Admin only (ops write)" }, env, 403);
           const body = await request.json();
           if (!body.sheet) return json({ error: "sheet name required" }, env, 400);
-          return json(await opsWriteSheet(token, body.sheet, body.headers || [], Array.isArray(body.rows) ? body.rows : []), env);
+          const rows = Array.isArray(body.rows) ? body.rows : [];
+          if (body.mode === "append") return json(await opsAppendRows(token, body.sheet, rows), env);
+          return json(await opsWriteSheet(token, body.sheet, body.headers || [], rows), env);
         }
       }
 
