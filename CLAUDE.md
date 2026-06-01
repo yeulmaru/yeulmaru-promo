@@ -1,7 +1,7 @@
 # yeulmaru-promo — CLAUDE.md (인계 문서)
 
 > **예울마루 홍보 계획표 웹앱.** GS칼텍스 예울마루 직원이 홍보 콘텐츠 신청·관리하는 단일파일 웹앱. 엑셀+VBA 매크로 대체.
-> **Last updated**: 2026-06-01 (KST) · **현재 HEAD**: `15a5625`
+> **Last updated**: 2026-06-01 (KST) · **현재 HEAD**: `d771131`
 >
 > 이 파일은 **매 세션 새 Claude에게 넘기는 인계서**다. 여기 적힌 건 "이미 정해진 사실"이니 다시 캐묻거나 추측으로 뒤집지 말 것. 코드 세부(컬럼순서·함수 시그니처)는 `index.html`을 직접 검색. 과거 전체 이력은 `docs/CLAUDE_full_backup_260601.md`.
 
@@ -116,9 +116,11 @@ function 클코프로모 {
 - **배포**: Cloudflare 대시보드 Quick Edit 또는 `wrangler deploy`. **git과 무관** — Worker 코드 고쳐도 GitHub push로 반영 안 됨, 반대도 마찬가지.
 - **주요 엔드포인트**:
   - `GET/POST/PATCH/DELETE /api/sheet/<slug>` — 시트 row CRUD (body.values / rowIndex)
-  - `POST /api/login`, `POST /api/auth`, `POST /api/auth/set-password` — 인증
+  - `POST /api/auth/set-pin`·`reset-pin`·`set-password` — PIN/비번 설정 (※ `/api/auth/super`는 260601 제거됨)
   - `POST /api/records` — 신청내역 전용
-- **인증 헤더**: 슈퍼admin `ADMIN_PASSWORD`(=PIN 0511) 직통 / 서브admin `X-Sub-Admin-PIN` (`checkAdmin` + 5분 매니저 캐시)
+  - `GET /api/lastmod` — 파일 mtime/eTag (C-1 변경감지 폴링용)
+  - `GET/POST/PATCH /api/messages` — 메시지함 알림 (없으면 '메시지' 시트 자동생성, 셀 텍스트서식)
+- **인증 헤더**: 서브admin `X-Sub-Admin-PIN` + `관리자여부=true` (`checkAdmin` + 5분 매니저 캐시). ⚠️ 슈퍼admin(0511)·`/api/auth/super` 폐기 — 권한은 시트 `관리자여부`로만 결정.
 - **cron**: `autoCancelStalePending` — 보류 3일 자동취소 (`scheduled` 핸들러)
 
 ### Azure AD (Graph API 인증 — Worker가 SharePoint 접근)
@@ -158,8 +160,8 @@ function 클코프로모 {
 ## 🔐 인증 모델
 
 - 담당자 시트 **개별 4자리 PIN**으로 로그인. **MSAL로 MS 신원 확인 + PIN 둘 다** 통과해야 입장.
-- **슈퍼admin**: PIN `0511` = Worker `ADMIN_PASSWORD` 직통 → `role=admin` (신원 없는 최고권한).
-- **서브admin**: 담당자 PIN + `관리자여부=true` → `role=admin` + `sessionStorage.subAdminPin` (Worker `X-Sub-Admin-PIN`).
+- ⚠️ **슈퍼admin(0511)·앱 내 권한전환은 260601 전면 폐기** (`12f4746`/`d5d4115`). 권한은 **담당자 시트 `관리자여부`로 고정**, 앱 안에서 일반↔관리자 전환 불가. 삭제·관리자컬럼 편집 = admin 전체 허용(`_canDelete`/`userRole==='admin'`). `isSuperAdmin`/`_verifySuperForDelete`/`switchRole`/`/api/auth/super` 제거됨.
+- **admin(서브admin = 최고권한)**: 담당자 PIN + `관리자여부=true` → `role=admin` + `sessionStorage.subAdminPin` (Worker `X-Sub-Admin-PIN`).
 - **일반 user**: 담당자 PIN + `관리자여부=false`.
 - **신원·세션 전부 `sessionStorage`** (`role/pw/subAdminPin/myApplicant/myUserDept`). localStorage 쓰면 탭간 신원 오염. 페이지 로드 시 localStorage 잔재 청소.
 - ⚠️ **MSAL loginPopup 직후 같은 페이지 화면전환 = COOP가 깨뜨림.** → loginPopup 성공 시 `localStorage._resumePin=email` 저장 후 `location.reload()` → 새 페이지에서 PIN칸 재개. (세션20에서 확립)
@@ -204,7 +206,7 @@ function 클코프로모 {
 
 ---
 
-## ✅ 현재 상태 (2026-06-01, HEAD `15a5625`)
+## ✅ 현재 상태 (2026-06-01, HEAD `d771131`)
 
 - **세션20 완료**: 로그인 무한루프 + PIN 우회 백도어 대수술 끝. 안정.
   - 버그A(PIN칸 무한): TDZ(`MANAGERS`)→setTimeout, COOP→reload 방식, `backToAccountStep`이 `initLoginScreen()` 재렌더.
@@ -215,10 +217,18 @@ function 클코프로모 {
   - `9ae917f` user-register 폼 개편(부서/직위 드롭다운, 가로 duty 체크박스, PIN/pw/active 숨김) + 콘텐츠-admin 메뉴 제거
   - `3c70982` row 삭제 슈퍼admin 전용화(버튼 비활성 + 삭제 시 슈퍼 패스워드 요구)
   - `b6df0b1` 유휴 자동잠금 1min→10min
-  - **`15a5625` 변경 모달 하단에 [신청 취소] 버튼 추가** (빨강, 본인 신청, 비종결 상태 조건부) ← 최신
-- **남은 정리거리**(기능 무해): 진단로그 떨거지(`[goToPin]/[pinFix]/[DIAG]/[fullLogout]/[backToAccount]/[initLogin]`), `_pinGuard` MutationObserver / `_pinActive` 가드(reload 도입 후 불필요할 수 있음). → **로그 한 줄씩 빼고 시크릿창 테스트** 원칙. (※ index.html.bak_* 백업파일은 260601 전부 정리 완료)
-- **Q-3 (캘린더 프로그램 좌클릭 → 조회모달)**: 사이드바 프로그램 좌클릭은 `openProgramView` 매핑 됨. **캘린더 그리드 안의 프로그램 표시 요소** 좌클릭 → `openProgramView` 매핑이 인계 포인트. (`@492107` 부근 onclick 확정 필요 — 코드 재확인하고 진행)
-- **잔여 기획**: 이메일 알림(Graph `sendMail`, **A안 확정** — Azure AD 앱에 `Mail.Send` 추가 + `/api/notify/mail` 엔드포인트) → Teams 알림(Power Automate Workflows 우선) → 조회모달 Y/Z/AA 표시분리, PR_MANAGERS 전원알림.
+  - **`15a5625` 변경 모달 하단에 [신청 취소] 버튼 추가** (빨강, 본인 신청, 비종결 상태 조건부)
+- **260601 후속 (F5수정 + 큐 A·B·C, 전부 배포됨)**:
+  - `33cec19` **F5 false-lock 수정** — `IDLE_MS`를 세션복원 IIFE 위로 호이스팅(reload 시 undefined IDLE_MS로 `setTimeout(lockScreen)=0ms` 즉시잠금 버그). 라이브 PASS.
+  - `8a81302` **[A]** 리스트 액션 → 단일 [변경] 메뉴 통일(클릭→`onEvContextMenu`, admin 인라인 승인/완료는 메뉴로 흡수), **예정 상태 user 변경·취소 차단**(admin만).
+  - `61ee570` **/api/lastmod** Worker 엔드포인트.
+  - `12f4746`+`d5d4115` **[B]** 0511 슈퍼admin + 권한전환 전면 제거, 삭제권한 admin 재배치, Worker `/api/auth/super` 제거.
+  - `3a062ad` **[C-1]** 변경감지 폴링 뱃지(45초 `/api/lastmod`, 수동 새로고침, 자동리로드 X, `loadData`에 baseline 훅).
+  - `59bfb9e`+`d771131` **[C-2]** 서버 기반 메시지함 — Worker `/api/messages`(GET/POST/PATCH, '메시지' 시트 자동생성·텍스트서식), 프론트 알림 **S(신청자) 엄격**(`||게시담당자` 폴백 제거) + 재신청 시 관리자 전원 알림. (이전 localStorage-only → 크로스유저 전달)
+- **메시지함 구조**: 알림은 이제 **'메시지' 시트(서버)** 저장. 컬럼 `ID·수신자·종류·트리거·이전·이후·사유·참조번호·참조요약·KST·읽음`, 수신자=**신청자(S) 이름**. ⚠️ 메시지 DELETE API 없음. 시트에 `ZZTEST` 테스트 row 2개 잔존(무해, 수동삭제 가능).
+- **남은 정리거리**(기능 무해): 진단로그 떨거지(`[IIFE]/[zombie-check]/[pinFix]/[fullLogout]` 등), `_pinGuard` MutationObserver/`_pinActive` 가드, **죽은 코드**(`_promptSuperSecret` 모달, IIFE의 `0511` 분기 — F5 핵심 IIFE라 보존). → **로그 한 줄씩 빼고 시크릿창 테스트** 원칙.
+- **Q-3 (캘린더 그리드 프로그램 좌클릭 → 조회모달)**: 사이드바는 `openProgramView` 매핑됨, 그리드 내 프로그램 표시요소 좌클릭 미연결이 인계 포인트.
+- **잔여 기획**: 이메일 알림(Graph `sendMail`, **A안 확정** — `Mail.Send` + `/api/notify/mail`) → Teams 알림(Power Automate) → 조회모달 Y/Z/AA 표시분리.
 
 ---
 
