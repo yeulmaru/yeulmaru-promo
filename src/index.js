@@ -386,6 +386,69 @@ async function autoCancelStalePending(env) {
 }
 __name(autoCancelStalePending, "autoCancelStalePending");
 
+// === 메시지(알림) 시트 — 자동 생성 + CRUD ===
+var MSG_SHEET = "메시지";
+var MSG_HEADERS = ["ID", "수신자", "종류", "트리거", "이전", "이후", "사유", "참조번호", "참조요약", "KST", "읽음"];
+
+async function graphPost(token, path, body) {
+  const r = await fetch(`https://graph.microsoft.com/v1.0${path}`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`Graph POST ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+__name(graphPost, "graphPost");
+
+// 메시지 시트 없으면 생성 + 헤더 기록 (최초 1회)
+async function ensureMessagesSheet(token) {
+  const { driveId, itemId } = await findFile(token);
+  const ws = await graphGet(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets`);
+  const exists = (ws.value || []).some((w) => w.name === MSG_SHEET);
+  if (!exists) {
+    await graphPost(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets/add`, { name: MSG_SHEET });
+    const lastCol = colLetter(MSG_HEADERS.length);
+    await graphPatch(token, `${sheetPathFor(driveId, itemId, MSG_SHEET)}/range(address='A1:${lastCol}1')`, { values: [MSG_HEADERS] });
+  }
+  return { driveId, itemId };
+}
+__name(ensureMessagesSheet, "ensureMessagesSheet");
+
+async function handleGetMessages(token) {
+  await ensureMessagesSheet(token);
+  const { rows } = await handleGetSheet(token, MSG_SHEET);
+  return rows;
+}
+__name(handleGetMessages, "handleGetMessages");
+
+async function handleAddMessage(token, msg) {
+  const { driveId, itemId } = await ensureMessagesSheet(token);
+  const { rows } = await handleGetSheet(token, MSG_SHEET);
+  const nextRow = rows.length > 0 ? Math.max(...rows.map((r) => r._rowIndex)) + 1 : 2;
+  const values = [
+    msg.id || "", msg.recipient || "", msg.type || "일반", msg.trigger || "",
+    msg.before || "", msg.after || "", msg.reason || "", msg.refNo || "",
+    msg.refSummary || "", msg.kst || kstNowText(), msg.read ? "TRUE" : "FALSE"
+  ];
+  const lastCol = colLetter(values.length);
+  const addr = `A${nextRow}:${lastCol}${nextRow}`;
+  // 셀을 텍스트 서식으로 먼저 지정 — KST/번호가 Excel 날짜·숫자로 자동변환되는 것 방지
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, MSG_SHEET)}/range(address='${addr}')`, { numberFormat: [values.map(() => "@")] });
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, MSG_SHEET)}/range(address='${addr}')`, { values: [values] });
+  return { ok: true, row: nextRow };
+}
+__name(handleAddMessage, "handleAddMessage");
+
+async function handleMarkMessageRead(token, id) {
+  const { driveId, itemId } = await ensureMessagesSheet(token);
+  const { headers, rows } = await handleGetSheet(token, MSG_SHEET);
+  const target = rows.find((r) => String(r["ID"] || "").trim() === String(id).trim());
+  if (!target) return { ok: false, error: "not found" };
+  const readIdx = headers.indexOf("읽음");
+  if (readIdx < 0) return { ok: false, error: "no read column" };
+  const col = colLetter(readIdx + 1);
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, MSG_SHEET)}/range(address='${col}${target._rowIndex}:${col}${target._rowIndex}')`, { values: [["TRUE"]] });
+  return { ok: true };
+}
+__name(handleMarkMessageRead, "handleMarkMessageRead");
+
 var index_default = {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(autoCancelStalePending(env));
@@ -587,6 +650,16 @@ var index_default = {
           serverTs: (new Date()).toISOString()
         }, env);
       }
+      // === 메시지(알림) — 로그인 사용자면 GET/POST/PATCH 허용 ===
+      if (url.pathname === "/api/messages") {
+        if (request.method === "GET") return json({ messages: await handleGetMessages(token) }, env);
+        if (request.method === "POST") return json(await handleAddMessage(token, await request.json()), env);
+      }
+      if (url.pathname.startsWith("/api/messages/")) {
+        const mid = decodeURIComponent(url.pathname.split("/").pop());
+        if (request.method === "PATCH") return json(await handleMarkMessageRead(token, mid), env);
+      }
+
       if (url.pathname === "/api/health") return json({ status: "ok", ts: (/* @__PURE__ */ new Date()).toISOString() }, env);
       return json({ error: "Not found" }, env, 404);
     } catch (e) {
