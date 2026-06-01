@@ -2207,7 +2207,7 @@ async function _doLogout(){
   location.reload();
 }
 let _idleTimer=null, _idleBound=false, _locked=false;
-const IDLE_MS=1*60*1000;
+const IDLE_MS=10*60*1000;
 function resetIdleTimer(){
   if(_idleTimer)clearTimeout(_idleTimer);
   const app=document.getElementById('app');
