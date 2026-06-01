@@ -2242,7 +2242,7 @@ function _salesBuild(){
     var status='unknown';
     if(m&&m.티켓오픈&&m.종료){ if(m.티켓오픈<=today&&today<=m.종료)status='active'; else if(today>m.종료)status='ended'; else status='notyet'; }
     else if(dday!==null){ status=dday>=0?'active':'ended'; }
-    perfs.push({name:name,seats:seats,money:money,diff:diff,occ:occ,totalOpen:totalOpen,dday:dday,dateStr:dateStr,수익성:m?m.수익성:'',startDate:startDate,status:status});
+    perfs.push({name:name,seats:seats,money:money,diff:diff,occ:occ,totalOpen:totalOpen,dday:dday,dateStr:dateStr,수익성:m?m.수익성:'',목표:(m?m.목표:50),startDate:startDate,status:status});
   });
   return perfs;
 }
@@ -2296,6 +2296,46 @@ function _salesTable(list,isActive){
   });
   h+='</tbody></table>'; return h;
 }
+function _salesAchieveColor(ach){
+  if(ach>75)return '#0F8B4C';
+  if(ach>50)return '#4A4DE7';
+  if(ach>25)return '#D97706';
+  return '#E5484D';
+}
+function _salesDrawOccChart(active){
+  if(!window.Plotly)return;
+  var div=document.getElementById('sales-occ-chart'); if(!div)return;
+  if(!active.length){ div.innerHTML=''; return; }
+  // D-day 내림차순 (임박=작은 D-day가 위로 가도록 autorange reversed와 조합)
+  var list=active.slice().sort(function(a,b){var da=(a.dday===null?99999:a.dday),db=(b.dday===null?99999:b.dday);return db-da;});
+  var names=list.map(function(p){return p.name;});
+  var occs=list.map(function(p){return p.occ;});
+  var colors=list.map(function(p){var ach=p.목표>0?p.occ/p.목표*100:p.occ;return _salesAchieveColor(ach);});
+  var ytick=list.map(function(p){
+    var dd=(p.dday===null)?'':_salesDdayStr(p.dday), ddc=_salesDdayColor(p.dday);
+    var s='<span style="font-size:12px;color:#333">'+escapeHtml(p.name)+'</span>';
+    if(p.dateStr)s+='<br><span style="font-size:11px;color:#999">'+escapeHtml(p.dateStr)+'</span>';
+    if(dd)s+='<br><span style="font-size:11px;color:'+ddc+';font-weight:700">'+dd+'</span>';
+    return s;
+  });
+  var trace={type:'bar',orientation:'h',x:occs,y:names,width:0.5,marker:{color:colors},
+    customdata:list.map(function(p){return [p.목표,(p.목표>0?(p.occ/p.목표*100):0),p.seats,p.totalOpen];}),
+    hovertemplate:'<b>%{y}</b><br>점유율: %{x:.1f}%<br>목표: %{customdata[0]:.0f}%<br>달성률: %{customdata[1]:.0f}%<br>판매: %{customdata[2]:,}석 / 오픈: %{customdata[3]:,}석<extra></extra>'};
+  var shapes=[{type:'line',xref:'x',yref:'paper',x0:100,x1:100,y0:0,y1:1,line:{color:'#E5484D',dash:'dash',width:1}}];
+  var annotations=[];
+  list.forEach(function(p,i){
+    shapes.push({type:'line',xref:'x',yref:'y',x0:p.목표,x1:p.목표,y0:i-0.3,y1:i+0.3,line:{color:'#D9A406',dash:'dot',width:1.5}});
+    annotations.push({x:p.목표,y:p.name,yref:'y',text:p.목표.toFixed(0)+'%',showarrow:false,font:{color:'#B8860B',size:9},yshift:15,bgcolor:'rgba(255,255,255,0.85)',borderpad:1});
+    annotations.push({x:p.occ+1,y:p.name,yref:'y',xanchor:'left',text:'<b>'+p.occ.toFixed(1)+'%</b> ('+p.seats.toLocaleString()+'/'+p.totalOpen.toLocaleString()+')',showarrow:false,font:{size:11,color:'#555'}});
+  });
+  var maxX=Math.max(110,Math.max.apply(null,occs.concat(list.map(function(p){return p.목표;})))+12);
+  var layout={height:Math.max(200,list.length*72+70),margin:{t:14,r:30,b:38,l:160},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'inherit',color:'#444'},
+    bargap:0.45,showlegend:false,
+    xaxis:{range:[0,maxX],ticksuffix:'%',gridcolor:'#f2f2f2',zeroline:false},
+    yaxis:{tickvals:names,ticktext:ytick,autorange:'reversed',showgrid:false},
+    shapes:shapes,annotations:annotations};
+  Plotly.react(div,[trace],layout,{responsive:true,displayModeBar:false});
+}
 function _salesRender(){
   var body=document.getElementById('sales-body'); if(!body)return;
   var perfs=_salesBuild();
@@ -2315,6 +2355,11 @@ function _salesRender(){
   h+='</div>';
   h+='<div style="font-size:14px;font-weight:700;color:#333;margin:6px 0 10px">[1] 공연 현황</div>';
   h+=_salesTable(active,true);
+  if(active.length){
+    h+='<div style="font-size:14px;font-weight:700;color:#333;margin:22px 0 4px">[2] 공연별 점유율 비교</div>';
+    h+='<div style="font-size:11px;color:#999;margin-bottom:6px">막대색=달성률(점유율/목표) · 점선=공연별 목표 · 빨강선=100%</div>';
+    h+='<div id="sales-occ-chart" style="min-height:200px"></div>';
+  }
   if(ended.length){
     h+='<div style="margin-top:18px"><button onclick="_salesToggleEnded()" style="padding:7px 14px;border-radius:8px;border:1px solid #ddd;background:#fafafa;font-size:12px;font-weight:600;color:#666;cursor:pointer;font-family:inherit">종료된 공연 '+(_salesState.showEnded?'숨기기 ▲':'보기 ▼')+' ('+ended.length+')</button></div>';
     if(_salesState.showEnded)h+='<div style="margin-top:10px">'+_salesTable(ended,false)+'</div>';
@@ -2322,6 +2367,7 @@ function _salesRender(){
   var sa=(_salesState.daily&&_salesState.daily.syncedAt)?_salesState.daily.syncedAt:null;
   if(sa)h+='<div style="text-align:right;color:#bbb;font-size:11px;margin-top:12px">동기화: '+escapeHtml(sa)+'</div>';
   body.innerHTML=h;
+  if(active.length){ _bizEnsurePlotly(function(){ _salesDrawOccChart(active); }); }
 }
 // === [DB통합] 사업 현황 (dash 2_사업현황 '연간 운영현황' 이식 — 프로모 톤) ===
 var _bizState = { raw:null, year:null, types:{}, escHandler:null };
