@@ -449,6 +449,8 @@ async function handleMarkMessageRead(token, id) {
 }
 __name(handleMarkMessageRead, "handleMarkMessageRead");
 
+// === [DB통합] 운영 데이터는 KV 미러 사용 (dash가 pandas로 읽어 push → /api/ops). dash 파일은 Graph Workbook API에서 501(unsupportedWorkbook)이라 Worker 직접읽기 폐기. ===
+
 var index_default = {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(autoCancelStalePending(env));
@@ -658,6 +660,23 @@ var index_default = {
       if (url.pathname.startsWith("/api/messages/")) {
         const mid = decodeURIComponent(url.pathname.split("/").pop());
         if (request.method === "PATCH") return json(await handleMarkMessageRead(token, mid), env);
+      }
+
+      // === [DB통합] 대시보드 운영 데이터 — KV 미러 (dash가 push, 사업현황 뷰 + 향후 LLM) ===
+      if (url.pathname === "/api/ops") {
+        if (request.method === "GET") {
+          const cached = await env.ops_kv.get("ops_latest");
+          if (!cached) return json({ headers: [], rows: [], count: 0, syncedAt: null, note: "아직 동기화 안 됨" }, env);
+          return new Response(cached, { headers: { "Content-Type": "application/json", ...corsHeaders(env) } });
+        }
+        if (request.method === "POST") {
+          if (role !== "admin") return json({ error: "Admin only (ops push)" }, env, 403);
+          const body = await request.json();
+          const rows = Array.isArray(body.rows) ? body.rows : [];
+          const payload = JSON.stringify({ headers: body.headers || [], rows, count: rows.length, syncedAt: (new Date()).toISOString() });
+          await env.ops_kv.put("ops_latest", payload);
+          return json({ ok: true, count: rows.length }, env);
+        }
       }
 
       if (url.pathname === "/api/health") return json({ status: "ok", ts: (/* @__PURE__ */ new Date()).toISOString() }, env);

@@ -1,0 +1,13 @@
+name = "yeulmaru-promo-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ALLOWED_ORIGIN = "*"
+
+[triggers]
+crons = ["0 1 * * *"]
+
+[[kv_namespaces]]
+binding = "ops_kv"
+id = "682559eeb2a94fa4b6382d9487242e45"
