@@ -4464,7 +4464,7 @@ async function holdPromoFromBoard(rowIndex){
     try{
       const row=buildRecordRow(rec,{'진행 상태':'취소','취소사유':cR});
       await api('PATCH','/api/records/'+rowIndex,{values:row});
-      try{pushMessage({recipient:rec['신청자']||rec['게시 담당자']||'',type:'중요',trigger:'재신청취소',before:'신청 중',after:'취소',reason:cR,refNo:rec['No']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});}catch(_e){}
+      try{pushMessage({recipient:rec['신청자']||'',type:'중요',trigger:'재신청취소',before:'신청 중',after:'취소',reason:cR,refNo:rec['No']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});}catch(_e){}
       await syncReload(0);if(typeof renderPromoBoard==='function')renderPromoBoard();render();
       showToast('재신청 건이 취소됐어요');
     }catch(e){showToast('취소 실패: '+(e.message||e),'error');}finally{hideOverlayLoad();}
@@ -4476,7 +4476,7 @@ async function holdPromoFromBoard(rowIndex){
   try{
     const row=buildRecordRow(rec,{'진행 상태':'보류','보류사유':reason});
     await api('PATCH','/api/records/'+rowIndex,{values:row});
-    try{pushMessage({recipient:rec['신청자']||rec['게시 담당자']||'',type:'중요',trigger:'신청보류',before:'신청 중',after:'보류',reason:reason,refNo:rec['No']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});}catch(_e){}
+    try{pushMessage({recipient:rec['신청자']||'',type:'중요',trigger:'신청보류',before:'신청 중',after:'보류',reason:reason,refNo:rec['No']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});}catch(_e){}
     await syncReload(0);if(typeof renderPromoBoard==='function')renderPromoBoard();render();
     showToast('보류 처리됐어요');
   }catch(e){showToast('보류 실패: '+(e.message||e),'error');}finally{hideOverlayLoad();}
@@ -4499,6 +4499,17 @@ async function reapplyPromoRequest(rowIndex){
     const row=buildRecordRow(rec,{'진행 상태':'신청 중','재신청사유':rR});
     await api('PATCH','/api/records/'+rowIndex,{values:row});
     showToast('재신청 완료');
+    // === 재신청 → 관리자(관리자여부=true) 전원 알림 (C-2) ===
+    try{
+      var _reSummary=(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim();
+      var _reApplicant=(rec['신청자']||'').toString().trim();
+      (MANAGERS||[]).forEach(function(a){
+        if(!isFlagOn(a['관리자여부'])) return;
+        var _an=(a['담당자']||'').toString().trim();
+        if(!_an || _an===_reApplicant) return;   // 재신청한 본인 제외
+        pushMessage({recipient:_an,type:'중요',trigger:'재신청',before:'보류',after:'신청 중',reason:(_reApplicant||'사용자')+' 님이 재신청했어요'+(rR?' ('+rR+')':''),refNo:rec['No']||'',refSummary:_reSummary});
+      });
+    }catch(_e){console.error('[reapply admin notify]',_e);}
     await syncReload(0);if(typeof renderPromoBoard==='function')renderPromoBoard();render();
   }catch(e){console.error('[reapply]',e);showToast('재신청 실패: '+(e.message||e),'error');}finally{hideOverlayLoad();}
 }
