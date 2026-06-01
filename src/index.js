@@ -595,6 +595,18 @@ var index_default = {
         return json({ error: "Method not allowed" }, env, 405);
       }
 
+      // === 파일 마지막 수정시각 (변경 감지 polling용) ===
+      if (url.pathname === "/api/lastmod") {
+        const lmToken = await getToken(env);
+        const { driveId, itemId } = await findFile(lmToken);
+        const meta = await graphGet(lmToken, `/drives/${driveId}/items/${itemId}?$select=lastModifiedDateTime,eTag,cTag`);
+        return json({
+          lastModified: meta.lastModifiedDateTime || null,
+          eTag: meta.eTag || null,
+          cTag: meta.cTag || null,
+          serverTs: (new Date()).toISOString()
+        }, env);
+      }
       if (url.pathname === "/api/health") return json({ status: "ok", ts: (/* @__PURE__ */ new Date()).toISOString() }, env);
       return json({ error: "Not found" }, env, 404);
     } catch (e) {
