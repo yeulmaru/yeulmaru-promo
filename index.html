@@ -1830,10 +1830,10 @@ async function loadPrograms(){
 }
 
 // === 마스터 데이터 캐시 (관리자 모달용) ===
-let CONTENT_TYPES=[],MANAGERS=[],_programsCache=[];
-let _sheetCache={};
+var CONTENT_TYPES=[],MANAGERS=[],_programsCache=[];
+var _sheetCache={};
 // === 마스터 데이터 캐시 (작성 화면용 - Phase 3C-2) ===
-let PLATFORMS=[],CONTENT_FORMATS=[],STATUSES=[],PR_MANAGERS=[];
+var PLATFORMS=[],CONTENT_FORMATS=[],STATUSES=[],PR_MANAGERS=[];
 
 // 마스터 시트 관리 메타 (3B-3에서 사용)
 const SHEET_CONFIG={
@@ -2206,8 +2206,8 @@ async function _doLogout(){
   try{ await _msalLogout(); }catch(e){ console.warn('[logout msal]',e); }
   location.reload();
 }
-let _idleTimer=null, _idleBound=false, _locked=false;
-const IDLE_MS=10*60*1000;
+var _idleTimer=null, _idleBound=false, _locked=false;
+var IDLE_MS=10*60*1000;
 function resetIdleTimer(){
   if(_idleTimer)clearTimeout(_idleTimer);
   const app=document.getElementById('app');
@@ -7422,8 +7422,8 @@ function getApplyMonthRows(){
 }
 
 // 캐시 (60초)
-let _applySettingsCache=null;
-let _applySettingsCacheAt=0;
+var _applySettingsCache=null;
+var _applySettingsCacheAt=0;
 
 async function loadApplySettings(){
   // 60초 캐시 재사용
@@ -10201,7 +10201,7 @@ function editRec(rowIndex,dateKey,ev,forceReadOnly){
   openModal(dateKey,rec,{readOnly:!!forceReadOnly});
 }
 // 복사 직후 점등 효과용 — 셀 dateKey 저장
-let _justCopiedDateKey=null;
+var _justCopiedDateKey=null;
 // 복사할 날짜·시간 묻는 모달 (원본 일정 prefill)
 function _askCopyDate(originalRec){
   return new Promise(function(resolve){
