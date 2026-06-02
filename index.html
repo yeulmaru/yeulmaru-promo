@@ -435,6 +435,7 @@ button{font-family:inherit;cursor:pointer}
 .dn.sun{color:#D64545}
 .dn.hol{color:#D64545}
 .hol-badge{font-size:9px;color:#D64545;font-weight:600;line-height:1.15;margin:0 0 2px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hol-pill{display:inline-block;font-size:9px;font-weight:700;color:#D64545;background:rgba(214,69,69,0.12);padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0;margin-left:4px;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .today-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(74,77,231,0.25)}
 .c-inner > .dn{position:sticky;top:0;z-index:2;background:inherit}
 .c.today .c-inner > .dn{padding:0 0 3px 0}
@@ -9673,7 +9674,7 @@ function renderCal(){
         var doneCount=filteredRecs.filter(function(r){return (r['진행 상태']||'')==='완료';}).length;
         h+='<div class="c-count">'+doneCount+'/'+filteredRecs.length+'</div>';
       }
-      h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past,key)+'</div>'+((holName&&perfs.filter(function(p){return p.t!=='e';}).length===0&&!(PROMO_SPECIAL||[]).some(function(s){return key>=s.start&&key<=s.end;}))?'<div class="hol-badge" title="'+escapeHtml(holName)+'">'+escapeHtml(holName)+'</div>':'');
+      h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+(holName?'<span class="hol-pill" title="'+escapeHtml(holName)+'">'+escapeHtml(holName)+'</span>':'')+renderPerfsHtml(perfs,td,past,key)+'</div>';
       filteredRecs.forEach(r=>{
         var p=r['플랫폼 1']||'',p2=r['플랫폼 2']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
         var done=st==='완료';
