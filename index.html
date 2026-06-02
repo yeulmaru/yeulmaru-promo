@@ -7996,6 +7996,7 @@ async function saveApplyMonth(idx){
     invalidateApplyCache();
     if(stEl){stEl.textContent='✓ 저장됨';stEl.style.color='#0F8B4C';setTimeout(function(){if(stEl)stEl.textContent='';},2000);}
     if(wasEmpty)renderApplySettings(true);
+    autoRegisterHolidayExclusions().then(function(n){if(n){renderApplySettings(true);showToast(n+'개 공휴일 자동 등록됨','success');}});
   }catch(e){
     if(stEl){stEl.textContent='저장 실패';stEl.style.color='#E24B4A';}
     showToast('저장 실패: '+e.message,'error');
@@ -8026,6 +8027,7 @@ async function addApplyMonth(){
     if(r&&r.row)APPLY_SETTINGS_ROWS.접수월.push(r.row);
     invalidateApplyCache();
     renderApplySettings(true);
+    autoRegisterHolidayExclusions().then(function(n){if(n){renderApplySettings(true);showToast(n+'개 공휴일 자동 등록됨','success');}});
     showToast('접수월 추가됨','success');
   }catch(e){
     showToast('추가 실패: '+e.message,'error');
@@ -8102,8 +8104,9 @@ function buildIndividualListHtml(){
   indivs.forEach(function(ex){
     const idx=APPLY_EXCLUSIONS.indexOf(ex);
     html+='<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#fff;border:1px solid #eee;border-radius:8px;font-size:13px">';
+    var _isHol=(ex.start==='00:00'&&ex.end==='23:59'&&window._holidays&&_holidays[ex.date]);
     html+='<span style="color:#333;font-weight:600;min-width:90px">'+escapeHtml(ex.date)+'</span>';
-    html+='<span style="color:#666;flex:1">'+escapeHtml(ex.start+' ~ '+ex.end)+'</span>';
+    html+=_isHol?'<span style="color:#D64545;flex:1;font-weight:600">'+escapeHtml(_holidays[ex.date])+' <span style="font-size:10px;color:#D64545;background:rgba(214,69,69,0.1);padding:1px 6px;border-radius:8px;font-weight:600;margin-left:2px">공휴일</span></span>':'<span style="color:#666;flex:1">'+escapeHtml(ex.start+' ~ '+ex.end)+'</span>';
     html+='<button onclick="deleteExclusion('+idx+')" style="padding:3px 9px;border:1px solid rgba(216,75,74,0.25);border-radius:6px;background:#fff;color:#E24B4A;cursor:pointer;font-size:11px">삭제</button>';
     html+='</div>';
   });
@@ -8119,6 +8122,30 @@ function refreshCommonChips(){
 function refreshIndividualList(){
   const el=document.getElementById('iv-list');
   if(el)el.innerHTML=buildIndividualListHtml();
+}
+
+// === 공휴일 자동 제외 등록 (접수월 범위만, 종일 00:00~23:59 차단, 관리자 개별 삭제 가능) ===
+function _ensureHolidays(year){
+  return api('GET','/api/holidays?year='+year).then(function(d){
+    ((d&&d.days)||[]).forEach(function(x){if(x&&x.date)_holidays[x.date]=x.name;});
+  }).catch(function(){});
+}
+async function autoRegisterHolidayExclusions(){
+  var months=getApplyMonths(); if(!months.length)return 0;
+  var years={}; months.forEach(function(ym){years[ym.split('-')[0]]=1;});
+  for(var y in years){ await _ensureHolidays(y); }
+  var added=0;
+  for(var date in _holidays){
+    if(months.indexOf(date.substring(0,7))<0)continue;          // 접수월 범위만
+    if(APPLY_EXCLUSIONS.some(function(ex){return ex.date===date;}))continue;  // 이미 등록(수동/공휴일) skip
+    try{
+      var r=await api('POST','/api/sheet/applysettings',{values:['제외',date+'|00:00|23:59']});
+      APPLY_EXCLUSIONS.push({rowIndex:(r&&r.row)||0,date:date,start:'00:00',end:'23:59'});
+      added++;
+    }catch(e){}
+  }
+  if(added)invalidateApplyCache();
+  return added;
 }
 
 // ===== 공통 추가 (시간만, 자정 넘는 경우 두 chip으로 자동 분할) =====
@@ -9646,7 +9673,7 @@ function renderCal(){
         var doneCount=filteredRecs.filter(function(r){return (r['진행 상태']||'')==='완료';}).length;
         h+='<div class="c-count">'+doneCount+'/'+filteredRecs.length+'</div>';
       }
-      h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past,key)+'</div>'+((holName&&perfs.filter(function(p){return p.t!=='e';}).length===0&&filteredRecs.length===0)?'<div class="hol-badge" title="'+escapeHtml(holName)+'">'+escapeHtml(holName)+'</div>':'');
+      h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past,key)+'</div>'+((holName&&perfs.filter(function(p){return p.t!=='e';}).length===0&&!(PROMO_SPECIAL||[]).some(function(s){return key>=s.start&&key<=s.end;}))?'<div class="hol-badge" title="'+escapeHtml(holName)+'">'+escapeHtml(holName)+'</div>':'');
       filteredRecs.forEach(r=>{
         var p=r['플랫폼 1']||'',p2=r['플랫폼 2']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
         var done=st==='완료';
