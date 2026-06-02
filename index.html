@@ -4593,7 +4593,7 @@ function onSpContextMenu(event,rowIndex){
 }
 
 // === 홍보 신청 검토 페이지 ===
-let _promoFilter={status:'all',q:'',hidePast:false,showCancelled:false,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide'};
+let _promoFilter={status:'all',q:'',hidePast:false,showCancelled:false,applicant:'',viewMode:'mine',sortBy:'',sortDir:'asc',specialMode:'hide',colFilters:{}};
 // 컬럼 너비 localStorage 로드 (v2 — 시간 컬럼 기본값 변경 반영)
 let _colWidths={};
 try{
@@ -4705,6 +4705,53 @@ function setPromoSort(col){
   }
   renderPromoBoard();
 }
+// === 엑셀식 컬럼 필터 (담당자/신청자/플랫폼/구분/콘텐츠) ===
+var PROMO_FILTERABLE=['platform','category','content','manager','applicant'];
+function _promoColVal(col,r){
+  if(col==='manager')return (r['게시 담당자']||'상관 없음').toString().trim();
+  if(col==='applicant')return (r['신청자']||'상관 없음').toString().trim();
+  if(col==='platform')return (r['플랫폼 1']||'').toString().trim();
+  if(col==='category')return (r['콘텐츠 구분']||'').toString().trim();
+  if(col==='content')return (r['콘텐츠 제목']||'').toString().trim();
+  return '';
+}
+function closeColFilter(){var el=document.getElementById('colf-pop-wrap');if(el)el.remove();document.removeEventListener('mousedown',_colfOutside,true);}
+function _colfOutside(e){var p=document.getElementById('colf-pop');if(p&&!p.contains(e.target))closeColFilter();}
+function colfToggleAll(on){Array.prototype.forEach.call(document.querySelectorAll('#colf-pop .colf-cb'),function(cb){cb.checked=on;});}
+function applyColFilter(col){
+  var cbs=Array.prototype.slice.call(document.querySelectorAll('#colf-pop .colf-cb'));
+  var checked=cbs.filter(function(cb){return cb.checked;}).map(function(cb){return cb.value;});
+  if(checked.length===cbs.length||checked.length===0){delete _promoFilter.colFilters[col];}
+  else{_promoFilter.colFilters[col]=checked;}
+  closeColFilter();renderPromoBoard();
+}
+function openColFilter(col,ev){
+  if(ev){ev.stopPropagation();ev.preventDefault();}
+  var trigger=ev&&ev.currentTarget;
+  var vals={};(records||[]).forEach(function(r){if(r._isSpecial)return;var v=_promoColVal(col,r);if(v!=='')vals[v]=1;});
+  var list=Object.keys(vals).sort(function(a,b){return a.localeCompare(b,'ko');});
+  var sel=_promoFilter.colFilters[col];var allChecked=!sel;
+  var box='background:#fff;border:1px solid #e0e0e0;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.16);width:232px;font-size:12px;overflow:hidden;font-family:inherit;text-align:left';
+  var h='<div id="colf-pop" style="position:fixed;z-index:100000;'+box+'">';
+  h+='<div style="display:flex;border-bottom:1px solid #f0f0f0">';
+  h+='<button onclick="_promoFilter.sortBy=\''+col+'\';_promoFilter.sortDir=\'asc\';closeColFilter();renderPromoBoard()" style="flex:1;padding:8px;border:0;background:#fff;cursor:pointer;font-size:11.5px;color:#444;font-family:inherit">▲ 오름차순</button>';
+  h+='<button onclick="_promoFilter.sortBy=\''+col+'\';_promoFilter.sortDir=\'desc\';closeColFilter();renderPromoBoard()" style="flex:1;padding:8px;border:0;border-left:1px solid #f0f0f0;background:#fff;cursor:pointer;font-size:11.5px;color:#444;font-family:inherit">▼ 내림차순</button>';
+  h+='</div>';
+  h+='<label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-weight:600;color:#333"><input type="checkbox" id="colf-all" '+(allChecked?'checked':'')+' onchange="colfToggleAll(this.checked)" style="accent-color:var(--accent)">(전체 선택)</label>';
+  h+='<div style="max-height:220px;overflow-y:auto;padding:4px 0">';
+  list.forEach(function(v){var ck=allChecked||sel.indexOf(v)>=0;h+='<label style="display:flex;align-items:center;gap:6px;padding:5px 12px;cursor:pointer;color:#444"><input type="checkbox" class="colf-cb" value="'+escapeHtml(v)+'" '+(ck?'checked':'')+' style="accent-color:var(--accent);flex-shrink:0">'+escapeHtml(v)+'</label>';});
+  if(!list.length)h+='<div style="padding:10px 12px;color:#aaa">값이 없습니다</div>';
+  h+='</div>';
+  h+='<div style="display:flex;gap:6px;padding:8px 10px;border-top:1px solid #f0f0f0">';
+  h+='<button onclick="closeColFilter()" style="flex:1;padding:7px;border:1px solid #ddd;border-radius:7px;background:#fff;color:#666;cursor:pointer;font-family:inherit;font-size:11.5px">닫기</button>';
+  h+='<button onclick="applyColFilter(\''+col+'\')" style="flex:1;padding:7px;border:0;border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;font-weight:600;font-family:inherit;font-size:11.5px">적용</button>';
+  h+='</div></div>';
+  var wrap=document.getElementById('colf-pop-wrap');if(!wrap){wrap=document.createElement('div');wrap.id='colf-pop-wrap';document.body.appendChild(wrap);}
+  wrap.innerHTML=h;
+  var pop=document.getElementById('colf-pop');
+  if(trigger&&pop){var rc=trigger.getBoundingClientRect();var left=Math.max(8,Math.min(rc.left,window.innerWidth-240));pop.style.top=(rc.bottom+4)+'px';pop.style.left=left+'px';}
+  setTimeout(function(){document.addEventListener('mousedown',_colfOutside,true);},0);
+}
 function openPromoBoard(){
   // 매번 열 때 필터 초기화 — 항상 [전체] 기준
   _promoFilter.status='all';
@@ -4712,6 +4759,8 @@ function openPromoBoard(){
   _promoFilter.applicant='';
   _promoFilter.q='';
   _promoFilter.viewMode='mine';  // 비관리자: 열 때마다 '내 신청만' 기본 (admin은 이 값 무시)
+  _promoFilter.colFilters={};
+  _promoFilter.sortBy='';_promoFilter.sortDir='asc';
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closePromoBoard)"><div class="modal pb-modal" style="width:96vw;max-width:1100px;height:88vh;max-height:88vh;overflow:hidden;padding:0;position:relative;display:flex;flex-direction:column"><button class="modal-x" onclick="closePromoBoard()" title="닫기" aria-label="닫기" style="position:absolute;top:16px;right:18px;float:none;margin:0;z-index:10">✕</button><div id="promo-board-body" style="flex:1;overflow:auto;padding:26px 30px 26px 30px;text-align:center;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('promo-board');
   if(!el){el=document.createElement('div');el.id='promo-board';document.body.appendChild(el);}
@@ -5134,6 +5183,13 @@ function renderPromoBoard(){
       return(r['콘텐츠 제목']||'').toLowerCase().includes(q)||(r['게시 담당자']||'').toLowerCase().includes(q)||(r['프로그램']||'').toLowerCase().includes(q);
     });
   }
+  // === 컬럼 필터 (엑셀식 다중선택) ===
+  if(_promoFilter.colFilters){
+    Object.keys(_promoFilter.colFilters).forEach(function(col){
+      var allowed=_promoFilter.colFilters[col];
+      if(allowed&&allowed.length){rows=rows.filter(function(r){return r._isSpecial||allowed.indexOf(_promoColVal(col,r))>=0;});}
+    });
+  }
   // === 정렬 ===
   const todayKey=getTodayKey();
   // 시간 추출 헬퍼
@@ -5307,23 +5363,23 @@ function renderPromoBoard(){
   }else{
     // 정렬 가능 헤더 빌더 (액션 컬럼 제외 모두 정렬 가능) — 비활성에도 ▾ 옅게 표시 (필터 가능 안내)
     function _sh(col,label,width){
+      const filterable=PROMO_FILTERABLE.indexOf(col)>=0;
+      const hasFilter=filterable&&_promoFilter.colFilters&&_promoFilter.colFilters[col]&&_promoFilter.colFilters[col].length;
       const isOn=_promoFilter.sortBy===col;
       let arrow,arrowColor,arrowSize;
       if(isOn){
-        arrow=_promoFilter.sortDir==='asc'?'▲':'▼';
-        arrowColor='#fff';
-        arrowSize='10px';
+        arrow=_promoFilter.sortDir==='asc'?'▲':'▼';arrowColor='#fff';arrowSize='10px';
       }else{
-        arrow='▾';
-        arrowColor='rgba(255,255,255,0.42)';
-        arrowSize='9px';
+        arrow='▾';arrowColor=filterable?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.42)';arrowSize='9px';
       }
-      // localStorage 저장된 width 우선
       const savedW=_colWidths&&_colWidths[col];
       const useW=savedW||width;
       const widthStyle=useW?'width:'+useW+'px;':'';
-      const activeStyle=isOn?'background:rgba(255,255,255,0.12);font-weight:800;':'';
-      return '<th data-col="'+col+'" onclick="setPromoSort(\''+col+'\')" style="padding:10px 12px;text-align:left;'+widthStyle+'cursor:pointer;user-select:none;color:#fff;'+activeStyle+'" title="클릭: 정렬 / 다시 클릭: 역순 / 한 번 더: 정렬 해제">'+label+'<span style="margin-left:5px;font-size:'+arrowSize+';color:'+arrowColor+'">'+arrow+'</span><span class="col-resize-handle" onmousedown="_onColResizeStart(event,this.parentElement)" onclick="event.stopPropagation()"></span></th>';
+      const activeStyle=(isOn||hasFilter)?'background:rgba(255,255,255,0.12);font-weight:800;':'';
+      const clickAttr=filterable?'onclick="openColFilter(\''+col+'\',event)"':'onclick="setPromoSort(\''+col+'\')"';
+      const ttl=filterable?'클릭: 필터·정렬 선택':'클릭: 정렬 / 다시: 역순 / 한 번 더: 해제';
+      const dot=hasFilter?'<span style="margin-left:3px;font-size:8px;color:#ffd24a;vertical-align:middle">●</span>':'';
+      return '<th data-col="'+col+'" '+clickAttr+' style="padding:10px 12px;text-align:left;'+widthStyle+'cursor:pointer;user-select:none;color:#fff;'+activeStyle+'" title="'+ttl+'">'+label+'<span style="margin-left:5px;font-size:'+arrowSize+';color:'+arrowColor+'">'+arrow+'</span>'+dot+'<span class="col-resize-handle" onmousedown="_onColResizeStart(event,this.parentElement)" onclick="event.stopPropagation()"></span></th>';
     }
     // 모서리 둥근 wrapper + 살짝 투명도 헤더
     html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;table-layout:fixed"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
