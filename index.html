@@ -2608,6 +2608,7 @@ function _bizDrawChart(list,multi){
     shapes:shapes,annotations:annotations};
   Plotly.react(div,traces,layout,{responsive:true,displayModeBar:false});
 }
+function _bizDrawGenreBench(){var div=document.getElementById('biz-genre-chart');if(!div||!window.Plotly)return;var all=_bizClean();var sel=_bizState.types||{};var selTypes=Object.keys(sel).filter(function(t){return sel[t];});var rows=all.filter(function(r){return selTypes.length?selTypes.indexOf(r._type)>=0:true;});var sm={};rows.forEach(function(r){var k=r._year+'|'+r._name;if(!sm[k])sm[k]={occs:[],genre:r._genre||'기타',year:r._year,name:r._name};sm[k].occs.push(r._occ);});var order=['클래식','뮤지컬','대중','발레/연극','어린이·가족','기타'];var shows=Object.keys(sm).map(function(k){var s=sm[k];s.occ=s.occs.reduce(function(a,b){return a+b;},0)/s.occs.length;if(order.indexOf(s.genre)<0)s.genre='기타';return s;});var byG={};shows.forEach(function(s){(byG[s.genre]=byG[s.genre]||[]).push(s);});var genres=order.filter(function(g){return byG[g]&&byG[g].length;});var cy=_bizState.year;var traces=[];genres.forEach(function(g,gi){var arr=byG[g];var col=_BIZ_GENRE_COLORS[g]||'#9CA3AF';var hx=[],hy=[],ht=[],sx=[],sy=[],st=[];arr.forEach(function(s){var jit=gi+(Math.random()-0.5)*0.5;var lab=s.name+' ('+s.year+') '+s.occ.toFixed(1)+'%';if(s.year===cy){sx.push(s.occ);sy.push(jit);st.push(lab);}else{hx.push(s.occ);hy.push(jit);ht.push(lab);}});traces.push({type:'scatter',mode:'markers',x:hx,y:hy,text:ht,marker:{color:col,size:6,opacity:0.3},hovertemplate:'%{text}<extra></extra>',showlegend:false});if(sx.length)traces.push({type:'scatter',mode:'markers',x:sx,y:sy,text:st,marker:{color:col,size:12,symbol:'star',line:{color:'#fff',width:1}},hovertemplate:'⭐ %{text}<extra></extra>',showlegend:false});var mean=arr.reduce(function(a,s){return a+s.occ;},0)/arr.length;traces.push({type:'scatter',mode:'markers',x:[mean],y:[gi],marker:{color:col,size:15,symbol:'diamond',line:{color:'#333',width:1.5}},hovertemplate:g+' 평균 '+mean.toFixed(1)+'%<extra></extra>',showlegend:false});});if(!traces.length){div.innerHTML='<div style="color:#aaa;text-align:center;padding:24px;font-size:12px">장르 데이터 없음</div>';return;}var layout={height:300,margin:{t:10,r:20,b:40,l:100},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'inherit',size:11,color:'#444'},xaxis:{title:'점유율 %',range:[0,105],gridcolor:'#f2f2f2',zeroline:false},yaxis:{tickvals:genres.map(function(g,i){return i;}),ticktext:genres.map(function(g){return g+' ('+byG[g].length+')';}),autorange:'reversed',gridcolor:'#fafafa',zeroline:false},showlegend:false};Plotly.react(div,traces,layout,{responsive:true,displayModeBar:false});}
 function _bizRender(){
   const body=document.getElementById('biz-body');if(!body)return;
   const all=_bizClean();
@@ -2650,6 +2651,7 @@ function _bizRender(){
   h+='</div></div>';
   if(!list.length){h+='<div style="text-align:center;padding:40px;color:#888">해당 연도/분류 데이터가 없습니다</div>';body.innerHTML=h;return;}
   h+='<div id="biz-chart" style="height:430px;margin-bottom:14px"></div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#333;margin:6px 0 4px">장르 벤치마크 <span style="font-weight:400;color:#999;font-size:11px">— ◆장르 평균 · ⭐'+_bizState.year+'년 공연 · 점=전체 기간 (선택 분류 기준)</span></div><div id="biz-genre-chart" style="height:300px;margin-bottom:18px"></div>';
   const total=list.length,avgAll=list.reduce(function(a,g){return a+g.avg;},0)/list.length,maxAll=Math.max.apply(null,list.map(function(g){return g.avg;}));
   h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+_bizCard('총 공연',total+'건')+_bizCard('평균 점유율',avgAll.toFixed(1)+'%')+_bizCard('최고 점유율',maxAll.toFixed(1)+'%')+'</div>';
   h+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #eee;color:#888;font-size:11px;text-align:left">';
@@ -2670,7 +2672,7 @@ function _bizRender(){
   const sa=(_bizState.raw&&_bizState.raw.syncedAt)?_bizState.raw.syncedAt:null;
   if(sa)h+='<div style="text-align:right;color:#bbb;font-size:11px;margin-top:10px">동기화: '+escapeHtml(sa)+'</div>';
   body.innerHTML=h;
-  _bizEnsurePlotly(function(){ _bizDrawChart(list, selTypes.length>1); });
+  _bizEnsurePlotly(function(){ _bizDrawChart(list, selTypes.length>1); _bizDrawGenreBench(); });
 }
 function openPlatformBoard(){
   _platformState = {
