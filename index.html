@@ -525,6 +525,10 @@ button{font-family:inherit;cursor:pointer}
 .panel-close:hover{background:var(--accent-light);color:var(--accent)}
 .panel-body{flex:1;padding:16px 24px;overflow-y:auto}
 .panel-empty{text-align:center;padding:40px 0;color:var(--dim);font-size:14px}
+.panel-hol{display:flex;align-items:center;gap:8px;padding:11px 2px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.panel-hol-dot{width:7px;height:7px;border-radius:50%;background:#D64545;flex-shrink:0}
+.panel-hol-name{font-size:14px;font-weight:600;color:#D64545}
+.panel-hol-tag{font-size:10px;color:#D64545;background:rgba(214,69,69,0.1);padding:2px 7px;border-radius:10px;font-weight:600;margin-left:auto}
 /* === 사이드 패널 특수일정 섹션 === */
 .panel-sp-section{background:rgba(240,196,184,0.12);border:1px solid rgba(240,196,184,0.4);border-radius:12px;padding:10px 12px;margin-bottom:12px}
 .panel-sp-label{font-size:10.5px;color:#888;text-transform:uppercase;letter-spacing:0.6px;font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -9642,7 +9646,7 @@ function renderCal(){
         var doneCount=filteredRecs.filter(function(r){return (r['진행 상태']||'')==='완료';}).length;
         h+='<div class="c-count">'+doneCount+'/'+filteredRecs.length+'</div>';
       }
-      h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past,key)+'</div>'+(holName?'<div class="hol-badge" title="'+escapeHtml(holName)+'">'+escapeHtml(holName)+'</div>':'');
+      h+='<div class="c-inner"><div class="'+dnCls+'">'+(td&&!nm?'<span style="color:var(--accent);font-weight:700">'+d.getDate()+'</span>':d.getDate())+renderPerfsHtml(perfs,td,past,key)+'</div>'+((holName&&perfs.length===0&&filteredRecs.length===0)?'<div class="hol-badge" title="'+escapeHtml(holName)+'">'+escapeHtml(holName)+'</div>':'');
       filteredRecs.forEach(r=>{
         var p=r['플랫폼 1']||'',p2=r['플랫폼 2']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
         var done=st==='완료';
@@ -10014,6 +10018,9 @@ function openPanel(dateObj,recs){
   var openPerfs=PERFS.filter(function(p){if(p.o!==1||p.t!=='c')return false;var pe=new Date(p.e);pe.setHours(0,0,0,0);return pe>=ref;});
   var openExh=PERFS.filter(function(p){if(p.o!==1||p.t!=='e')return false;var pe=new Date(p.e);pe.setHours(0,0,0,0);return pe>=ref;});
   var progTotal=openPerfs.length+openExh.length;
+  // === 공휴일 행 (프로그램 일정 바로 위, 구분선) ===
+  var _panelHol=(window._holidays&&_holidays[dk(dateObj)])||'';
+  if(_panelHol){h+='<div class="panel-hol"><span class="panel-hol-dot"></span><span class="panel-hol-name">'+escapeHtml(_panelHol)+'</span><span class="panel-hol-tag">공휴일</span></div>';}
   if(progTotal>0){
     var open=_panelProgramsOpen;
     h+='<div class="panel-prog-wrap">';
