@@ -3946,7 +3946,11 @@ function markMsgRead(id){
       try {
         closeMsgBox();
         const _dk = (typeof getRecDateKey==='function') ? getRecDateKey(rec) : (rec['날짜']||'').toString();
-        if(typeof openScheduleRow === 'function'){
+        if(typeof editRec === 'function'){
+          // 역할 기반: 관리자=편집, 일반=읽기전용 조회. 취소건도 조회 가능(목록 필터 우회)
+          editRec(rec._rowIndex, _dk, null);
+          return;
+        } else if(typeof openScheduleRow === 'function'){
           openScheduleRow(_dk, rec._rowIndex);
           return;
         }
