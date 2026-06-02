@@ -734,7 +734,8 @@ var index_default = {
           return json({ sheets }, env);
         }
         if (request.method === "POST") {
-          if (role !== "admin") return json({ error: "Admin only (ops write)" }, env, 403);
+          const opsAuth = await checkAdmin(request, env, token);
+          if (!opsAuth.admin) return json({ error: "Admin only (ops write)" }, env, 403);
           const body = await request.json();
           if (!body.sheet) return json({ error: "sheet name required" }, env, 400);
           const rows = Array.isArray(body.rows) ? body.rows : [];
