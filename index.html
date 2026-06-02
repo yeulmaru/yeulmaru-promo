@@ -10005,8 +10005,8 @@ function onEvContextMenu(event,rowIndex,dateKey){
       menuHtml='<div style="padding:10px 14px;color:#0F8B4C;font-size:12px;line-height:1.4;background:rgba(15,139,76,0.06);border-radius:8px;margin:2px;max-width:220px">📅 예정(승인)된 신청<br><span style="color:#888;font-size:11px">변경·취소는 관리자에게 문의하세요</span></div>';
     }else if(status==='보류'){
       // 본인 + 보류 — 재신청
-      menuHtml='<div style="padding:10px 14px;color:#F59E0B;font-size:12px;line-height:1.4;background:#fff8e6;border-radius:8px;margin:2px 2px 4px;max-width:220px">⏸ 보류된 신청<br><span style="color:#888;font-size:11px">내용 확인 후 재신청 가능</span></div>'+
-        '<div class="ccm-item" onclick="closeCellContextMenu();reapplyPromoRequest('+rowIndex+')"><span class="emo" style="color:#0F8B4C">↻</span>재신청 (신청 중으로)</div>'+
+      menuHtml='<div style="padding:10px 14px;font-size:12px;line-height:1.4;background:#fff8e6;border-radius:8px;margin:2px 2px 4px;max-width:220px"><div style="color:var(--accent);font-weight:700;margin-bottom:7px">⏸ 보류된 신청</div><span style="color:#333;font-size:11px">내용 확인 후 재신청 가능</span></div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();reapplyPromoRequest('+rowIndex+')"><span class="emo" style="color:#0F8B4C">↻</span>재신청</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();cancelPromoRequest('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소</div>';
     }else{
       // 본인 + 완료/취소 — 안내만
