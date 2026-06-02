@@ -7833,6 +7833,8 @@ async function openApplySettings(){
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
   const ok=await loadApplySettings();
+  // 공휴일 라벨용 — 접수월 + 기존 제외일정 연도의 공휴일 로드
+  try{ var _yy={}; getApplyMonths().forEach(function(m){_yy[m.substring(0,4)]=1;}); (APPLY_EXCLUSIONS||[]).forEach(function(ex){if(ex.date)_yy[ex.date.substring(0,4)]=1;}); for(var _y in _yy){ await _ensureHolidays(_y); } }catch(e){}
   renderApplySettings(ok);
 }
 
@@ -8140,20 +8142,28 @@ function _ensureHolidays(year){
   }).catch(function(){});
 }
 async function autoRegisterHolidayExclusions(){
-  var months=getApplyMonths(); if(!months.length)return 0;
-  var years={}; months.forEach(function(ym){years[ym.split('-')[0]]=1;});
+  var months=getApplyMonths();
+  var years={}; months.forEach(function(ym){years[ym.substring(0,4)]=1;});
+  (APPLY_EXCLUSIONS||[]).forEach(function(ex){if(ex.date)years[ex.date.substring(0,4)]=1;});
   for(var y in years){ await _ensureHolidays(y); }
+  // (prune) 접수월 밖에 있는 자동등록 공휴일(종일) 제거
+  var stale=APPLY_EXCLUSIONS.filter(function(ex){return ex.date&&ex.start==='00:00'&&ex.end==='23:59'&&_holidays[ex.date]&&months.indexOf(ex.date.substring(0,7))<0;});
+  for(var si=0;si<stale.length;si++){
+    try{ if(stale[si].rowIndex)await api('DELETE','/api/sheet/applysettings/'+stale[si].rowIndex); }catch(e){}
+    var sx=APPLY_EXCLUSIONS.indexOf(stale[si]); if(sx>=0)APPLY_EXCLUSIONS.splice(sx,1);
+  }
+  // (add) 접수월 범위 공휴일 추가
   var added=0;
   for(var date in _holidays){
-    if(months.indexOf(date.substring(0,7))<0)continue;          // 접수월 범위만
-    if(APPLY_EXCLUSIONS.some(function(ex){return ex.date===date;}))continue;  // 이미 등록(수동/공휴일) skip
+    if(months.indexOf(date.substring(0,7))<0)continue;
+    if(APPLY_EXCLUSIONS.some(function(ex){return ex.date===date;}))continue;
     try{
       var r=await api('POST','/api/sheet/applysettings',{values:['제외',date+'|00:00|23:59']});
       APPLY_EXCLUSIONS.push({rowIndex:(r&&r.row)||0,date:date,start:'00:00',end:'23:59'});
       added++;
     }catch(e){}
   }
-  if(added)invalidateApplyCache();
+  if(added||stale.length)invalidateApplyCache();
   return added;
 }
 
