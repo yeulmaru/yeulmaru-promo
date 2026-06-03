@@ -2727,6 +2727,29 @@ function _bizSetRunDays(b){_bizState.rundays=b;_bizRender();}
 function _bizSetProfit(p){_bizState.profit=p;_bizRender();}
 function _salesSetProfit(p){_salesState.profit=p;_salesRender();}
 function _bizDrawGenreBench(){var div=document.getElementById('biz-genre-chart');if(!div||!window.Plotly)return;var all=_bizClean();var sel=_bizState.types||{};var selTypes=Object.keys(sel).filter(function(t){return sel[t];});var rows=all.filter(function(r){return selTypes.length?selTypes.indexOf(r._type)>=0:true;});var sm={};rows.forEach(function(r){var k=r._year+'|'+r._name;if(!sm[k])sm[k]={occs:[],dates:{},genre:r._genre||'기타',year:r._year,name:r._name};sm[k].occs.push(r._occ);if(r._date)sm[k].dates[r._date.getFullYear()+'-'+r._date.getMonth()+'-'+r._date.getDate()]=1;});var order=['클래식','뮤지컬','대중','발레/연극','어린이·가족','기타'];var shows=Object.keys(sm).map(function(k){var s=sm[k];s.occ=s.occs.reduce(function(a,b){return a+b;},0)/s.occs.length;s.회차=s.occs.length;s.진행일=Object.keys(s.dates||{}).length||1;if(order.indexOf(s.genre)<0)s.genre='기타';return s;});var __pf=_bizState.profit||'전체';if(__pf!=='전체')shows=shows.filter(function(s){return _profitType(s.name,s.genre)===__pf;});var __rb=_bizState.rounds||'전체';if(__rb!=='전체')shows=shows.filter(function(s){var c=s.회차;return __rb==='1회'?c<=1:(__rb==='2~4회'?(c>=2&&c<=4):c>=5);});var __db=_bizState.rundays||'전체';if(__db!=='전체')shows=shows.filter(function(s){var d=s.진행일;return __db==='단일'?d<=1:(__db==='2~3일'?(d>=2&&d<=3):d>=4);});var byG={};shows.forEach(function(s){(byG[s.genre]=byG[s.genre]||[]).push(s);});var genres=order.filter(function(g){return byG[g]&&byG[g].length;});var cy=_bizState.year;var traces=[];genres.forEach(function(g,gi){var arr=byG[g];var col=_BIZ_GENRE_COLORS[g]||'#9CA3AF';var hx=[],hy=[],ht=[],sx=[],sy=[],st=[];arr.forEach(function(s){var jit=gi+(Math.random()-0.5)*0.5;var lab=s.name+' ('+s.year+') '+s.occ.toFixed(1)+'%';if(s.year===cy){sx.push(s.occ);sy.push(jit);st.push(lab);}else{hx.push(s.occ);hy.push(jit);ht.push(lab);}});traces.push({type:'scatter',mode:'markers',x:hx,y:hy,text:ht,marker:{color:col,size:6,opacity:0.3},hovertemplate:'%{text}<extra></extra>',showlegend:false});if(sx.length)traces.push({type:'scatter',mode:'markers',x:sx,y:sy,text:st,marker:{color:col,size:12,symbol:'star',line:{color:'#fff',width:1}},hovertemplate:'⭐ %{text}<extra></extra>',showlegend:false});var mean=arr.reduce(function(a,s){return a+s.occ;},0)/arr.length;traces.push({type:'scatter',mode:'markers',x:[mean],y:[gi],marker:{color:col,size:15,symbol:'diamond',line:{color:'#333',width:1.5}},hovertemplate:g+' 평균 '+mean.toFixed(1)+'%<extra></extra>',showlegend:false});});if(!traces.length){div.innerHTML='<div style="color:#aaa;text-align:center;padding:24px;font-size:12px">장르 데이터 없음</div>';return;}var layout={height:300,margin:{t:10,r:20,b:40,l:100},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'inherit',size:11,color:'#444'},xaxis:{title:'점유율 %',range:[0,105],gridcolor:'#f2f2f2',zeroline:false},yaxis:{tickvals:genres.map(function(g,i){return i;}),ticktext:genres.map(function(g){return g+' ('+byG[g].length+')';}),autorange:'reversed',gridcolor:'#fafafa',zeroline:false},showlegend:false};Plotly.react(div,traces,layout,{responsive:true,displayModeBar:false});}
+// 시즌(연도)별 장르 점유율 추세 — 전체기간 연×장르 평균 라인. 기획/대관·수익성·회차·진행일 필터 공유.
+function _bizDrawSeason(){
+  var div=document.getElementById('biz-season-chart');if(!div||!window.Plotly)return;
+  var all=_bizClean();
+  var sel=_bizState.types||{};var selTypes=Object.keys(sel).filter(function(t){return sel[t];});
+  var rows=all.filter(function(r){return selTypes.length?selTypes.indexOf(r._type)>=0:true;});
+  var sm={};rows.forEach(function(r){var k=r._year+'|'+r._name;if(!sm[k])sm[k]={occs:[],dates:{},genre:r._genre||'기타',year:r._year,name:r._name};sm[k].occs.push(r._occ);if(r._date)sm[k].dates[r._date.getFullYear()+'-'+r._date.getMonth()+'-'+r._date.getDate()]=1;});
+  var order=['클래식','뮤지컬','대중','발레/연극','어린이·가족','기타'];
+  var shows=Object.keys(sm).map(function(k){var s=sm[k];s.occ=s.occs.reduce(function(a,b){return a+b;},0)/s.occs.length;s.회차=s.occs.length;s.진행일=Object.keys(s.dates||{}).length||1;if(order.indexOf(s.genre)<0)s.genre='기타';return s;});
+  var __pf=_bizState.profit||'전체';if(__pf!=='전체')shows=shows.filter(function(s){return _profitType(s.name,s.genre)===__pf;});
+  var __rb=_bizState.rounds||'전체';if(__rb!=='전체')shows=shows.filter(function(s){var c=s.회차;return __rb==='1회'?c<=1:(__rb==='2~4회'?(c>=2&&c<=4):c>=5);});
+  var __db=_bizState.rundays||'전체';if(__db!=='전체')shows=shows.filter(function(s){var d=s.진행일;return __db==='단일'?d<=1:(__db==='2~3일'?(d>=2&&d<=3):d>=4);});
+  var yg={};shows.forEach(function(s){var k=s.genre+'|'+s.year;(yg[k]=yg[k]||[]).push(s.occ);});
+  var byG={};Object.keys(yg).forEach(function(k){var p=k.split('|');var g=p[0],y=+p[1];var arr=yg[k];(byG[g]=byG[g]||[]).push({y:y,occ:arr.reduce(function(a,b){return a+b;},0)/arr.length,n:arr.length});});
+  var genres=order.filter(function(g){return byG[g]&&byG[g].length;});
+  if(!genres.length){div.innerHTML='<div style="color:#aaa;text-align:center;padding:24px;font-size:12px">시즌 데이터 없음</div>';return;}
+  var cy=_bizState.year;var traces=[];
+  genres.forEach(function(g){var arr=byG[g].sort(function(a,b){return a.y-b.y;});var col=_BIZ_GENRE_COLORS[g]||'#9CA3AF';
+    traces.push({type:'scatter',mode:'lines+markers',name:g,x:arr.map(function(p){return p.y;}),y:arr.map(function(p){return Math.round(p.occ*10)/10;}),line:{color:col,width:2},marker:{color:col,size:arr.map(function(p){return p.y===cy?12:6;}),line:{color:'#fff',width:1}},text:arr.map(function(p){return 'n'+p.n;}),hovertemplate:g+' %{x}년<br>%{y:.1f}% (%{text})<extra></extra>'});});
+  var shapes=[{type:'line',x0:cy,x1:cy,yref:'paper',y0:0,y1:1,line:{color:'#ccc',dash:'dot',width:1}}];
+  var layout={height:300,margin:{t:10,r:20,b:36,l:44},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'inherit',size:11,color:'#444'},xaxis:{title:'연도',dtick:1,gridcolor:'#f5f5f5',zeroline:false},yaxis:{title:'평균 점유율 %',range:[0,105],ticksuffix:'%',gridcolor:'#f2f2f2',zeroline:false},showlegend:true,legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:10}},shapes:shapes};
+  Plotly.react(div,traces,layout,{responsive:true,displayModeBar:false});
+}
 function _bizRender(){
   const body=document.getElementById('biz-body');if(!body)return;
   const all=_bizClean();
@@ -2770,6 +2793,7 @@ function _bizRender(){
   if(!list.length){h+='<div style="text-align:center;padding:40px;color:#888">해당 연도/분류 데이터가 없습니다</div>';body.innerHTML=h;return;}
   h+='<div id="biz-chart" style="height:430px;margin-bottom:14px"></div>';
   h+='<div style="font-size:13px;font-weight:700;color:#333;margin:6px 0 4px">장르 벤치마크 <span style="font-weight:400;color:#999;font-size:11px">— ◆장르 평균 · ⭐'+_bizState.year+'년 공연 · 점=전체 기간 (선택 분류 기준)</span></div><div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:2px 0 10px">'+_chipRow('수익성',['전체','공공성','상업성'],_bizState.profit,'_bizSetProfit')+_chipRow('회차',['전체','1회','2~4회','5회+'],_bizState.rounds,'_bizSetRounds')+_chipRow('진행일',['전체','단일','2~3일','4일+'],_bizState.rundays,'_bizSetRunDays')+'</div><div id="biz-genre-chart" style="height:300px;margin-bottom:18px"></div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#333;margin:6px 0 4px">시즌(연도)별 장르 점유율 추세 <span style="font-weight:400;color:#999;font-size:11px">— 장르별 연평균 점유율(기획·발권유료÷기준석) · 큰점='+_bizState.year+'년 · 위 분류/필터 반영</span></div><div id="biz-season-chart" style="height:300px;margin-bottom:18px"></div>';
   const total=list.length,avgAll=list.reduce(function(a,g){return a+g.avg;},0)/list.length,maxAll=Math.max.apply(null,list.map(function(g){return g.avg;}));
   h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+_bizCard('총 공연',total+'건')+_bizCard('평균 점유율',avgAll.toFixed(1)+'%')+_bizCard('최고 점유율',maxAll.toFixed(1)+'%')+'</div>';
   h+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #eee;color:#888;font-size:11px;text-align:left">';
@@ -2790,7 +2814,7 @@ function _bizRender(){
   const sa=(_bizState.raw&&_bizState.raw.syncedAt)?_bizState.raw.syncedAt:null;
   if(sa)h+='<div style="text-align:right;color:#bbb;font-size:11px;margin-top:10px">동기화: '+escapeHtml(sa)+'</div>';
   body.innerHTML=h;
-  _bizEnsurePlotly(function(){ _bizDrawChart(list, selTypes.length>1); _bizDrawGenreBench(); _accordionize('biz-body'); });
+  _bizEnsurePlotly(function(){ _bizDrawChart(list, selTypes.length>1); _bizDrawGenreBench(); _bizDrawSeason(); _accordionize('biz-body'); });
 }
 function openPlatformBoard(){
   _platformState = {
