@@ -2204,13 +2204,17 @@ function _wxRenderPop(){
 function _wxToggle(ev){ if(ev)ev.stopPropagation(); var p=document.getElementById('wx-pop'); if(!p)return; if(p.classList.contains('show')){p.classList.remove('show');return;} _wxRenderPop(); p.classList.add('show'); var i=document.getElementById('wx-q'); if(i)i.focus(); }
 var _wxTimer=null;
 function _wxSearchDebounced(q){ if(_wxTimer)clearTimeout(_wxTimer); _wxTimer=setTimeout(function(){_wxSearch(q);},350); }
+var _WX_KEEP={city:1,town:1,municipality:1,county:1};  // 시 단위(시·군·광역시 등) — 동/리/구/도로 제외
 async function _wxSearch(q){
   q=(q||'').trim(); if(_wxTimer){clearTimeout(_wxTimer);_wxTimer=null;} if(!q){ _wxRenderResults([]); return; }
   _wxRenderResults(null,'검색 중…');
   try{
-    var r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=jsonv2&accept-language=ko&limit=6&addressdetails=1');
-    var j=await r.json();
-    var list=(j||[]).map(function(x){ var nm=x.name||String(x.display_name||'').split(',')[0]; var parts=String(x.display_name||'').split(',').map(function(s){return s.trim();}).filter(Boolean); var sub=parts.slice(1).slice(-2).join(' · '); return {lat:+x.lat, lon:+x.lon, name:nm, sub:sub}; }).filter(function(x){return x.name&&!isNaN(x.lat);});
+    var r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=jsonv2&accept-language=ko&limit=12&addressdetails=1');
+    var j=await r.json(); var seen={};
+    var list=(j||[]).filter(function(x){ return _WX_KEEP[x.addresstype] || /(시|군)$/.test(x.name||''); })  // 도시(시/군)만
+      .map(function(x){ var nm=x.name||String(x.display_name||'').split(',')[0]; var parts=String(x.display_name||'').split(',').map(function(s){return s.trim();}).filter(Boolean); var sub=parts.slice(1).slice(-2).join(' · '); return {lat:+x.lat, lon:+x.lon, name:nm, sub:sub}; })
+      .filter(function(x){ if(!x.name||isNaN(x.lat))return false; if(seen[x.name])return false; seen[x.name]=1; return true; })
+      .slice(0,6);
     _wxRenderResults(list);
   }catch(e){ _wxRenderResults([],'검색 실패'); }
 }
