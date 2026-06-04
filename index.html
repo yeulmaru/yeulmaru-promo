@@ -2443,7 +2443,7 @@ function _dailyMasters(){
   return rows.map(_salesNorm)
     .filter(function(m){ return String(m['상태']||'').trim()==='판매중'; })  // 판매중만
     .map(function(m){ var name=String(m['사업명']||'').trim(); return {name:name, open:(_salesNum(m['총오픈석'])||((_salesNum(m['기준석'])||926)*(_salesNum(m['총회차'])||1))), cat:(catIdx[_uName(name)]||'')}; })
-    .filter(function(m){ if(!m.name)return false; if(!allowed)return true; return allowed.indexOf(m.cat)>=0; });  // 담당 카테고리만
+    .filter(function(m){ if(!m.name)return false; if(!allowed)return true; if(!m.cat)return true; return allowed.indexOf(m.cat)>=0; });  // 담당 카테고리만(카테고리 미상=조인실패는 표시해 입력 누락 방지)
 }
 function openDailyInput(){
   if(userRole!=='admin'){showToast('관리자만 입력할 수 있어요','error');return;}
