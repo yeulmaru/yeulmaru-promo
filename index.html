@@ -125,6 +125,18 @@ button{font-family:inherit;cursor:pointer}
 .nav-right{display:flex;align-items:center;gap:12px}
 .kst{font-size:12px;color:var(--dim);font-weight:500;font-variant-numeric:tabular-nums}
 .icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(0,0,0,0.06);background:var(--glass);backdrop-filter:blur(8px);font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;transition:all .2s}
+/* === 동시 접속자 아바타 === */
+.pres-ava{position:relative;width:36px;height:36px;border-radius:50%;border:2px solid #e3e3ef;background:linear-gradient(135deg,#7c7ff0,#4A4DE7);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;transition:box-shadow .25s,border-color .25s;flex:0 0 auto;padding:0}
+.pres-ava.live{border-color:#22c55e;animation:presPulse 2s infinite}
+@keyframes presPulse{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,0.22),0 0 10px rgba(34,197,94,0.4)}50%{box-shadow:0 0 0 4px rgba(34,197,94,0.14),0 0 16px rgba(34,197,94,0.65)}}
+.pres-dot{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#22c55e;color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid #fff;line-height:1}
+.pres-ava.live .pres-dot{display:flex}
+.pres-pop{position:absolute;top:46px;right:0;width:266px;max-height:72vh;overflow:auto;background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:14px;box-shadow:0 14px 38px rgba(0,0,0,0.15);padding:8px 0;z-index:100000;display:none}
+.pres-pop.show{display:block}
+.pres-row{display:flex;align-items:center;gap:10px;padding:7px 14px;opacity:0;transform:translateY(-7px);animation:presIn .28s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes presIn{to{opacity:1;transform:translateY(0)}}
+.pres-ico{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex:0 0 auto}
+.pres-hd{padding:8px 14px 4px;font-size:11px;font-weight:700;color:#9aa}
 .icon-btn:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent-glow)}
 /* 햄버거 — 데스크탑에서는 숨김 */
 .hamburger{display:none;background:transparent;border:none;cursor:pointer;padding:8px;margin-right:4px;color:var(--text);align-items:center;justify-content:center;border-radius:8px;transition:background .15s}
@@ -802,6 +814,10 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
     <div class="nav-center" id="nav-menus"></div>
     <div class="nav-right">
       <div id="wx-widget" title="여수 날씨" style="display:none;align-items:center;gap:8px;padding:4px 11px;border-radius:14px;background:linear-gradient(135deg,#eef2ff,#f7f9ff);border:1px solid #e7eaf6;cursor:default;font-family:inherit"></div>
+      <div id="pres-wrap" style="position:relative;display:none">
+        <button class="pres-ava" id="pres-ava" onclick="_presToggle(event)" title="접속자 보기"><span id="pres-ava-init">·</span><span class="pres-dot" id="pres-dot">0</span></button>
+        <div class="pres-pop" id="pres-pop"></div>
+      </div>
       <button class="icon-btn" id="admin-gear" onclick="openAdminPanel()" title="관리" aria-label="관리" style="display:none;cursor:pointer">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -2070,6 +2086,7 @@ function updatePerfOpen(){
 async function initApp(){
   buildNav();startClock();updateRoleTag();
   loadWeather(); if(!window._wxTimer)window._wxTimer=setInterval(loadWeather,1800000);
+  _presBeat(); _presPoll(); if(!window._presTimer)window._presTimer=setInterval(function(){_presBeat();_presPoll();},35000);
   // 슈퍼 admin (subAdminPin 없음)만 myApplicant 정리. 서브 admin은 본인 신원 유지.
   if(userRole==='admin' && !sessionStorage.getItem('subAdminPin')){
     try{sessionStorage.removeItem('myApplicant');}catch(e){}
@@ -2105,6 +2122,42 @@ async function loadWeather(){
     el.style.display='inline-flex';
   }catch(e){ console.warn('[loadWeather]',e); el.style.display='none'; }
 }
+
+// === 동시 접속자 presence (KV 백엔드 /api/presence) ===
+var _presData={now:0,users:[]};
+function _presSid(){ var s=sessionStorage.getItem('presSid'); if(!s){ s=Date.now().toString(36)+Math.random().toString(36).slice(2,8); sessionStorage.setItem('presSid',s); } return s; }
+function _presColor(name){ var h=0; name=String(name||''); for(var i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))%360; return 'hsl('+h+',52%,55%)'; }
+async function _presBeat(){ if(!password)return; try{ await api('POST','/api/presence',{sid:_presSid(),name:(sessionStorage.getItem('myApplicant')||'이름없음'),dept:(sessionStorage.getItem('myUserDept')||''),role:userRole||'user'}); }catch(e){} }
+async function _presPoll(){ if(userRole!=='admin'||!password)return; try{ _presData=await api('GET','/api/presence'); _presRender(); }catch(e){} }
+function _presAgo(ms){ var m=Math.floor(ms/60000); if(m<1)return '방금'; if(m<60)return m+'분 전'; var h=Math.floor(m/60); return h+'시간 전'; }
+function _presRender(){
+  var ava=document.getElementById('pres-ava'); if(!ava)return;
+  var me=_presSid(), now=_presData.now||Date.now();
+  var users=(_presData.users||[]).map(function(u){ u._age=now-(u.ts||0); return u; });
+  var online=users.filter(function(u){return u._age<70000;});
+  var others=online.filter(function(u){return u.sid!==me;});
+  ava.classList.toggle('live', others.length>0);
+  var dot=document.getElementById('pres-dot'); if(dot)dot.textContent=others.length;
+  var init=document.getElementById('pres-ava-init'); var myName=sessionStorage.getItem('myApplicant')||'';
+  if(init)init.textContent=(myName||'·').slice(0,1);
+  var pop=document.getElementById('pres-pop'); if(!pop)return;
+  online.sort(function(a,b){return (b.sid===me?1:0)-(a.sid===me?1:0);});
+  var recent=users.filter(function(u){return u._age>=70000&&u._age<=900000;}).sort(function(a,b){return a._age-b._age;});
+  var h='<div class="pres-hd">🟢 접속 중 ('+online.length+'명)</div>';
+  if(!online.length)h+='<div style="padding:6px 14px;color:#bbb;font-size:12px">없음</div>';
+  online.forEach(function(u,i){ var mine=u.sid===me;
+    h+='<div class="pres-row" style="animation-delay:'+(i*0.04).toFixed(2)+'s"><span class="pres-ico" style="background:'+_presColor(u.name)+'">'+escapeHtml((u.name||'·').slice(0,1))+'</span><span style="flex:1;min-width:0"><span style="font-size:13px;font-weight:600;color:#333">'+escapeHtml(u.name||'이름없음')+'</span>'+(mine?' <span style="font-size:10px;color:var(--accent);font-weight:700">(나)</span>':'')+'<br><span style="font-size:11px;color:#999">'+escapeHtml(u.dept||'')+(u.role==='admin'?' · 관리자':'')+'</span></span><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex:0 0 auto"></span></div>';
+  });
+  if(recent.length){
+    h+='<div class="pres-hd" style="margin-top:4px;border-top:1px solid #f0f0f0;padding-top:8px">⚪ 최근 나감</div>';
+    recent.forEach(function(u,i){
+      h+='<div class="pres-row" style="animation-delay:'+((online.length+i)*0.04).toFixed(2)+'s"><span class="pres-ico" style="background:#cbd5e1">'+escapeHtml((u.name||'·').slice(0,1))+'</span><span style="flex:1;min-width:0"><span style="font-size:13px;font-weight:600;color:#888">'+escapeHtml(u.name||'이름없음')+'</span><br><span style="font-size:11px;color:#bbb">'+escapeHtml(u.dept||'')+' · '+_presAgo(u._age)+' 나감</span></span></div>';
+    });
+  }
+  pop.innerHTML=h;
+}
+function _presToggle(ev){ if(ev)ev.stopPropagation(); var pop=document.getElementById('pres-pop'); if(!pop)return; if(pop.classList.contains('show')){pop.classList.remove('show');} else {_presRender();pop.classList.add('show');_presPoll();} }
+document.addEventListener('click',function(e){ var w=document.getElementById('pres-wrap'),pop=document.getElementById('pres-pop'); if(w&&pop&&pop.classList.contains('show')&&!w.contains(e.target))pop.classList.remove('show'); });
 
 function updateRoleTag(){
   const el=document.getElementById('role-tag');
@@ -2188,6 +2241,7 @@ function buildNav(){
   const menus=userRole==='admin'?[...MENUS.filter(function(m){return m.id!=='promo';})]:MENUS;
   // 관리(admin)는 nav-center 메뉴에서 빼고 우상단 톱니 아이콘으로 이동 — admin에게만 노출
   var _gear=document.getElementById('admin-gear'); if(_gear)_gear.style.display=(userRole==='admin')?'flex':'none';
+  var _pw=document.getElementById('pres-wrap'); if(_pw)_pw.style.display=(userRole==='admin')?'block':'none';
   menus.forEach(m=>{
     const b=document.createElement('button');b.className='nav-btn'+(m.id==='cal'?' on':'')+(m.id==='admin'?' nav-admin':'');b.textContent=m.label;
     b.onclick=()=>{

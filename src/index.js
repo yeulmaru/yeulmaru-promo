@@ -517,6 +517,29 @@ async function opsAppendRows(token, slug, rows){
 }
 __name(opsAppendRows, "opsAppendRows");
 
+// === 동시 접속자 presence (KV ops_kv, expirationTtl 자동정리) ===
+async function handlePresencePost(request, env) {
+  let b = {};
+  try { b = await request.json(); } catch (e) {}
+  const sid = String(b.sid || "").slice(0, 64);
+  if (!sid) return { ok: false, error: "no sid" };
+  const v = { sid, name: String(b.name || "").slice(0, 40), dept: String(b.dept || "").slice(0, 40), role: String(b.role || "").slice(0, 12), ts: Date.now() };
+  try { await env.ops_kv.put("presence:" + sid, JSON.stringify(v), { expirationTtl: 900 }); } catch (e) { return { ok: false, error: String(e) }; }
+  return { ok: true };
+}
+__name(handlePresencePost, "handlePresencePost");
+async function handlePresenceGet(env) {
+  const users = [];
+  try {
+    const list = await env.ops_kv.list({ prefix: "presence:" });
+    for (const k of (list.keys || [])) {
+      try { const raw = await env.ops_kv.get(k.name); if (raw) users.push(JSON.parse(raw)); } catch (e) {}
+    }
+  } catch (e) {}
+  return { now: Date.now(), users };
+}
+__name(handlePresenceGet, "handlePresenceGet");
+
 // === 공휴일 (KASI 한국천문연구원 특일정보) — KV 캐시 + cron 갱신. 임시·대체공휴일 포함 ===
 async function fetchHolidaysFromKasi(env, year) {
   if (!env.KASI_KEY) throw new Error("KASI_KEY 미설정");
@@ -700,6 +723,13 @@ var index_default = {
       const pw = request.headers.get("X-App-Password");
       const role = roleOf(pw, env);
       if (!role) return json({ error: "Unauthorized" }, env, 401);
+
+      // 동시 접속자 (presence) — Graph 토큰 불필요, 가벼운 KV 읽기/쓰기
+      if (url.pathname === "/api/presence") {
+        if (request.method === "POST") return json(await handlePresencePost(request, env), env);
+        if (request.method === "GET") return json(await handlePresenceGet(env), env);
+      }
+
       const token = await getToken(env);
 
       // 홍보기록
