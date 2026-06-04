@@ -175,6 +175,10 @@ button{font-family:inherit;cursor:pointer}
 .memo-alarm{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#e5484d;border:2px solid #fff;display:none}
 .memo-alarm.on{display:block;animation:memoPulse 1.2s infinite}
 @keyframes memoPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:0.55}}
+.sw{width:34px;height:19px;border-radius:10px;background:#cfd3dc;position:relative;cursor:pointer;transition:background .2s;flex:0 0 auto;display:inline-block}
+.sw.on{background:#22c55e}
+.sw-k{position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.25)}
+.sw.on .sw-k{left:17px}
 .icon-btn:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent-glow)}
 /* 햄버거 — 데스크탑에서는 숨김 */
 .hamburger{display:none;background:transparent;border:none;cursor:pointer;padding:8px;margin-right:4px;color:var(--text);align-items:center;justify-content:center;border-radius:8px;transition:background .15s}
@@ -2129,7 +2133,7 @@ async function initApp(){
   buildNav();startClock();updateRoleTag();
   loadWeather(); if(!window._wxTimer)window._wxTimer=setInterval(loadWeather,1800000);
   _presBeat(); _presPoll(); if(!window._presTimer)window._presTimer=setInterval(function(){_presBeat();_presPoll();},35000);
-  if(userRole==='admin'){ _memoLoad().then(_memoAlarmRefresh); if(!window._memoTimer)window._memoTimer=setInterval(_memoAlarmRefresh,60000); }
+  _memoLoad().then(_memoAlarmRefresh); if(!window._memoTimer)window._memoTimer=setInterval(_memoAlarmRefresh,60000);  // 메모/알림 = 전체 사용자
   // 슈퍼 admin (subAdminPin 없음)만 myApplicant 정리. 서브 admin은 본인 신원 유지.
   if(userRole==='admin' && !sessionStorage.getItem('subAdminPin')){
     try{sessionStorage.removeItem('myApplicant');}catch(e){}
@@ -2207,7 +2211,7 @@ document.addEventListener('click',function(e){ var w=document.getElementById('pr
 
 // === 개인 할 일/일정 (관리자 전용, KV /api/memo에 JSON 저장 · 중요도→기한 정렬 · 기한 알람 · 우클릭 완료) ===
 var _MEMO_ALARM_MS=24*3600*1000; // 기한 24시간 이내 = 임박(깜빡)
-var _memoState={timer:null, tasks:[], loaded:false, addImp:2, expand:null};
+var _memoState={timer:null, tasks:[], loaded:false, addImp:2, expand:null, alarmOff:false};
 function _memoUser(){ return (sessionStorage.getItem('myApplicant')||'').trim(); }
 function _memoDateLabel(){ var d=new Date(); var w=['일','월','화','수','목','금','토']; return (d.getMonth()+1)+'/'+d.getDate()+'('+w[d.getDay()]+')'; }
 function _memoUid(){ return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -2231,15 +2235,17 @@ function _memoSorted(){
 }
 async function _memoLoad(){
   try{ var d=await api('GET','/api/memo?user='+encodeURIComponent(_memoUser())); var t=(d&&d.text)||'';
-    var arr=[]; if(t){ try{ var p=JSON.parse(t); if(Array.isArray(p))arr=p; }catch(_){ } }
-    _memoState.tasks=arr; }catch(e){ _memoState.tasks=[]; }
+    var tasks=[], alarmOff=false;
+    if(t){ try{ var p=JSON.parse(t); if(Array.isArray(p))tasks=p; else if(p&&typeof p==='object'){ tasks=Array.isArray(p.tasks)?p.tasks:[]; alarmOff=!!p.alarmOff; } }catch(_){ } }
+    _memoState.tasks=tasks; _memoState.alarmOff=alarmOff;
+  }catch(e){ _memoState.tasks=[]; }
   _memoState.loaded=true;
 }
 function _memoPersist(){
   var s=document.getElementById('memo-status'); if(s)s.textContent='저장 중…';
   if(_memoState.timer)clearTimeout(_memoState.timer);
   _memoState.timer=setTimeout(function(){ _memoState.timer=null;
-    api('POST','/api/memo',{user:_memoUser(),text:JSON.stringify(_memoState.tasks)})
+    api('POST','/api/memo',{user:_memoUser(),text:JSON.stringify({tasks:_memoState.tasks,alarmOff:_memoState.alarmOff})})
       .then(function(){var s=document.getElementById('memo-status');if(s)s.textContent='저장됨 ✓';})
       .catch(function(){var s=document.getElementById('memo-status');if(s)s.textContent='저장 실패';});
   },500);
@@ -2262,7 +2268,7 @@ function _memoRows(){
   var list=_memoSorted(); if(!list.length) return '<div class="todo-empty">할 일이 없어요. 위에서 추가하세요 ✏️</div>';
   return list.map(function(t){
     var du=_memoDue(t.due); var impc=t.imp>=3?'h':(t.imp===2?'m':'l'); var impl=t.imp>=3?'상':(t.imp===2?'중':'하');
-    var blink=!t.done && (du.cls==='soon'||du.cls==='over');
+    var blink=!_memoState.alarmOff && !t.done && (du.cls==='soon'||du.cls==='over');
     var h='<div class="todo-row'+(t.done?' done':'')+'" oncontextmenu="event.preventDefault();_memoToggleDone(\''+t.id+'\')">';
     h+='<span class="todo-cir'+(t.done?' done':'')+(blink?' soon':'')+'" onclick="_memoToggleDone(\''+t.id+'\')" title="클릭/우클릭 = 완료">'+(t.done?'✓':'')+'</span>';
     h+='<div class="todo-main"><div class="todo-title" onclick="_memoExpand(\''+t.id+'\')" title="클릭 = 메모">'+escapeHtml(t.title)+'</div>';
@@ -2273,12 +2279,15 @@ function _memoRows(){
   }).join('');
 }
 function _memoRenderBody(){ var el=document.getElementById('memo-list'); if(el)el.innerHTML=_memoRows(); }
+function _memoToggleAlarm(){ _memoState.alarmOff=!_memoState.alarmOff; _memoRender(false); _memoPersist(); }
 function _memoRender(loading){
   var pop=document.getElementById('memo-pop'); if(!pop)return;
   if(loading){ pop.innerHTML='<div style="color:#bbb;font-size:12px;padding:26px;text-align:center">불러오는 중…</div>'; return; }
   var imp=_memoState.addImp||2;
   pop.innerHTML=''
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:14px;font-weight:800;color:#2a2a3a">📝 내 할 일 <span style="font-size:11px;color:#aaa;font-weight:500">· '+_memoDateLabel()+'</span></span><span id="memo-status" style="font-size:11px;color:#bbb"></span></div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px"><span style="font-size:14px;font-weight:800;color:#2a2a3a">📝 내 할 일 <span style="font-size:11px;color:#aaa;font-weight:500">· '+_memoDateLabel()+'</span></span>'
+      +'<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:11px;color:#888;display:inline-flex;align-items:center;gap:4px">'+(_memoState.alarmOff?'🔕':'🔔')+'<span class="sw'+(_memoState.alarmOff?'':' on')+'" onclick="_memoToggleAlarm()" title="알림 전체 켜기/끄기"><span class="sw-k"></span></span></span></span></div>'
+    +'<div style="text-align:right;height:14px;margin-bottom:6px"><span id="memo-status" style="font-size:11px;color:#bbb"></span></div>'
     +'<div class="todo-add">'
       +'<input id="m-title" placeholder="해야 할 일" style="width:100%;box-sizing:border-box;margin-bottom:7px" onkeydown="if(event.key===\'Enter\')_memoAdd()">'
       +'<div style="display:flex;gap:6px;align-items:center">'
@@ -2304,6 +2313,7 @@ async function _memoToggle(ev){
 // 기한 임박/지남 할 일이 있으면 메모 버튼에 빨간 알람점
 function _memoAlarmRefresh(){
   var dot=document.getElementById('memo-alarm'); if(!dot)return;
+  if(_memoState.alarmOff){ dot.classList.remove('on'); return; }  // 알림 끔
   var now=Date.now();
   var alarm=(_memoState.tasks||[]).some(function(t){ if(t.done||!t.due)return false; var dt=new Date(t.due).getTime(); return !isNaN(dt) && (dt-now)<=_MEMO_ALARM_MS; });
   dot.classList.toggle('on',alarm);
@@ -2393,7 +2403,7 @@ function buildNav(){
   // 관리(admin)는 nav-center 메뉴에서 빼고 우상단 톱니 아이콘으로 이동 — admin에게만 노출
   var _gear=document.getElementById('admin-gear'); if(_gear)_gear.style.display=(userRole==='admin')?'flex':'none';
   var _pw=document.getElementById('pres-wrap'); if(_pw)_pw.style.display=(userRole==='admin')?'block':'none';
-  var _mw=document.getElementById('memo-wrap'); if(_mw)_mw.style.display=(userRole==='admin')?'block':'none';
+  var _mw=document.getElementById('memo-wrap'); if(_mw)_mw.style.display='block';  // 메모는 전체 사용자
   menus.forEach(m=>{
     const b=document.createElement('button');b.className='nav-btn'+(m.id==='cal'?' on':'')+(m.id==='admin'?' nav-admin':'');b.textContent=m.label;
     b.onclick=()=>{
