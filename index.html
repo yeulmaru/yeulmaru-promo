@@ -3818,8 +3818,8 @@ async function adminCompleteWithResult(rowIndex){
   if(!result)return;  // 취소
 
   // PATCH — 진행상태='완료' + 결과 필드 3개 (기존 다른 필드 유지)
+  showOverlayLoad('완료 처리 중...');
   try{
-    showToast('완료 처리 중...','info');
     const row = buildRecordRow(rec, {
       '진행 상태':'완료',
       '결과_링크':result.link||'',
@@ -3834,6 +3834,8 @@ async function adminCompleteWithResult(rowIndex){
   }catch(e){
     console.error(e);
     showToast('완료 처리 실패: '+e.message,'error');
+  }finally{
+    hideOverlayLoad();
   }
 }
 
@@ -8261,6 +8263,7 @@ async function setApplyAuto(key,on){
 
 async function setApplyOpen(on){
   const val=on?'true':'false';
+  showOverlayLoad(on?'접수 ON 처리 중...':'접수 OFF 처리 중...');
   try{
     const ri=APPLY_SETTINGS_ROWS.접수ON;
     if(ri){
@@ -8275,6 +8278,8 @@ async function setApplyOpen(on){
     showToast(on?'접수 ON':'접수 OFF','success');
   }catch(e){
     showToast('저장 실패: '+e.message,'error');
+  }finally{
+    hideOverlayLoad();
   }
 }
 
