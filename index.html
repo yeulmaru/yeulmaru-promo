@@ -2418,19 +2418,43 @@ function openSalesBoard(){
 }
 function closeSalesBoard(){ if(_salesState.escHandler)document.removeEventListener('keydown',_salesState.escHandler); var el=document.getElementById('sales-board'); if(el)el.innerHTML=''; }
 // === [DB통합] 일일입력 폼 (운영_일일입력에 기록 — Streamlit 입력 대체) ===
-var _dailyState = { master:null };
+var _dailyState = { master:null, programs:null };
 function _dailyToday(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+// 프로그램(콘텐츠구분) 인덱스: 정규화 공연명 → 콘텐츠구분 (공연마스터엔 카테고리가 없어 프로그램에서 조인)
+function _dailyCatIndex(){
+  var idx={}; var ps=_dailyState.programs||window._programsCache||[];
+  ps.forEach(function(p){ var c=String(p['콘텐츠구분']||'').trim(); if(!c)return; [p['풀네임'],p['줄임말']].forEach(function(nm){ var k=_uName(nm); if(k)idx[k]=c; }); });
+  return idx;
+}
+// 로그인 사용자의 담당 카테고리 (담당업무 플래그 기준). null=전체 표시(최고관리자 또는 카테고리 담당 없음)
+function _dailyAllowedCats(){
+  try{ if(typeof _isSuperAdmin==='function' && _isSuperAdmin()) return null; }catch(_){}
+  var me=(window.MANAGERS||[]).find(function(m){return (m['담당자']||'').trim()===(sessionStorage.getItem('myApplicant')||'').trim();});
+  if(!me) return null;
+  var cats=[];
+  if(isFlagOn(me['공연여부']))cats.push('공연');
+  if(isFlagOn(me['전시여부']))cats.push('전시');
+  if(isFlagOn(me['예술교육여부']))cats.push('예술교육');
+  return cats.length? cats : null;
+}
 function _dailyMasters(){
   var rows=(_dailyState.master&&_dailyState.master.rows)||[];
-  return rows.map(_salesNorm).filter(function(m){var s=String(m['상태']||'').trim();return s===''||s==='판매중';}).map(function(m){return {name:String(m['사업명']||'').trim(),open:(_salesNum(m['총오픈석'])||((_salesNum(m['기준석'])||926)*(_salesNum(m['총회차'])||1)))};}).filter(function(m){return m.name;});
+  var catIdx=_dailyCatIndex(); var allowed=_dailyAllowedCats();
+  return rows.map(_salesNorm)
+    .filter(function(m){ return String(m['상태']||'').trim()==='판매중'; })  // 판매중만
+    .map(function(m){ var name=String(m['사업명']||'').trim(); return {name:name, open:(_salesNum(m['총오픈석'])||((_salesNum(m['기준석'])||926)*(_salesNum(m['총회차'])||1))), cat:(catIdx[_uName(name)]||'')}; })
+    .filter(function(m){ if(!m.name)return false; if(!allowed)return true; return allowed.indexOf(m.cat)>=0; });  // 담당 카테고리만
 }
 function openDailyInput(){
   if(userRole!=='admin'){showToast('관리자만 입력할 수 있어요','error');return;}
   let el=document.getElementById('daily-input');
   if(!el){el=document.createElement('div');el.id='daily-input';document.body.appendChild(el);}
   el.innerHTML='<div class="modal-bg show" style="z-index:99990" onclick="if(event.target===this)closeDailyInput()"><div class="modal" style="width:96vw;max-width:760px;max-height:90vh;overflow:auto;padding:0;position:relative;background:#fff"><button class="modal-x" onclick="closeDailyInput()" title="닫기" style="position:absolute;top:14px;right:14px;z-index:10">✕</button><div style="padding:18px 22px;border-bottom:1px solid #eee;font-size:15px;font-weight:700">➕ 일일 판매 입력</div><div id="daily-body" style="padding:18px 22px"><div style="text-align:center;color:#888;padding:30px">공연 목록 불러오는 중…</div></div></div></div>';
-  if(_dailyState.master){_dailyRenderForm();return;}
-  api('GET','/api/ops?sheet='+encodeURIComponent('공연마스터')).then(function(d){_dailyState.master=d;_dailyRenderForm();}).catch(function(e){var b=document.getElementById('daily-body');if(b)b.innerHTML='<div style="color:#E24B4A;text-align:center;padding:30px">공연 목록 로드 실패: '+escapeHtml(e.message||String(e))+'</div>';});
+  if(_dailyState.master&&_dailyState.programs){_dailyRenderForm();return;}
+  Promise.all([
+    api('GET','/api/ops?sheet='+encodeURIComponent('공연마스터')),
+    api('GET','/api/programs').then(function(d){return (d&&d.programs)||[];}).catch(function(){return [];})
+  ]).then(function(res){_dailyState.master=res[0];_dailyState.programs=res[1];_dailyRenderForm();}).catch(function(e){var b=document.getElementById('daily-body');if(b)b.innerHTML='<div style="color:#E24B4A;text-align:center;padding:30px">공연 목록 로드 실패: '+escapeHtml(e.message||String(e))+'</div>';});
 }
 function closeDailyInput(){ var el=document.getElementById('daily-input'); if(el)el.innerHTML=''; }
 function _dailyRowHtml(r){
@@ -2453,6 +2477,10 @@ function _dailyReadDOM(){
 }
 function _dailyRenderForm(rowsData){
   var body=document.getElementById('daily-body'); if(!body)return;
+  if(!_dailyMasters().length){
+    body.innerHTML='<div style="text-align:center;color:#888;padding:34px 20px;font-size:13px;line-height:1.6">📭 담당 분야의 <b>판매중 공연</b>이 없어요.<div style="font-size:12px;color:#bbb;margin-top:6px">공연마스터 상태가 \'판매중\'이고, 내 담당 업무(공연·전시·예술교육)에 해당하는 공연만 표시됩니다.</div></div><div style="display:flex;justify-content:flex-end;margin-top:8px;padding-top:14px;border-top:1px solid #eee"><button onclick="closeDailyInput()" class="m-btn cancel">닫기</button></div>';
+    return;
+  }
   var rows=(rowsData&&rowsData.length)?rowsData:[{}];
   var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="font-size:12px;color:#888;font-weight:600">기준일자</span><input type="date" id="d-date" value="'+_dailyToday()+'" style="padding:7px 10px;border:1.5px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>';
   h+='<div style="display:flex;gap:8px;font-size:11px;color:#999;font-weight:600;margin-bottom:6px;padding:0 4px"><span style="flex:2;min-width:160px">공연</span><span style="flex:1;min-width:78px">유료좌석</span><span style="flex:1;min-width:78px">유료금액</span><span style="flex:1;min-width:78px">무료좌석</span><span style="width:24px"></span></div>';
