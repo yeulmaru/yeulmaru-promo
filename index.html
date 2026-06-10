@@ -768,6 +768,28 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .mv-title{font-size:15px;color:#222;font-weight:500;margin:6px 0 4px;line-height:1.4}
 .mv-title .fmt{color:#888;font-size:12px;font-weight:500;margin-left:6px}
 .mv-content{font-size:13px;color:#444;line-height:1.55;background:#fafafa;border-radius:8px;padding:10px 12px;max-height:54px;overflow-y:auto;white-space:pre-wrap;margin-top:6px}
+/* === 조회 모달 — 자료 경로/홍보 내용 분리 + 하부 팝업 === */
+.mv-link{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(74,77,231,0.07);border:1px solid rgba(74,77,231,0.18);border-radius:8px;color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;transition:all .15s;max-width:100%;vertical-align:middle}
+.mv-link:hover{background:rgba(74,77,231,0.13)}
+.mv-link .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.mv-content-btn{display:flex;align-items:center;gap:8px;font-size:12.5px;background:#fafafa;border:1px solid rgba(0,0,0,0.07);border-radius:10px;padding:9px 12px;margin-top:6px;cursor:pointer;transition:all .15s;line-height:1.5}
+.mv-content-btn:hover{background:rgba(74,77,231,0.05);border-color:rgba(74,77,231,0.2)}
+.mv-content-btn .prev{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#666}
+.mv-content-btn .go{flex-shrink:0;color:var(--accent);font-weight:600;font-size:11px;white-space:nowrap}
+.sub-pop-bg{position:fixed;inset:0;background:rgba(26,26,46,0.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9400;display:flex;align-items:center;justify-content:center;animation:fadeUp .18s ease}
+.sub-pop{background:var(--surface-solid);border:1px solid var(--glass-border);border-radius:var(--radius-lg);width:430px;max-width:90vw;max-height:72vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(74,77,231,0.16),0 8px 24px rgba(0,0,0,0.10);animation:fadeUp .22s ease}
+.sub-pop-hdr{display:flex;align-items:center;gap:8px;padding:14px 16px 12px 20px;border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0}
+.sub-pop-title{flex:1;font-size:14px;font-weight:700;color:var(--text)}
+.sub-pop-copy{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid rgba(0,0,0,0.10);background:#fff;border-radius:8px;font-size:11px;color:#666;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
+.sub-pop-copy:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
+.sub-pop-close{width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.05);color:#888;font-size:13px;cursor:pointer;flex-shrink:0}
+.sub-pop-close:hover{background:rgba(0,0,0,0.1)}
+.sub-pop-body{padding:14px 20px 18px;overflow-y:auto;font-size:13px;line-height:1.6;color:#333}
+.sub-sec-h{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.4px;margin:14px 0 4px}
+.sub-sec-h:first-child{margin-top:0}
+.sub-sec-b{white-space:pre-wrap;word-break:break-word;color:#444}
+.sub-path-row{display:flex;align-items:center;gap:8px;background:#fafafa;border:1px solid rgba(0,0,0,0.06);border-radius:10px;padding:9px 12px;margin-bottom:8px}
+.sub-path-tx{flex:1;font-size:12px;color:#444;word-break:break-all;line-height:1.5}
 .mv-content.empty{color:#aaa;font-style:italic}
 .mv-cat{display:inline-block;padding:3px 10px;border-radius:8px;background:rgba(74,77,231,0.1);color:var(--accent);font-size:11px;font-weight:600;margin:4px 0}
 /* === 홍보 신청 위저드 === */
@@ -982,8 +1004,9 @@ const _MSAL_CONFIG = {
     storeAuthStateInCookie: false
   }
 };
-// Files.Read.All: 공유받은 폴더(sharedWithMe) 조회용 — 위임 권한, 관리자 동의 불요 (첫 사용 시 동의 팝업 1회)
-const _MSAL_SCOPES = ['Files.Read', 'Files.Read.All'];
+// Files.Read.All: 공유받은 폴더(sharedWithMe) 조회용 / Sites.Read.All: 공유받은 SharePoint 사이트 라이브러리 탐색용
+// — 둘 다 위임 권한, 관리자 동의 불요 (사용자별 첫 사용 시 동의 팝업 1회. 테넌트가 사용자 동의 차단 시 Azure 앱 등록에 권한 추가 필요)
+const _MSAL_SCOPES = ['Files.Read', 'Files.Read.All', 'Sites.Read.All'];
 
 const API='https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
 const PLAT_COLORS={
@@ -7401,12 +7424,13 @@ async function _msalFetchSharedWithMe(){
   }
 }
 
-// 공유 폴더 하위 탐색 — 원본 드라이브 ID 기반 (path 주소 불가)
+// 공유 폴더 하위 탐색 — 원본 드라이브 ID 기반 (path 주소 불가). itemId='root' = 드라이브 루트
 async function _msalFetchDriveChildren(driveId, itemId){
   const token = await _msalGetToken();
   if(!token) return null;
   try {
-    const url = 'https://graph.microsoft.com/v1.0/drives/' + encodeURIComponent(driveId) + '/items/' + encodeURIComponent(itemId) + '/children?$select=id,name,folder,parentReference,webUrl&$top=200&$orderby=name';
+    const seg = (itemId === 'root') ? '/root' : '/items/' + encodeURIComponent(itemId);
+    const url = 'https://graph.microsoft.com/v1.0/drives/' + encodeURIComponent(driveId) + seg + '/children?$select=id,name,folder,parentReference,webUrl&$top=200&$orderby=name';
     const resp = await fetch(url, {headers: {'Authorization': 'Bearer ' + token}});
     if(!resp.ok){
       const t = await resp.text();
@@ -7419,6 +7443,56 @@ async function _msalFetchDriveChildren(driveId, itemId){
   } catch(e){
     console.error('[fetchDriveChildren]', driveId, itemId, e);
     showToast('공유 폴더 조회 실패: ' + e.message,'error');
+    return null;
+  }
+}
+
+// 공유받은 SharePoint 사이트 목록 (팔로우한 사이트 + 접근 가능 사이트 검색) — Sites.Read.All 필요
+async function _msalFetchSpSites(){
+  const token = await _msalGetToken();
+  if(!token) return null;
+  const hdr = {headers: {'Authorization': 'Bearer ' + token}};
+  try {
+    const [fRes, sRes] = await Promise.all([
+      fetch('https://graph.microsoft.com/v1.0/me/followedSites?$select=id,displayName,name,webUrl', hdr).catch(function(){ return null; }),
+      fetch('https://graph.microsoft.com/v1.0/sites?search=*&$select=id,displayName,name,webUrl&$top=60', hdr).catch(function(){ return null; })
+    ]);
+    const seen = {}, out = [];
+    for (const res of [fRes, sRes]){
+      if(!res || !res.ok) continue;
+      const data = await res.json();
+      (data.value || []).forEach(function(s){
+        if(!s.id || seen[s.id]) return;
+        seen[s.id] = 1;
+        out.push({siteId: s.id, name: s.displayName || s.name || '(사이트)', hasChildren: true, isSite: true, noSelect: true, sp: true});
+      });
+    }
+    if(out.length === 0 && (!fRes || !fRes.ok) && (!sRes || !sRes.ok)) return null;  // 권한 미동의 등
+    out.sort(function(a, b){ return a.name.localeCompare(b.name, 'ko'); });
+    return out;
+  } catch(e){
+    console.warn('[fetchSpSites]', e.message);
+    return null;  // 실패해도 내 폴더/공유받은 폴더 흐름은 유지
+  }
+}
+
+// 사이트의 문서 라이브러리 목록 — 라이브러리 루트도 폴더로 선택 가능 (webUrl 저장)
+async function _msalFetchSiteDrives(siteId){
+  const token = await _msalGetToken();
+  if(!token) return null;
+  try {
+    const resp = await fetch('https://graph.microsoft.com/v1.0/sites/' + encodeURIComponent(siteId) + '/drives?$select=id,name,driveType,webUrl', {headers: {'Authorization': 'Bearer ' + token}});
+    if(!resp.ok){
+      const t = await resp.text();
+      throw new Error('Graph ' + resp.status + ': ' + t.slice(0,200));
+    }
+    const data = await resp.json();
+    return (data.value || []).map(function(d){
+      return {driveId: d.id, id: 'root', name: d.name || '문서', hasChildren: true, isLib: true, shared: true, sp: true, webUrl: d.webUrl || ''};
+    });
+  } catch(e){
+    console.error('[fetchSiteDrives]', siteId, e);
+    showToast('라이브러리 조회 실패: ' + e.message,'error');
     return null;
   }
 }
@@ -7445,7 +7519,7 @@ async function openFolderTreeModal(idx){
   el.innerHTML = '<div class="modal-bg show" style="z-index:9300" onclick="if(event.target===this)closeFolderTreeModal()">'+
     '<div class="modal" style="max-width:560px;padding:0;text-align:left;max-height:80vh;display:flex;flex-direction:column">'+
     '<div style="padding:18px 22px;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">'+
-    '<h3 style="margin:0;font-size:15px;font-weight:700">📁 OneDrive 폴더 선택</h3>'+
+    '<h3 style="margin:0;font-size:15px;font-weight:700">📁 참고자료 폴더 선택</h3>'+
     '<button onclick="closeFolderTreeModal()" style="background:rgba(216,132,85,0.15);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;color:var(--peach);font-family:inherit">×</button>'+
     '</div>'+
     '<div style="padding:10px 18px 8px;border-bottom:1px solid rgba(0,0,0,0.04);font-size:11px;color:#888;flex-shrink:0;letter-spacing:0.2px">'+
@@ -7459,8 +7533,8 @@ async function openFolderTreeModal(idx){
     '<button id="ftm-confirm-btn" onclick="confirmFolderTreeSelection()" disabled style="padding:8px 18px;border:none;background:var(--accent);color:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;opacity:0.4">선택 (폴더 클릭)</button>'+
     '</div>'+
     '</div></div>';
-  // root children + 공유받은 폴더 병렬 로드
-  const [children, shared] = await Promise.all([_msalFetchOneDriveChildren(''), _msalFetchSharedWithMe()]);
+  // root children + 공유받은 폴더 + SharePoint 사이트 병렬 로드
+  const [children, shared, spSites] = await Promise.all([_msalFetchOneDriveChildren(''), _msalFetchSharedWithMe(), _msalFetchSpSites()]);
   const treeEl = document.getElementById('ftm-tree');
   if(!treeEl) return;
   if(!children){
@@ -7484,6 +7558,15 @@ async function openFolderTreeModal(idx){
     const e3=document.createElement('div'); e3.style.cssText='color:#bbb;padding:6px 12px;font-size:11px'; e3.textContent='공유받은 폴더가 없어요'; treeEl.appendChild(e3);
   } else {
     shared.forEach(function(child){ treeEl.appendChild(_renderFolderTreeNode(child, '', 0)); });
+  }
+  // 섹션 3 — 공유받은 SharePoint 사이트 (Sites.Read.All)
+  const spHdr=document.createElement('div'); spHdr.style.cssText=secSt+';margin-top:10px;border-top:1px solid rgba(0,0,0,0.05);padding-top:10px'; spHdr.textContent='🏢 SharePoint 사이트'; treeEl.appendChild(spHdr);
+  if(spSites===null){
+    const e4=document.createElement('div'); e4.style.cssText='color:#bbb;padding:6px 12px;font-size:11px;line-height:1.5'; e4.textContent='SharePoint 사이트를 불러올 수 없어요 (권한 동의가 필요할 수 있어요 — 다시 열면 동의 팝업이 떠요)'; treeEl.appendChild(e4);
+  } else if(spSites.length === 0){
+    const e5=document.createElement('div'); e5.style.cssText='color:#bbb;padding:6px 12px;font-size:11px'; e5.textContent='접근 가능한 사이트가 없어요'; treeEl.appendChild(e5);
+  } else {
+    spSites.forEach(function(site){ treeEl.appendChild(_renderFolderTreeNode(site, '', 0)); });
   }
 }
 
@@ -7511,10 +7594,13 @@ function _renderFolderTreeNode(node, parentPath, depth){
         return;
       }
       this.textContent = '⌛';
-      // 공유 폴더(타 드라이브)는 path 주소가 불가 — 드라이브 ID 기반으로 탐색
-      const children = node.driveId
-        ? await _msalFetchDriveChildren(node.driveId, node.id)
-        : await _msalFetchOneDriveChildren(fullPath);
+      // 사이트=라이브러리 목록 / 공유·SP 폴더(타 드라이브)=드라이브 ID 기반 / 내 OneDrive=path 기반
+      const children = node.isSite
+        ? await _msalFetchSiteDrives(node.siteId)
+        : node.driveId
+          ? await _msalFetchDriveChildren(node.driveId, node.id)
+          : await _msalFetchOneDriveChildren(fullPath);
+      if(node.sp && children) children.forEach(function(c){ c.sp = true; });
       this.textContent = '▼';
       const cd = document.createElement('div');
       cd.className = 'ftm-children';
@@ -7531,7 +7617,7 @@ function _renderFolderTreeNode(node, parentPath, depth){
   }
   row.appendChild(expandBtn);
   const icon = document.createElement('span');
-  icon.textContent = '📁';
+  icon.textContent = node.isSite ? '🏢' : node.isLib ? '📚' : '📁';
   icon.style.cssText = 'font-size:13px;user-select:none';
   row.appendChild(icon);
   const nameSpan = document.createElement('span');
@@ -7546,6 +7632,7 @@ function _renderFolderTreeNode(node, parentPath, depth){
   }
   row.onclick = function(e){
     if(e.target === expandBtn) return;
+    if(node.noSelect){ if(node.hasChildren) expandBtn.click(); return; }  // 사이트는 선택 불가 — 펼치기만
     document.querySelectorAll('.ftm-row[data-selected]').forEach(function(r){
       r.removeAttribute('data-selected');
       r.style.background = '';
@@ -7558,9 +7645,11 @@ function _renderFolderTreeNode(node, parentPath, depth){
     _folderTreeSelectedName = node.name;
     _folderTreeSelectedUrl = node.shared ? (node.webUrl || '') : '';
     const pathSpan = document.getElementById('ftm-current-path');
-    if(pathSpan) pathSpan.textContent = node.shared
-      ? ('공유받은 폴더' + fullPath.replace(/\//g, '\\') + (node.owner ? ' (' + node.owner + ')' : ''))
-      : ('OneDrive - GS칼텍스 예울마루' + fullPath.replace(/\//g, '\\'));
+    if(pathSpan) pathSpan.textContent = node.sp
+      ? ('SharePoint' + fullPath.replace(/\//g, '\\'))
+      : node.shared
+        ? ('공유받은 폴더' + fullPath.replace(/\//g, '\\') + (node.owner ? ' (' + node.owner + ')' : ''))
+        : ('OneDrive - GS칼텍스 예울마루' + fullPath.replace(/\//g, '\\'));
     const btn = document.getElementById('ftm-confirm-btn');
     if(btn){ btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '✓ 선택: ' + node.name; }
   };
@@ -11342,6 +11431,78 @@ function formatMemoCell(memo){
   return '<span style="color:#555;font-size:12px;line-height:1.4">'+escapeHtml(memoStr).replace(/\n/g,'<br>')+'</span>';
 }
 
+// === 조회 모달 — 콘텐츠 내용에서 [참고자료 폴더] 분리 + 하부 팝업 (자료 경로/홍보 내용 각각 복사) ===
+let _mvDetail={folders:[],text:'',_copy:''};
+function _splitRecContent(raw){
+  raw=(raw==null?'':String(raw));
+  const out={folders:[],text:''};
+  if(!raw.trim())return out;
+  let cur=null;const secs=[];const pre=[];
+  raw.split('\n').forEach(function(line){
+    const m=line.match(/^\[(.+)\]$/);
+    if(m){cur={h:m[1],b:[]};secs.push(cur);}
+    else if(cur)cur.b.push(line);
+    else pre.push(line);
+  });
+  if(secs.length===0){out.text=raw.trim();return out;}
+  const keep=[];
+  const preTxt=pre.join('\n').replace(/^\n+|\n+$/g,'');
+  if(preTxt)keep.push(preTxt);
+  secs.forEach(function(s){
+    const body=s.b.join('\n').replace(/^\n+|\n+$/g,'');
+    if(s.h==='참고자료 폴더'){body.split('\n').map(function(v){return v.trim();}).filter(Boolean).forEach(function(f){out.folders.push(f);});}
+    else keep.push('['+s.h+']'+(body?'\n'+body:''));
+  });
+  out.text=keep.join('\n\n').trim();
+  return out;
+}
+function _folderLabel(p){
+  try{const s=String(p).replace(/[\\\/]+$/,'').split(/[\\\/]/).pop();return decodeURIComponent(s||p);}catch(e){return String(p);}
+}
+function _subPopCopy(btn,text){
+  const done=function(){const o=btn.innerHTML;btn.innerHTML='✓ 복사됨';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';setTimeout(function(){btn.innerHTML=o;btn.style.color='';btn.style.borderColor='';},1400);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,function(){fallbackCopy(text);done();});}
+  else{fallbackCopy(text);done();}
+}
+function closeSubPop(){const el=document.getElementById('sub-pop');if(el)el.remove();}
+function _openSubPop(title,bodyHtml,copyText){
+  closeSubPop();
+  _mvDetail._copy=copyText||'';
+  const el=document.createElement('div');
+  el.id='sub-pop';
+  el.innerHTML='<div class="sub-pop-bg" onclick="if(event.target===this)closeSubPop()">'+
+    '<div class="sub-pop">'+
+    '<div class="sub-pop-hdr"><span class="sub-pop-title">'+escapeHtml(title)+'</span>'+
+    (copyText?'<button class="sub-pop-copy" onclick="_subPopCopy(this,_mvDetail._copy)">⧉ 복사</button>':'')+
+    '<button class="sub-pop-close" onclick="closeSubPop()">✕</button></div>'+
+    '<div class="sub-pop-body">'+bodyHtml+'</div>'+
+    '</div></div>';
+  document.body.appendChild(el);
+}
+function openMvFolderPopup(){
+  const fs=_mvDetail.folders||[];
+  if(!fs.length)return;
+  let h='';
+  fs.forEach(function(f,i){
+    h+='<div class="sub-path-row"><span class="sub-path-tx">'+escapeHtml(f)+'</span>'+
+       '<button class="sub-pop-copy" onclick="_subPopCopy(this,_mvDetail.folders['+i+'])">⧉ 복사</button></div>';
+  });
+  _openSubPop('자료 경로'+(fs.length>1?' ('+fs.length+'개)':''),h,null);
+}
+function openMvContentPopup(){
+  const t=_mvDetail.text||'';
+  if(!t)return;
+  let h='';let buf=[];
+  const flush=function(){if(buf.length){const b=buf.join('\n').replace(/^\n+|\n+$/g,'');if(b)h+='<div class="sub-sec-b">'+escapeHtml(b)+'</div>';buf=[];}};
+  t.split('\n').forEach(function(line){
+    const m=line.match(/^\[(.+)\]$/);
+    if(m){flush();h+='<div class="sub-sec-h">'+escapeHtml(m[1])+'</div>';}
+    else buf.push(line);
+  });
+  flush();
+  _openSubPop('홍보 내용',h,t);
+}
+
 function renderReadOnlyView(dateKey,rec,dateObj,dn){
   // 시간 추출
   const ts=rec['입력시간(KST)'];
@@ -11405,7 +11566,18 @@ function renderReadOnlyView(dateKey,rec,dateObj,dn){
   html+='<div class="mv-row"><span class="lbl">프로그램</span><span class="val'+(prog?'':' muted')+'" style="color:'+(prog?'var(--accent)':'#aaa')+';font-weight:'+(prog?'600':'400')+'">'+(prog?escapeHtml(prog):'-')+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">구분</span><span class="val">'+escapeHtml(cat||'-')+'</span></div>';
   html+='<div class="mv-row"><span class="lbl">홍보 내용</span><span class="val">'+escapeHtml(title)+(fmt?' <span style="color:#888;font-size:12px">('+escapeHtml(fmt)+')</span>':'')+'</span></div>';
-  html+='<div class="mv-content'+(content?'':' empty')+'">'+(content?escapeHtml(content):'내용 없음')+'</div>';
+  // 콘텐츠 내용 → [참고자료 폴더]는 '자료 경로' 행으로 분리, 본문은 클릭 시 하부 팝업 (각각 복사 가능)
+  const _cd=_splitRecContent(content);
+  _mvDetail={folders:_cd.folders,text:_cd.text,_copy:''};
+  if(_cd.folders.length){
+    html+='<div class="mv-row" style="align-items:center"><span class="lbl">자료 경로</span><span class="val"><span class="mv-link" onclick="openMvFolderPopup()">📁<span class="tx">'+escapeHtml(_folderLabel(_cd.folders[0]))+'</span>'+(_cd.folders.length>1?'<span style="color:#888;font-weight:500">외 '+(_cd.folders.length-1)+'</span>':'')+'<span style="color:#999;font-size:11px">보기 ›</span></span></span></div>';
+  }
+  if(_cd.text){
+    const _pl=_cd.text.split('\n').filter(function(l){return l.trim()&&!/^\[.+\]$/.test(l.trim());});
+    html+='<div class="mv-content-btn" onclick="openMvContentPopup()"><span class="prev">'+escapeHtml(_pl.length?_pl[0].trim():'내용 보기')+'</span><span class="go">전체 보기 ›</span></div>';
+  }else if(!_cd.folders.length){
+    html+='<div class="mv-content empty">내용 없음</div>';
+  }
   
   html+='<div class="mv-section">📍 게시자</div>';
   html+='<div class="mv-row"><span class="lbl">담당 부서</span><span class="val">'+escapeHtml(dept||'-')+'</span></div>';
