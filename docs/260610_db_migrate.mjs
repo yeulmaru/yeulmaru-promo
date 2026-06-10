@@ -14,7 +14,7 @@
 // ⚠️ POST는 시트 전체 교체(text 서식) — dash push와 동일 경로. 실행 전 dry-run 확인 필수.
 // ============================================================
 const BASE = 'https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
-const PW = '0510';
+const PW = process.env.DB_PW || '0510';   // 슈퍼 비번 인증 시 DB_PW로 교체 (checkAdmin: ADMIN_PASSWORD 직통)
 const PIN = process.env.DB_PIN || '';
 const WRITE = process.argv.includes('--write');
 
@@ -27,7 +27,7 @@ async function getSheet(name){
   return r.json();
 }
 async function postSheet(payload){
-  const r = await fetch(BASE + '/api/ops', { method:'POST', headers: { 'Content-Type':'application/json', 'X-App-Password': PW, 'X-Sub-Admin-PIN': PIN, '관리자여부':'true' }, body: JSON.stringify(payload) });
+  const r = await fetch(BASE + '/api/ops', { method:'POST', headers: { 'Content-Type':'application/json', 'X-App-Password': PW, 'X-Sub-Admin-PIN': PIN }, body: JSON.stringify(payload) });
   const t = await r.text();
   if(!r.ok) throw new Error(payload.sheet + ' POST ' + r.status + ': ' + t.slice(0,200));
   return JSON.parse(t);
