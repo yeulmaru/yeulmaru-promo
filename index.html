@@ -2909,13 +2909,16 @@ function _opsIndex(){
     var nm=String(r['공연명']||'').trim(); var k=_uName(nm); if(!k) return;
     var y=parseInt(String(r['년도']||'').replace(/[^0-9]/g,''),10); if(isNaN(y))y=null;
     var kk=k+'|'+(y||'?');
-    var e=agg[kk]; if(!e){ e=agg[kk]={key:k,name:nm,year:y,base:_salesNum(r['기본좌석'])||0,genre:String(r['장르1']||'').trim(),gubun:String(r['공연구분']||'').trim(),count:0,first:null,last:null}; }
+    var e=agg[kk]; if(!e){ e=agg[kk]={key:k,name:nm,year:y,base:_salesNum(r['기본좌석'])||0,genre:String(r['장르1']||'').trim(),gubun:String(r['공연구분']||'').trim(),count:0,first:null,last:null,id:''}; }
     e.count++; if(!e.base)e.base=_salesNum(r['기본좌석'])||0;
+    // [DB통합 Phase 2] 공연ID 컬럼이 있으면 ID 인덱스도 구축 (마이그레이션 전엔 컬럼 없음 — 무해)
+    var rid=String(r['공연ID']||'').trim(); if(rid&&!e.id)e.id=rid;
     var mo=_salesNum(r['월']), dy=_salesNum(r['일']);
     if(y&&mo){ var dt=new Date(y,mo-1,dy||1); if(!isNaN(dt.getTime())){ if(!e.first||dt<e.first)e.first=dt; if(!e.last||dt>e.last)e.last=dt; } }
   });
-  var byName={};
-  Object.keys(agg).forEach(function(kk){ var e=agg[kk]; (byName[e.key]=byName[e.key]||[]).push(e); });
+  var byName={}, byId={};
+  Object.keys(agg).forEach(function(kk){ var e=agg[kk]; (byName[e.key]=byName[e.key]||[]).push(e); if(e.id&&!byId[e.id])byId[e.id]=e; });
+  byName._byId=byId;  // uName 키는 '_'가 제거되므로 충돌 불가
   _salesState._opsIdx=byName; return byName;
 }
 // 연도 ±1 이내 가장 가까운 에디션만 매칭(재연 오매칭 방지: 2025 판매가 2015 카탈로그에 붙는 것 차단).
@@ -2923,6 +2926,11 @@ function _opsLookup(name,year){
   var arr=_opsIndex()[_uName(name)]; if(!arr||!arr.length) return null;
   if(year){ var best=null,bd=99; arr.forEach(function(e){ if(e.year){ var d=Math.abs(e.year-year); if(d<bd){bd=d;best=e;} } }); return (best&&bd<=1)?best:null; }
   return arr[0];
+}
+// [DB통합 Phase 2] 공연ID 직접 조인 — 이름 정규화보다 우선
+function _opsLookupById(rid){
+  if(!rid) return null;
+  return _opsIndex()._byId[rid]||null;
 }
 function _salesFmtDates(dates){
   var ds=dates.slice().sort(function(a,b){return a-b;}); if(!ds.length)return '';
@@ -2934,10 +2942,11 @@ function _salesFmtDates(dates){
   return groups.map(function(g){var a=g[0],b=g[g.length-1]; if(a.getTime()===b.getTime())return f(a); if(a.getMonth()===b.getMonth())return (a.getMonth()+1)+'.'+a.getDate()+'('+ws[a.getDay()]+')~'+b.getDate()+'('+ws[b.getDay()]+')'; return f(a)+'~'+f(b);}).join(', ');
 }
 function _salesBuild(){
-  var master={};
+  var master={},masterById={};
   ((_salesState.master&&_salesState.master.rows)||[]).map(_salesNorm).forEach(function(m){
     var name=String(m['사업명']||'').trim(); if(!name)return;
-    master[name]={기본석:_salesNum(m['기준석'])||_SALES_FALLBACK_SEAT,총회차:_salesNum(m['총회차'])||1,총오픈석:_salesNum(m['총오픈석']),목표:_salesNum(m['목표점유율'])||50,수익성:String(m['수익성']||'').trim(),티켓오픈:_salesDate(m['티켓오픈일']),종료:_salesDate(m['종료일']),시작:_salesDate(m['시작일']),ID:String(m['ID']||'').trim()};
+    var ent={기본석:_salesNum(m['기준석'])||_SALES_FALLBACK_SEAT,총회차:_salesNum(m['총회차'])||1,총오픈석:_salesNum(m['총오픈석']),목표:_salesNum(m['목표점유율'])||50,수익성:String(m['수익성']||'').trim(),티켓오픈:_salesDate(m['티켓오픈일']),종료:_salesDate(m['종료일']),시작:_salesDate(m['시작일']),ID:String(m['ID']||'').trim()};
+    master[name]=ent; if(ent.ID)masterById[ent.ID]=ent;
   });
   var rounds={};
   ((_salesState.rounds&&_salesState.rounds.rows)||[]).map(_salesNorm).forEach(function(r){
@@ -2956,11 +2965,13 @@ function _salesBuild(){
     var diff=null, dv=_salesNum(snap['전일대비(석)']);
     if(dv!==null&&dv!==0)diff=dv;
     else if(rows.length>=2)diff=(_salesNum(rows[rows.length-1]['합계좌석'])||0)-(_salesNum(rows[rows.length-2]['합계좌석'])||0);
-    var m=master[name];
+    // [DB통합 Phase 2] 공연ID 우선 조인 (마이그레이션 후 컬럼 생김) → 이름 조인 폴백
+    var rid=String(snap['공연ID']||'').trim();
+    var m=(rid&&masterById[rid])||master[name];
     // [DB통합] 공연마스터에 없는 공연은 운영대장 폴백: 기준석×회차(=운영행수)로 총오픈석 산출, 장르/구분 보강.
     var by=_salesNum(snap['기준일자']); var salesYear=by?Math.floor(by/10000):null;
     var ops=null;
-    if(!m){ ops=_opsLookup(name,salesYear); }
+    if(!m){ ops=(rid?_opsLookupById(rid):null)||_opsLookup(name,salesYear); }
     var base=m?m.기본석:(ops&&ops.base?ops.base:_SALES_FALLBACK_SEAT);
     var genre=ops?ops.genre:'';
     var totalOpen=(m&&m.총오픈석)?m.총오픈석:(ops?base*(ops.count||1):base*((m&&m.총회차)||1));
@@ -2979,7 +2990,7 @@ function _salesBuild(){
     // 마스터 판매기간(종료일)이 미래로 잡혀 있어도 공연 자체가 끝났으면 ended (종료 공연이 [1] 현황에 섞이던 문제)
     var lastShow=null;
     if(m&&m.ID&&rounds[m.ID]){ rounds[m.ID].forEach(function(d){ if(!lastShow||d>lastShow)lastShow=d; }); }
-    var opsForDates=ops||_opsLookup(name,salesYear);
+    var opsForDates=ops||(rid?_opsLookupById(rid):null)||_opsLookup(name,salesYear);
     if(opsForDates&&opsForDates.last&&(!lastShow||opsForDates.last>lastShow))lastShow=opsForDates.last;
     if(!lastShow&&endDate)lastShow=endDate;
     if(status==='active'&&lastShow&&lastShow<today)status='ended';
