@@ -391,6 +391,29 @@ async function autoCancelStalePending(env) {
     try {
       await handleUpdateSheetRow(token, "\uD64D\uBCF4\uAE30\uB85D", row._rowIndex, { values }, "admin", "records");
       cancelled++;
+      // \uC2E0\uCCAD\uC790\uC5D0\uAC8C \uC790\uB3D9\uCDE8\uC18C \uC54C\uB9BC (\uC218\uB3D9 \uCDE8\uC18C \uACBD\uB85C\uC758 pushMessage\uC640 \uB3D9\uC77C \uD3EC\uB9F7) \u2014 \uC2E4\uD328\uD574\uB3C4 cron\uC740 \uACC4\uC18D
+      try {
+        const recipient = String(row["\uC2E0\uCCAD\uC790"] || "").trim();
+        if (recipient) {
+          const dateKey = [row["\uC5F0\uB3C4"], String(row["\uC6D4"] || "").padStart(2, "0"), String(row["\uC77C"] || "").padStart(2, "0")].join("-");
+          const refSummary = (dateKey + " " + (row["\uD50C\uB7AB\uD3FC 1"] || "") + " " + (row["\uCF58\uD150\uCE20 \uC81C\uBAA9"] || "")).trim();
+          await handleAddMessage(token, {
+            id: "m" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+            recipient,
+            type: "\uC911\uC694",
+            trigger: "\uC790\uB3D9\uCDE8\uC18C",
+            before: HOLD_VAL,
+            after: CANCEL_VAL,
+            reason: "\uBCF4\uB958 3\uC77C \uACBD\uACFC\uB85C \uC790\uB3D9 \uCDE8\uC18C\uB418\uC5C8\uC5B4\uC694",
+            refNo: row["No"] || row["NO"] || "",
+            refSummary,
+            kst: nowKstStr.slice(0, 16),
+            read: false
+          });
+        }
+      } catch (e2) {
+        console.error("autoCancel notify", row._rowIndex, e2);
+      }
     } catch (e) {
       console.error("autoCancel row", row._rowIndex, e);
     }
@@ -449,6 +472,86 @@ async function handleAddMessage(token, msg) {
   return { ok: true, row: nextRow };
 }
 __name(handleAddMessage, "handleAddMessage");
+
+// === 챗봇 — FAQ 시트(운영자 편집) + 질의 로그 누적 ===
+var FAQ_SHEET = "챗봇FAQ";
+var FAQ_HEADERS = ["카테고리", "질문", "답변", "키워드", "사용"];
+var FAQ_SEED = [
+  ["회사", "예울마루 위치 / 오시는 길", "(여기에 답변을 입력한 뒤 '사용'을 TRUE로 바꾸면 챗봇에 표시돼요)", "위치,주소,오시는길,찾아오", "FALSE"],
+  ["회사", "주차 안내", "(여기에 답변을 입력한 뒤 '사용'을 TRUE로 바꾸면 챗봇에 표시돼요)", "주차,주차장,차", "FALSE"],
+  ["회사", "운영 시간 / 휴관일", "(여기에 답변을 입력한 뒤 '사용'을 TRUE로 바꾸면 챗봇에 표시돼요)", "시간,운영,휴관,오픈,마감", "FALSE"],
+  ["회사", "대관 문의", "(여기에 답변을 입력한 뒤 '사용'을 TRUE로 바꾸면 챗봇에 표시돼요)", "대관,대여,빌리", "FALSE"]
+];
+var CHATLOG_SHEET = "챗봇로그";
+var CHATLOG_HEADERS = ["ID", "KST", "사용자", "부서", "종류", "질의", "응답", "매칭"];
+
+// 시트 없으면 생성 + 헤더(+시드) 기록 — ensureMessagesSheet 일반화 버전
+async function ensureNamedSheet(token, name, headerRow, seedRows) {
+  const { driveId, itemId } = await findFile(token);
+  const ws = await graphGet(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets`);
+  const exists = (ws.value || []).some((w) => w.name === name);
+  if (!exists) {
+    await graphPost(token, `/drives/${driveId}/items/${itemId}/workbook/worksheets/add`, { name });
+    const lastCol = colLetter(headerRow.length);
+    await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='A1:${lastCol}1')`, { values: [headerRow] });
+    if (seedRows && seedRows.length) {
+      const addr = `A2:${lastCol}${1 + seedRows.length}`;
+      await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { numberFormat: seedRows.map((r) => r.map(() => "@")) });
+      await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { values: seedRows });
+    }
+  }
+  return { driveId, itemId };
+}
+__name(ensureNamedSheet, "ensureNamedSheet");
+
+async function handleGetFaq(token) {
+  await ensureNamedSheet(token, FAQ_SHEET, FAQ_HEADERS, FAQ_SEED);
+  const { rows } = await handleGetSheet(token, FAQ_SHEET);
+  return rows;
+}
+__name(handleGetFaq, "handleGetFaq");
+
+async function handleAddChatLog(token, log) {
+  const { driveId, itemId } = await ensureNamedSheet(token, CHATLOG_SHEET, CHATLOG_HEADERS, null);
+  const { rows } = await handleGetSheet(token, CHATLOG_SHEET);
+  const nextRow = rows.length > 0 ? Math.max(...rows.map((r) => r._rowIndex)) + 1 : 2;
+  const values = [
+    log.id || "", log.kst || kstNowText(), log.user || "", log.dept || "",
+    log.kind || "", log.query || "", log.answer || "", log.match || ""
+  ];
+  const lastCol = colLetter(values.length);
+  const addr = `A${nextRow}:${lastCol}${nextRow}`;
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, CHATLOG_SHEET)}/range(address='${addr}')`, { numberFormat: [values.map(() => "@")] });
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, CHATLOG_SHEET)}/range(address='${addr}')`, { values: [values] });
+  return { ok: true, row: nextRow };
+}
+__name(handleAddChatLog, "handleAddChatLog");
+
+// === 규정 시트 — 사무처리규정 PDF 조항 인제스트 (docs/260610_rules_ingest.mjs) ===
+var RULES_SHEET = "규정";
+var RULES_HEADERS = ["규정명", "조항", "제목", "본문", "키워드"];
+
+async function writeNamedSheetRows(token, name, headers, rows) {
+  const { driveId, itemId } = await ensureNamedSheet(token, name, headers, null);
+  const lastCol = colLetter(headers.length);
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='A1:${lastCol}1')`, { values: [headers] });
+  for (let b = 0; b < rows.length; b += 200) {
+    const slice = rows.slice(b, b + 200).map((r) => headers.map((h) => { const v = r[h]; return (v === null || v === undefined) ? "" : String(v); }));
+    const sr = 2 + b, er = sr + slice.length - 1;
+    const addr = `A${sr}:${lastCol}${er}`;
+    await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { numberFormat: slice.map(() => headers.map(() => "@")) });
+    await graphPatch(token, `${sheetPathFor(driveId, itemId, name)}/range(address='${addr}')`, { values: slice });
+  }
+  return { ok: true, sheet: name, rows: rows.length };
+}
+__name(writeNamedSheetRows, "writeNamedSheetRows");
+
+async function handleGetRules(token) {
+  await ensureNamedSheet(token, RULES_SHEET, RULES_HEADERS, null);
+  const { rows } = await handleGetSheet(token, RULES_SHEET);
+  return rows;
+}
+__name(handleGetRules, "handleGetRules");
 
 async function handleMarkMessageRead(token, id) {
   const { driveId, itemId } = await ensureMessagesSheet(token);
@@ -805,6 +908,23 @@ var index_default = {
       if (url.pathname.startsWith("/api/messages/")) {
         const mid = decodeURIComponent(url.pathname.split("/").pop());
         if (request.method === "PATCH") return json(await handleMarkMessageRead(token, mid), env);
+      }
+
+      // === 챗봇 — FAQ 조회(시트 자동생성) + 질의 로그 누적. 로그인 사용자 허용 ===
+      if (url.pathname === "/api/chatbot/faq" && request.method === "GET") {
+        return json({ faq: await handleGetFaq(token) }, env);
+      }
+      if (url.pathname === "/api/chatbot/log" && request.method === "POST") {
+        return json(await handleAddChatLog(token, await request.json()), env);
+      }
+      if (url.pathname === "/api/chatbot/rules") {
+        if (request.method === "GET") return json({ rules: await handleGetRules(token) }, env);
+        if (request.method === "POST") {
+          const rAuth = await checkAdmin(request, env, token);
+          if (!rAuth.admin) return json({ error: "Admin only" }, env, 403);
+          const body = await request.json();
+          return json(await writeNamedSheetRows(token, RULES_SHEET, RULES_HEADERS, Array.isArray(body.rows) ? body.rows : []), env);
+        }
       }
 
       // === [DB통합/이관] 운영 데이터 — 프로모 엑셀 "운영_*" 시트가 source of truth (Workbook API) ===
