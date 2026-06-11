@@ -889,6 +889,8 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .yc-wrap a{text-decoration:none;color:inherit}
 /* 전시 종료점 상세 링크 (백로그: 종료 항목에도 링크) */
 .yc-ex-end-i .yc-ev-link{color:#D88455;border-bottom-color:rgba(216,132,85,0.3)}
+/* 닫기(X) 자리 확보 — X가 12월 칸 아래 깔려 잘 안 보이고 클릭이 12월로 가던 버그 */
+.yc-mnav{padding-right:56px !important}
 .yc-wrap a{text-decoration:none;color:inherit}
 
   
@@ -1227,7 +1229,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
     </button>
     <div class="nav-left">
-      <span class="nav-logo">YEULMARU</span>
+      <span class="nav-logo" onclick="location.replace(location.pathname+'?cb='+Date.now())" title="강제 새로고침 (최신 버전 불러오기)" style="cursor:pointer">YEULMARU</span>
       <span class="nav-beta">Beta</span>
     </div>
     <div class="nav-center" id="nav-menus"></div>
@@ -2935,7 +2937,7 @@ function openAnnualCalendar(){
     el.id='annual-calendar';
     document.body.appendChild(el);
   }
-  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAnnualCalendar)"><div class="modal annual-modal" style="width:96vw;max-width:1400px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#FDFCFB"><button class="modal-x" onclick="closeAnnualCalendar()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:18px;float:none;margin:0;z-index:10;background:rgba(255,255,255,0.95);box-shadow:0 2px 8px rgba(0,0,0,0.12)">✕</button><div id="yc-scroll" style="flex:1;overflow-y:auto;overscroll-behavior:contain"></div></div></div>';
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAnnualCalendar)"><div class="modal annual-modal" style="width:96vw;max-width:1400px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#FDFCFB"><button class="modal-x" onclick="closeAnnualCalendar()" title="닫기" aria-label="닫기" style="position:absolute;top:9px;right:12px;float:none;margin:0;z-index:30;background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(74,77,231,0.4)">✕</button><div id="yc-scroll" style="flex:1;overflow-y:auto;overscroll-behavior:contain"></div></div></div>';
   const wrap=document.getElementById('yc-wrap');
   const sc=document.getElementById('yc-scroll');
   if(wrap&&sc)sc.appendChild(wrap);
