@@ -1634,8 +1634,9 @@ function renderSpecialMarquee(d,nm,past){
   const areaCtx=userRole==='admin'?' oncontextmenu="onSpAreaContextMenu(event);return false;"':'';
   return '<div class="sp-area"'+areaCtx+' title="담당자 일정'+(userRole==='admin'?' — 우클릭: 변경/삭제':'')+'"><div class="sp-track" data-sp-count="'+items.length+'">'+inner+'</div></div>';
 }
-// (260611) 일정관리 S행 [변경] 버튼 — 완료/변경 선택 메뉴 (완료=즉시 토글, 변경=편집 모달)
-function _spRowMenu(event,rowIndex){
+// (260611) 담당자 일정 [변경] 버튼 — 완료/변경 선택 메뉴 (완료=즉시 토글, 변경=편집 모달)
+// src: 'view'=조회 모달에서(조회 닫고 편집), 기본=일정관리 보드에서(보드 닫고 편집, 닫으면 보드 복귀)
+function _spRowMenu(event,rowIndex,src){
   event.preventDefault();event.stopPropagation();
   closeCellContextMenu();
   const _sp=(PROMO_SPECIAL||[]).find(function(s){return s._rowIndex===rowIndex;});
@@ -1644,9 +1645,12 @@ function _spRowMenu(event,rowIndex){
   menu.id='cell-context-menu';
   menu.style.background='linear-gradient(135deg,#E0F2FE 0%,#F0F9FF 100%)';
   menu.style.borderColor='rgba(125,211,252,0.5)';
+  const _editAct=src==='view'
+    ?'closeCellContextMenu();closeSpecialView();openSpecialEntry(null,'+rowIndex+')'
+    :'closeCellContextMenu();_schedReturnFlag=true;closePromoBoard();openSpecialEntry(null,'+rowIndex+')';
   menu.innerHTML=
     '<div class="ccm-item" onclick="closeCellContextMenu();_spToggleDone('+rowIndex+')"><span class="emo">'+(_manual?'↩️':'✔️')+'</span>'+(_manual?'완료 해제':'완료 처리')+'</div>'+
-    '<div class="ccm-item" onclick="closeCellContextMenu();_schedReturnFlag=true;closePromoBoard();openSpecialEntry(null,'+rowIndex+')"><span class="emo">✏️</span>변경</div>';
+    '<div class="ccm-item" onclick="'+_editAct+'"><span class="emo">✏️</span>변경</div>';
   document.body.appendChild(menu);
   const rect=menu.getBoundingClientRect();
   menu.style.left=Math.min(event.clientX,window.innerWidth-rect.width-8)+'px';
@@ -4656,20 +4660,20 @@ function openSpecialView(rowIndex){
       const endDate = endRaw.split(' ')[0];
       const endTime = endRaw.split(' ')[1] || '';
       if(endDate === dateStr){ endTimeStr = endTime; }
-      else { dateStr = dateStr + ' ~ ' + endDate; endTimeStr = endTime; }
+      else { dateStr = _rangeShort(dateStr, endDate); endTimeStr = endTime; }
     } else if(endRaw !== dateStr){
-      dateStr = dateStr + ' ~ ' + endRaw;
+      dateStr = _rangeShort(dateStr, endRaw);
     }
   }
   const _spv=_parseSpTime(it.time||'');let _spvE=_spv.e;if(!_spvE&&it.start&&it.end&&it.start!==it.end)_spvE='18:00';const timeFull=_spv.s?(_spvE?(_spv.s+' ~ '+_spvE):_spv.s):(timeStr?(endTimeStr?(timeStr+' ~ '+endTimeStr):timeStr):'');
   const typeStr = it.type || '-';
   const personStr = it.person || '-';
   const labelStr = it.label || '';
-  // (260611) 상태: 자동(종료시각/18시) + 수동(비고='완료') — admin은 여기서도 완료 토글 가능
+  // (260611 v2) 상태: 도형 없이 일관된 강조색 텍스트 + [변경] 버튼(호버 리액트, 클릭 → 그 자리에서 완료/변경 메뉴)
   const spSt=_spStatus(it);
   const spManual=(it.note||'').indexOf('완료')>-1;
-  const stChip='<span style="display:inline-block;padding:3px 10px;border-radius:10px;background:'+(spSt==='완료'?'#DBEAFE':'#E8F5EC')+';color:'+(spSt==='완료'?'#2563EB':'#0F8B4C')+';font-size:11px;font-weight:600">'+spSt+(spManual?' <span style="font-weight:400;opacity:0.7">(수동)</span>':'')+'</span>';
-  const stBtn=userRole==='admin'?' <button onclick="_spToggleDone('+rowIndex+')" style="margin-left:8px;padding:4px 11px;border-radius:8px;border:1px solid '+(spManual?'#ddd':'rgba(37,99,235,0.35)')+';background:'+(spManual?'#f5f5f5':'#EFF6FF')+';color:'+(spManual?'#888':'#2563EB')+';font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">'+(spManual?'완료 해제':'완료 처리')+'</button>':'';
+  const stChip='<span style="color:var(--accent);font-weight:700;font-size:13.5px">'+spSt+'</span>'+(spManual?'<span style="color:#aaa;font-size:11px;margin-left:5px">(수동)</span>':'');
+  const stBtn=userRole==='admin'?'<button onclick="_spRowMenu(event,'+rowIndex+',\'view\')" style="margin-left:10px;padding:4px 13px;border-radius:8px;border:1px solid rgba(74,77,231,0.35);background:#fff;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background=\'rgba(74,77,231,0.10)\';this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.background=\'#fff\';this.style.borderColor=\'rgba(74,77,231,0.35)\'">변경</button>':'';
   const html = '<div class="modal-bg show" onclick="if(event.target===this)closeSpecialView()" style="z-index:9100">'
     +'<div class="modal" style="max-width:480px;padding:0;position:relative;text-align:left">'
     +'<div style="padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between">'
@@ -4678,7 +4682,7 @@ function openSpecialView(rowIndex){
     +'</div>'
     +'<div style="padding:16px 24px 24px">'
     +'<div class="mv-section">📅 일정 현황</div>'
-    +'<div class="mv-row"><span class="lbl">상태</span><span class="val">'+stChip+stBtn+'</span></div>'
+    +'<div class="mv-row"><span class="lbl">상태</span><span class="val" style="display:inline-flex;align-items:center">'+stChip+stBtn+'</span></div>'
     +'<div class="mv-row"><span class="lbl">날짜</span><span class="val">'+escapeHtml(dateStr||'-')+'</span></div>'
     +(timeFull?'<div class="mv-row"><span class="lbl">시간</span><span class="val">'+escapeHtml(timeFull)+'</span></div>':'')
     +'<div class="mv-section">📌 상세</div>'
@@ -5702,6 +5706,15 @@ function _onColResizeEnd(){
   document.removeEventListener('mouseup',_onColResizeEnd);
   _colResizeState=null;
 }
+// (260611) 날짜 범위 공통 표기 — 끝 날짜의 중복 연/월 생략 (2026-06-18 ~ 19 / 2026-06-18 ~ 07-02)
+function _rangeShort(s,e){
+  s=String(s||'').trim();e=String(e||'').trim();
+  if(!s)return e;
+  if(!e||e===s)return s;
+  if(s.slice(0,7)===e.slice(0,7))return s+' ~ '+e.slice(8);
+  if(s.slice(0,4)===e.slice(0,4))return s+' ~ '+e.slice(5);
+  return s+' ~ '+e;
+}
 // (260611) 담당자 일정 상태 — 수동 완료(비고='완료') 우선, 아니면 종료시각 경과로 자동 완료.
 // 종료시간 있으면 그 시각, 없으면(미정·시작만) 마지막 날 18:00 기준.
 function _spStatus(it){
@@ -5743,7 +5756,7 @@ function _spToRecord(it){
     '플랫폼 2':'',
     '콘텐츠 구분':'특별',
     '콘텐츠 제목':it.label||typeStr,
-    '프로그램':it.start+(it.end&&it.end!==it.start?' ~ '+it.end:''),
+    '프로그램':_rangeShort(it.start,it.end),
     '게시 담당자':it.person||'',
     '진행 상태':'특별 일정'
   };
@@ -6528,7 +6541,7 @@ function renderPromoBoard(){
         const dateKey=getRecDateKey(r);
         const isToday=dateKey===todayKey;
         const isPast=dateKey<todayKey;
-        const rangeStr=(it.end&&it.end!==it.start)?(m2+'/'+d2+' ~ '+it.end.slice(5).replace('-','/')):(m2+'/'+d2);
+        const rangeStr=(it.end&&it.end!==it.start)?(m2+'/'+d2+' ~ '+(String(it.start).slice(0,7)===String(it.end).slice(0,7)?it.end.slice(8):it.end.slice(5).replace('-','/'))):(m2+'/'+d2);
         // 행 배경 — 살구 톤 (시각 구분)
         const trBg='background:rgba(240,196,184,0.10)';
         const trBorder='border-left:3px solid var(--peach)';
@@ -9477,7 +9490,7 @@ function buildCommonChipsHtml(){
   let html='<div style="display:flex;flex-wrap:wrap;gap:6px">';
   commons.forEach(function(ex){
     const idx=APPLY_EXCLUSIONS.indexOf(ex);
-    html+='<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#F8F7FC;border:1px solid rgba(74,77,231,0.15);border-radius:14px;font-size:12px;color:#4A4DE7;font-weight:500"><span>'+escapeHtml(ex.start+'~'+ex.end)+'</span><button onclick="deleteExclusion('+idx+')" style="padding:0;border:0;background:transparent;color:#888;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center" title="삭제">✕</button></span>';
+    html+='<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#F8F7FC;border:1px solid rgba(74,77,231,0.15);border-radius:14px;font-size:12px;color:#4A4DE7;font-weight:500"><span>'+escapeHtml(_rangeShort(ex.start,ex.end).replace(' ~ ','~'))+'</span><button onclick="deleteExclusion('+idx+')" style="padding:0;border:0;background:transparent;color:#888;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center" title="삭제">✕</button></span>';
   });
   html+='</div>';
   return html;
@@ -9496,7 +9509,7 @@ function buildIndividualListHtml(){
     var _holNm=(window._holidays&&_holidays[ex.date])||'';
     var _isFull=(ex.start==='00:00'&&ex.end==='23:59');
     html+='<span style="color:#333;font-weight:600;min-width:90px">'+escapeHtml(ex.date)+'</span>';
-    html+=_holNm?'<span style="color:#D64545;flex:1;font-weight:600">'+escapeHtml(_holNm)+' <span style="font-size:10px;color:#D64545;background:rgba(214,69,69,0.1);padding:1px 6px;border-radius:8px;font-weight:600;margin-left:2px">공휴일</span>'+(_isFull?'':' <span style="color:#999;font-weight:400;font-size:11px">'+escapeHtml(ex.start+'~'+ex.end)+'</span>')+'</span>':'<span style="color:#666;flex:1">'+escapeHtml(ex.start+' ~ '+ex.end)+'</span>';
+    html+=_holNm?'<span style="color:#D64545;flex:1;font-weight:600">'+escapeHtml(_holNm)+' <span style="font-size:10px;color:#D64545;background:rgba(214,69,69,0.1);padding:1px 6px;border-radius:8px;font-weight:600;margin-left:2px">공휴일</span>'+(_isFull?'':' <span style="color:#999;font-weight:400;font-size:11px">'+escapeHtml(_rangeShort(ex.start,ex.end).replace(' ~ ','~'))+'</span>')+'</span>':'<span style="color:#666;flex:1">'+escapeHtml(_rangeShort(ex.start,ex.end))+'</span>';
     html+='<button onclick="deleteExclusion('+idx+')" style="padding:3px 9px;border:1px solid rgba(216,75,74,0.25);border-radius:6px;background:#fff;color:#E24B4A;cursor:pointer;font-size:11px">삭제</button>';
     html+='</div>';
   });
@@ -11725,7 +11738,12 @@ function openProgramView(perfName){
       return dateStr + '(' + days[d.getDay()] + ')';
     }
     const sFmt = _addDay(s);
-    const eFmt = _addDay(e);
+    let eFmt = _addDay(e);
+    // 같은 연/월이면 끝 날짜의 중복 부분 생략 (요일 괄호는 유지)
+    if(sFmt && eFmt && s !== e){
+      if(String(s).slice(0,7)===String(e).slice(0,7)) eFmt = eFmt.slice(8);
+      else if(String(s).slice(0,4)===String(e).slice(0,4)) eFmt = eFmt.slice(5);
+    }
     if(!sFmt && !eFmt) return '';
     if(sFmt && eFmt && s===e) return sFmt;
     if(sFmt && eFmt) return sFmt + ' ~ ' + eFmt;
@@ -12690,10 +12708,10 @@ function _cbProgAnswer(p,typed){
   if(!typed)_cbUser(p.f||p.n);
   const tMap={c:'공연',e:'전시',a:'예술교육',r:'대관'};
   let h='<div class="cb-card-t">🎭 '+escapeHtml(p.f||p.n)+'</div>';
-  if(p.s)h+='기간: '+escapeHtml(p.s===p.e?p.s:(p.s+' ~ '+(p.e||'')));
+  if(p.s)h+='기간: '+escapeHtml(_rangeShort(p.s,p.e));
   if(p.l)h+='\n장소: '+escapeHtml(p.l);
   h+='\n구분: '+(tMap[p.t]||'공연');
-  if(p.ss)h+='\n판매 기간: '+escapeHtml(p.ss+(p.se?' ~ '+p.se:''));
+  if(p.ss)h+='\n판매 기간: '+escapeHtml(_rangeShort(p.ss,p.se));
   if(p.m)h+='\n담당자: '+escapeHtml(p.m);
   if(p.u){
     const link=String(p.u).charAt(0)==='?'?('https://www.yeulmaru.org/performance/v/'+p.u):p.u;
