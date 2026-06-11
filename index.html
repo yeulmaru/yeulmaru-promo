@@ -1364,15 +1364,15 @@ const PLAT_COLORS={
 function platColor(p){if(!p)return'#2D5F8A';for(const[k,v]of Object.entries(PLAT_COLORS)){if(p.includes(k))return v;}return'#2D5F8A';}
 function platIcon(p1){
   const p=p1||'';
-  if(p.includes('카카오'))return'06_kakao.png';
-  if(p.includes('인스타'))return'03_insta.png';
-  if(p.includes('블로그'))return'05_blog.png';
-  if(p.includes('맘카페'))return'02_cafe.png';
-  if(p.includes('유튜브'))return'04_youtube.png';
-  if(p.includes('B2B'))return'01_Labor.png';
-  if(p.includes('문자'))return'07_SMS.png';
-  if(p.includes('홈페이지'))return'08_HP.png';
-  return '09_Emergency.png';
+  if(p.includes('카카오'))return'image/06_kakao.png';
+  if(p.includes('인스타'))return'image/03_insta.png';
+  if(p.includes('블로그'))return'image/05_blog.png';
+  if(p.includes('맘카페'))return'image/02_cafe.png';
+  if(p.includes('유튜브'))return'image/04_youtube.png';
+  if(p.includes('B2B'))return'image/01_Labor.png';
+  if(p.includes('문자'))return'image/07_SMS.png';
+  if(p.includes('홈페이지'))return'image/08_HP.png';
+  return 'image/09_Emergency.png';
 }
 function statusClass(st){
   if(st==='예정')return'st-pre';
@@ -3978,7 +3978,7 @@ function openVenueMap(venueFilter){
     + '<button id="vm-edit-toggle" onclick="toggleVenuePinEdit()" style="padding:7px 14px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">📍 좌표 조정 모드</button>'
     + '</div></div>'
     + '<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f1216;padding:8px">'
-    + '<div id="vm-container" style="position:relative;width:100%;max-width:100%;aspect-ratio:16/9;max-height:100%;background:#1a1d22 url(\'10_background.jpg\') center/contain no-repeat;border-radius:8px"></div>'
+    + '<div id="vm-container" style="position:relative;width:100%;max-width:100%;aspect-ratio:16/9;max-height:100%;background:#1a1d22 url(\'image/10_background.jpg\') center/contain no-repeat;border-radius:8px"></div>'
     + '</div></div></div>';
   el.innerHTML = html;
   _renderVenuePins();
@@ -12335,7 +12335,7 @@ function _chatbotMount(){
   document.body.appendChild(fab);
   const win=document.createElement('div');
   win.id='cb-win';win.className='cb-win';
-  win.innerHTML='<div class="cb-hdr"><div class="cb-ava">🤖</div><div class="cb-titles"><div class="cb-title">예울마루 도우미</div><div class="cb-sub">자동응답 · 규정/프로그램 문의</div></div><button class="cb-close" onclick="_cbClear()" title="대화 지우기" style="font-size:15px">⟲</button><button class="cb-close" onclick="_cbToggle()">✕</button></div>'+
+  win.innerHTML='<div class="cb-hdr"><div class="cb-ava"><img src="image/yeul.png" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover"></div><div class="cb-titles"><div class="cb-title">예울마루 도우미</div><div class="cb-sub">자동응답 · 규정/프로그램 문의</div></div><button class="cb-close" onclick="_cbClear()" title="대화 지우기" style="font-size:15px">⟲</button><button class="cb-close" onclick="_cbToggle()">✕</button></div>'+
     '<div class="cb-body" id="cb-body"></div>'+
     '<div class="cb-foot"><input class="cb-in" id="cb-in" placeholder="궁금한 내용을 입력하세요" onkeydown="if(event.key===\'Enter\')_cbSend()"><button class="cb-send" onclick="_cbSend()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>';
   document.body.appendChild(win);
