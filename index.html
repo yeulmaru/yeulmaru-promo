@@ -2281,7 +2281,8 @@ function programToPerf(p){
     se:excelSerialToISO(p['판매종료일']),
     m:p['담당자']||'',
     l:p['장소']||'',
-    u:p['URL']||p['공연 URL']||p['상세 링크']||p['링크']||''
+    u:p['URL']||p['공연 URL']||p['상세 링크']||p['링크']||'',
+    id:String(p['공연ID']||'').trim()   // [정규화] 운영 DB 공유키 — records 저장 시 동반
   };
 }
 // SharePoint에서 프로그램 시트 fetch → PERFS 채우기
@@ -3116,7 +3117,7 @@ function _dailyMasters(){
   var catIdx=_dailyCatIndex(); var allowed=_dailyAllowedCats();
   return rows.map(_salesNorm)
     .filter(function(m){ return String(m['상태']||'').trim()==='판매중'; })  // 판매중만
-    .map(function(m){ var name=String(m['사업명']||'').trim(); return {name:name, open:(_salesNum(m['총오픈석'])||((_salesNum(m['기준석'])||926)*(_salesNum(m['총회차'])||1))), cat:(catIdx[_uName(name)]||'')}; })
+    .map(function(m){ var name=String(m['사업명']||'').trim(); return {name:name, id:String(m['ID']||'').trim(), open:(_salesNum(m['총오픈석'])||((_salesNum(m['기준석'])||926)*(_salesNum(m['총회차'])||1))), cat:(catIdx[_uName(name)]||'')}; })
     .filter(function(m){ if(!m.name)return false; if(!allowed)return true; if(!m.cat)return true; return allowed.indexOf(m.cat)>=0; });  // 담당 카테고리만(카테고리 미상=조인실패는 표시해 입력 누락 방지)
 }
 function openDailyInput(){
@@ -3170,13 +3171,13 @@ async function _dailySubmit(){
   var dEl=document.getElementById('d-date'); var date=dEl?dEl.value:''; var msg=document.getElementById('d-msg');
   if(!date){if(msg)msg.textContent='기준일자를 선택하세요';return;}
   var ymd=date.replace(/-/g,'');
-  var masters={}; _dailyMasters().forEach(function(m){masters[m.name]=m.open;});
+  var masters={},_mid={}; _dailyMasters().forEach(function(m){masters[m.name]=m.open;_mid[m.name]=m.id;});
   var entries=_dailyReadDOM().filter(function(r){return r.공연;});
   if(!entries.length){if(msg)msg.textContent='공연을 1개 이상 선택하세요';return;}
   var rows=entries.map(function(r){
     var paidS=parseFloat(r['d-paids'])||0, paidA=parseFloat(r['d-paida'])||0, free=parseFloat(r['d-free'])||0;
     var totSeat=paidS+free, open=masters[r.공연]||926, occ=open>0?Math.min(totSeat/open*100,100):0;
-    return {기준일자:ymd,공연명:r.공연,유료좌석:paidS,유료금액:paidA,무료좌석:free,합계좌석:totSeat,합계금액:paidA,점유율:occ.toFixed(1),'전일대비(석)':''};
+    return {기준일자:ymd,공연명:r.공연,유료좌석:paidS,유료금액:paidA,무료좌석:free,합계좌석:totSeat,합계금액:paidA,점유율:occ.toFixed(1),'전일대비(석)':'','공연ID':(_mid[r.공연]||'')};
   });
   var btn=document.getElementById('d-save'); if(btn){btn.disabled=true;btn.textContent='저장 중…';}
   try{
@@ -5789,7 +5790,8 @@ function buildRecordRow(rec, overrides){
     pick('상태 변경 KST'),
     pick('보류사유'),
     pick('재신청사유'),
-    pick('취소사유')
+    pick('취소사유'),
+    pick('공연ID')   // AB: [정규화] 운영 DB 공유키
   ];
 }
 
@@ -6844,6 +6846,7 @@ async function submitPromoEdit(){
   }
   showOverlayLoad('변경 사항 저장 중...');
   try{
+    if(patch['프로그램']!==undefined)patch['공연ID']=_recPerfId(patch['프로그램']);  // [정규화] 프로그램 변경 → ID 동기화
     const row = buildRecordRow(orig, patch);
     await api('PATCH','/api/records/'+_pwEditTarget,{values: row});
     // 메시지함 hook — admin이 타인 신청을 변경·승인·상태변경하면 신청자에게 알림
@@ -7482,7 +7485,8 @@ async function submitPromoRequest(){
       nowKstStr(),  // X: 상태 변경 KST
       '',
       '',
-      ''
+      '',
+      _recPerfId(_pwData.program)  // AB: 공연ID
     ];
     await api('POST','/api/records',{values:row});
     // ⚠️ myApplicant는 절대 _pwData.applicant(게시 담당자, P열)로 덮어쓰지 않음.
@@ -9665,6 +9669,8 @@ function canApplyOnDateTime(dateKey,time){
 function _recDate(rec){ return (rec['연도']||'')+'-'+String(rec['월']||'').padStart(2,'0')+'-'+String(rec['일']||'').padStart(2,'0'); }
 function _recTime(rec){ var ts=rec['입력시간(KST)']; if(typeof ts==='string'&&ts.indexOf(' ')>-1)return ts.split(' ')[1].substr(0,5); if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');} return '10:00'; }
 function _findPerfByName(name){ name=String(name||'').trim(); if(!name)return null; var arr=(typeof PERFS!=='undefined'&&PERFS)?PERFS:[]; return arr.find(function(p){return String(p.f||'').trim()===name||String(p.n||'').trim()===name;})||null; }
+// [정규화] 프로그램명 → 공연ID (프로그램 시트 공연ID 컬럼). '기타'/미등록은 빈값
+function _recPerfId(name){ var p=_findPerfByName(name); return (p&&p.id)||''; }
 // 카카오/문자 2일연속·중복 (관리자 포함 전 경로). ignoreRowIndex=자기 자신(이동/변경 원본) 제외
 function _kakaoSmsConflict(plat1, dateKey, applicant, ignoreRowIndex){
   if(plat1!=='카카오톡'&&plat1!=='문자')return null;
@@ -12122,7 +12128,8 @@ async function copyRec(rowIndex,dateKey){
       nowKstStr(),                    // X: 상태 변경 KST
       '',                             // Y: 보류사유
       '',                             // Z: 재신청사유
-      ''                              // AA: 취소사유
+      '',                             // AA: 취소사유
+      rec['공연ID']||_recPerfId(rec['프로그램'])  // AB: 공연ID (원본 승계)
     ];
     await api('POST','/api/records',{values:row});
     // 점등 효과 — 새 날짜 셀
@@ -12733,7 +12740,7 @@ async function saveEntry(){
   }else{
     let _seMyAppl='';try{_seMyAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
     row=[records.length+1,kstStr,serial,y,m,d,dn+'요일',plat1,plat2,document.getElementById('f-cat').value,document.getElementById('f-program').value,'예술사업팀',title,document.getElementById('f-format').value,document.getElementById('f-content').value,document.getElementById('f-author').value,document.getElementById('f-status').value,document.getElementById('f-memo').value,
-      _seMyAppl||'황세웅','','','','',nowKstStr(),'','',''];
+      _seMyAppl||'황세웅','','','','',nowKstStr(),'','','',_recPerfId(document.getElementById('f-program').value)];
   }
   showOverlayLoad();
   try{
