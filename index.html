@@ -7161,6 +7161,7 @@ function _renderChangeMenu(rec){
     {step:6,icon:'📋',label:'비고',desc:rec['비고']||'(없음)'}
   ];
   if(isAdmin)items.push({step:7,icon:'⚙️',label:'진행 상태 (관리자)',desc:rec['진행 상태']||''});
+  if(isAdmin)items.push({step:8,icon:'🙋',label:'신청자 (관리자)',desc:rec['신청자']||'(없음)'});
   let html='<div class="modal-bg show" id="change-menu-modal" style="z-index:99998" onclick="if(event.target===this)closeChangeMenu()">';
   html+='<div class="modal" style="max-width:480px;padding:24px;text-align:left;position:relative">';
   html+='<button class="modal-x" onclick="closeChangeMenu()" title="닫기">✕</button>';
@@ -7211,6 +7212,7 @@ function _startChangeWizard(rowIndex){
   _pwOriginalRec=Object.assign({},rec);
   closeChangeMenu();
   _prefillPwDataFromRec(rec);
+  _pwData.s_applicant=(rec['신청자']||'');   // 신청자(S) — admin 변경용 (게시담당자 P=_pwData.applicant 와 별개)
   _pwMode='edit';
   _pwStep=_pwSelectedSteps[0];
   if(_pwStep===4)_pwSubStep=1;
@@ -7360,6 +7362,10 @@ async function submitPromoEdit(){
   // Step 7 — 진행 상태 (admin only)
   if(_pwSelectedSteps.includes(7)&&userRole==='admin'){
     patch['진행 상태']=_pwData.status;
+  }
+  // Step 8 — 신청자 (admin only) — 대행 신청 건의 실제 신청자로 재지정
+  if(_pwSelectedSteps.includes(8)&&userRole==='admin'&&_pwData.s_applicant){
+    patch['신청자']=_pwData.s_applicant;
   }
   // admin이 신청 중 항목을 1건 이상 변경하면 자동으로 「예정」으로 승인 (Step 7로 직접 지정한 경우는 admin 선택 우선)
   if(userRole==='admin' && (orig['진행 상태']||'')==='신청 중' && !patch['진행 상태'] && Object.keys(patch).length>0){
@@ -7555,7 +7561,7 @@ function renderPwStep(){
   }else if(_pwStep===5){
     // === edit 모드 — 변경 사항 요약 ===
     if(_pwMode==='edit'){
-      const stepLabels={1:'프로그램',2:'콘텐츠 제목',3:'일자·시간',4:'플랫폼·내용·담당자',6:'비고',7:'진행 상태'};
+      const stepLabels={1:'프로그램',2:'콘텐츠 제목',3:'일자·시간',4:'플랫폼·내용·담당자',6:'비고',7:'진행 상태',8:'신청자'};
       const orig=_pwOriginalRec||{};
       let summaryHtml='<div class="pw-question">변경 사항 확인</div>';
       summaryHtml+='<div class="pw-hint">아래 항목이 변경됩니다. 저장하면 시트에 반영돼요.</div>';
@@ -7568,6 +7574,7 @@ function renderPwStep(){
         else if(s===4){oldVal=(orig['플랫폼 1']||'')+' · '+(orig['게시 담당자']||'');newVal=(_pwData.plat1||'')+' · '+(_pwData.applicant||'');}
         else if(s===6){oldVal=orig['비고']||'(없음)';newVal=_pwData.memo||'(없음)';}
         else if(s===7){oldVal=orig['진행 상태']||'';newVal=_pwData.status||'';}
+        else if(s===8){oldVal=orig['신청자']||'(없음)';newVal=_pwData.s_applicant||'(없음)';}
         const changed=String(oldVal)!==String(newVal);
         summaryHtml+='<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:12px">';
         summaryHtml+='<div style="font-size:11px;font-weight:600;color:'+(changed?'var(--accent)':'#aaa')+';min-width:120px">'+(stepLabels[s]||'Step '+s)+'</div>';
@@ -7588,6 +7595,7 @@ function renderPwStep(){
         if(s===4)return (orig['플랫폼 1']||'')!==(_pwData.plat1||'')||(orig['게시 담당자']||'')!==(_pwData.applicant||'');
         if(s===6)return (orig['비고']||'')!==(_pwData.memo||'');
         if(s===7)return (orig['진행 상태']||'')!==(_pwData.status||'');
+        if(s===8)return (orig['신청자']||'')!==(_pwData.s_applicant||'');
         return false;
       }).length;
       body.innerHTML=summaryHtml;
@@ -7627,6 +7635,24 @@ function renderPwStep(){
       +'<div class="pw-hint">관리자 권한으로 상태 변경</div>'
       +'<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">진행 상태</label>'
       +'<select id="pw-status-edit" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">'+opts+'</select>';
+    next.textContent='다음';next.disabled=false;
+    return;
+  }else if(_pwStep===8){
+    // === edit 모드 — 신청자 변경 (admin only) ===
+    if(userRole!=='admin'){
+      _pwSelectedIdx++;
+      if(_pwSelectedIdx<_pwSelectedSteps.length){_pwStep=_pwSelectedSteps[_pwSelectedIdx];if(_pwStep===4)_pwSubStep=1;}
+      else _pwStep=5;
+      renderPwStep();return;
+    }
+    var _curS=_pwData.s_applicant||'';
+    var _names=(typeof MANAGERS!=='undefined'&&MANAGERS)?MANAGERS.map(function(m){return m['담당자'];}).filter(Boolean):[];
+    if(_curS&&_names.indexOf(_curS)<0)_names.unshift(_curS);   // 휴직 등으로 목록에 없어도 현재값 유지
+    var _opts=_names.map(function(n){return '<option value="'+escapeHtml(n)+'"'+(_curS===n?' selected':'')+'>'+escapeHtml(n)+'</option>';}).join('');
+    body.innerHTML='<div class="pw-question">신청자를 변경하시겠어요?</div>'
+      +'<div class="pw-hint">관리자 권한 — 대행 신청한 건의 실제 신청자로 바꿀 수 있어요</div>'
+      +'<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">신청자</label>'
+      +'<select id="pw-s-applicant" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">'+_opts+'</select>';
     next.textContent='다음';next.disabled=false;
     return;
   }else if(_pwStep===99){
@@ -7849,6 +7875,9 @@ function collectPwStep(){
   }else if(_pwStep===7){
     const el=document.getElementById('pw-status-edit');
     if(el)_pwData.status=el.value;
+  }else if(_pwStep===8){
+    const el=document.getElementById('pw-s-applicant');
+    if(el)_pwData.s_applicant=el.value;
   }
 }
 function validatePwStep(){
