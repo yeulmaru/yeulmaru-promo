@@ -752,13 +752,17 @@ async function generateBlogDraft(env, b) {
     toneBlock;
 
   const model = env.BLOG_MODEL || "claude-opus-4-8";
+  // 인증: 구독 OAuth 토큰(CLAUDE_CODE_OAUTH_TOKEN 값) 우선, 없으면 API 키.
+  const headers = { "content-type": "application/json", "anthropic-version": "2023-06-01" };
+  if (env.ANTHROPIC_AUTH_TOKEN) {
+    headers["authorization"] = "Bearer " + env.ANTHROPIC_AUTH_TOKEN;
+    headers["anthropic-beta"] = "oauth-2025-04-20";
+  } else {
+    headers["x-api-key"] = env.ANTHROPIC_API_KEY;
+  }
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01"
-    },
+    headers,
     body: JSON.stringify({ model, max_tokens: 4000, system, messages: [{ role: "user", content: user }] })
   });
   if (!resp.ok) {
@@ -938,7 +942,7 @@ var index_default = {
       // === 콘텐츠 제작 — 네이버 블로그 초안 AI 생성 (Graph 토큰 불요) ===
       // ANTHROPIC_API_KEY 미설정 시 503 → 프론트가 로컬 템플릿 생성기로 폴백.
       if (url.pathname === "/api/content/blog" && request.method === "POST") {
-        if (!env.ANTHROPIC_API_KEY) return json({ error: "no_api_key", note: "ANTHROPIC_API_KEY 미설정" }, env, 503);
+        if (!env.ANTHROPIC_API_KEY && !env.ANTHROPIC_AUTH_TOKEN) return json({ error: "no_api_key", note: "ANTHROPIC_AUTH_TOKEN 또는 ANTHROPIC_API_KEY 미설정" }, env, 503);
         let bb = {};
         try { bb = await request.json(); } catch (e) {}
         const topic = String(bb.topic || "").slice(0, 2000).trim();
