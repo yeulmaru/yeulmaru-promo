@@ -714,8 +714,26 @@ async function generateBlogDraft(env, b) {
   const voice = String(b.voice || "정중하고 따뜻한");
   const wantEmoji = b.emoji !== false;
   const topic = String(b.topic || "").slice(0, 2000).trim();
-  const purpose = String(b.purpose || "").slice(0, 1000).trim();
+  // 의도(why) — 사용자가 직접 고르는 ★1번(AIDA 기반). 사실(OCR)과 분리. 글의 방향을 잡아 모호함을 없앤다.
+  const intent = String(b.intent || b.purpose || "").slice(0, 1500).trim();
+  // 타겟 관점 = 디자인 싱킹(공감지도) — 독자가 했으면 하는 '생각(Think)'과 '느낌(Feel)'. 칩 선택값이 넘어온다.
+  const audThink = String(b.audThink || b.wantKnow || "").slice(0, 800).trim();
+  const audFeel = String(b.audFeel || "").slice(0, 800).trim();
   const target = String(b.target || "").slice(0, 500).trim();
+  const extra = String(b.extra || "").slice(0, 4000).trim();
+  // 4️⃣ 기본 틀(글 구성) — 있으면 이 순서·구성을 따른다. 없으면 톤 참조(레퍼토리) 기반.
+  const template = String(b.template || "").slice(0, 1500).trim();
+  // 수정 요청 — 1차 초안(prevDraft) + 의견(revise)이 오면 재생성(다듬기) 모드.
+  const prevDraft = String(b.prevDraft || "").slice(0, 12000).trim();
+  const revise = String(b.revise || "").slice(0, 1000).trim();
+  // 홍보물 OCR로 추출한 '사실'(육하원칙) — 사람이 검증한 값이 넘어온다.
+  const facts = (b.facts && typeof b.facts === "object") ? b.facts : {};
+  const FLABEL = { overview: "개요(무엇을·왜)", when: "일시(언제)", where: "장소(어디서)", who: "출연·주최(누가)", price: "가격·예매·문의(어떻게)", detail: "상세 내용" };
+  const factLines = [];
+  ["overview", "when", "where", "who", "price", "detail"].forEach((k) => {
+    const v = String(facts[k] || "").trim();
+    if (v) factLines.push("- " + FLABEL[k] + ": " + v);
+  });
   const keys = (Array.isArray(b.keys) ? b.keys : [])
     .map((k) => String(k || "").trim()).filter(Boolean).slice(0, 5);
   const refs = Array.isArray(b.refs)
@@ -730,25 +748,40 @@ async function generateBlogDraft(env, b) {
   }
 
   const system = "당신은 GS칼텍스 예울마루(전남 여수에 있는 복합문화예술공간)의 홍보 담당자입니다. " +
-    "네이버 블로그에 올릴 한국어 포스팅 초안을 작성합니다. 글의 '목적'을 달성하고 '주요 타겟 독자'의 눈높이에 맞추며, " +
-    "지정된 '핵심 메시지'가 본문에 모두 자연스럽게 담기도록 쓰세요. 독자가 읽기 편한 자연스러운 블로그 문체로 쓰되, " +
-    "주어진 정보 안에서만 작성하고 가격·일시 등 없는 사실을 임의로 지어내지 마세요. " +
-    "결과는 곧바로 블로그에 붙여넣을 수 있도록 '제목 한 줄 + 본문'만 출력하고, 설명·머리말·코드블록 없이 글 본문 텍스트만 내보내세요.";
+    "네이버 블로그에 올릴 한국어 포스팅 초안을 작성합니다. 가장 중요한 것은 글쓴이가 밝힌 '의도·목적'을 분명히 달성하는 것입니다 — " +
+    "글 전체가 그 의도를 향하도록 구성하고, 의도가 흐려져 모호한 글이 되지 않게 하세요. " +
+    "공연·행사의 사실 정보(일시·장소·출연·가격 등)는 아래 '공연 정보'와 '추가 참고'에 주어진 범위 안에서만 사용하고, 없는 사실을 임의로 지어내지 마세요. " +
+    "유명하지 않은 공연일 수 있으니 주어진 정보만으로도 충실하고 매력적인 글이 되도록 쓰세요. " +
+    "독자가 읽기 편한 자연스러운 블로그 문체로 쓰고, 결과는 곧바로 붙여넣을 수 있도록 '제목 한 줄 + 본문'만, 설명·머리말·코드블록 없이 글 본문 텍스트만 내보내세요.";
 
-  const user = "다음 정보로 네이버 블로그 글 초안을 작성해 주세요.\n\n" +
-    "# 글의 주제\n" + topic + "\n\n" +
-    (purpose ? "# 글의 목적\n" + purpose + "\n\n" : "") +
-    (target ? "# 주요 타겟 독자\n" + target + "\n\n" : "") +
-    "# 꼭 전해야 할 핵심 메시지 (모두 본문에 자연스럽게 녹일 것)\n" +
-    keys.map((k, i) => (i + 1) + ". " + k).join("\n") + "\n\n" +
-    "# 작성 지침\n" +
+  let user = "다음 정보로 네이버 블로그 글 초안을 작성해 주세요.\n\n";
+  user += "# 글의 주제(공연·행사명)\n" + topic + "\n\n";
+  if (intent) user += "# 이 글을 쓰는 의도·목적 ★가장 중요 — 글 전체가 이 의도를 이루는 방향으로 쓰일 것\n" + intent + "\n\n";
+  if (target) user += "# 주요 타겟 독자\n" + target + "\n\n";
+  if (audThink) user += "# 독자가 이 글을 읽고 했으면 하는 생각 (이 인상이 남도록 구성)\n" + audThink + "\n\n";
+  if (audFeel) user += "# 독자가 이 글에서 느꼈으면 하는 감정 (이 분위기로 톤을 잡을 것)\n" + audFeel + "\n\n";
+  if (factLines.length) user += "# 공연·행사 정보 (홍보물에서 추출·검증한 사실 — 이 범위 안에서만 사용)\n" + factLines.join("\n") + "\n\n";
+  if (keys.length) user += "# 꼭 전해야 할 핵심 메시지 (모두 본문에 자연스럽게 녹일 것)\n" + keys.map((k, i) => (i + 1) + ". " + k).join("\n") + "\n\n";
+  if (extra) user += "# 추가 참고 자료 (보도·리뷰·메모 등 — 사실 확인용)\n" + extra + "\n\n";
+  if (template) user += "# 글의 구성 틀 (아래 순서·구성을 따라 단락을 배치할 것)\n" + template + "\n\n";
+  user += "# 작성 지침\n" +
     "- 분량: " + lengthGuide + "\n" +
     "- 말투/톤: " + voice + " 느낌\n" +
-    "- 타겟 독자의 관심사에 맞춰 목적을 이루도록 자연스럽게 구성\n" +
+    "- 글의 '의도·목적'을 분명히 달성하도록, 타겟 독자의 눈높이에서 구성\n" +
+    (template ? "- 위 '글의 구성 틀'의 순서·흐름을 따르되, 단락은 자연스럽게 이어 쓸 것\n" : "- 글의 구성은 톤 참조(이전 글)의 흐름을 자연스럽게 따를 것\n") +
     "- 이모지: " + (wantEmoji ? "문단 사이에 어울리는 이모지를 적당히 사용" : "이모지는 사용하지 않음") + "\n" +
     "- 해시태그는 넣지 않음\n" +
-    "- 주어진 정보에 없는 구체적 사실(가격·날짜·출연진 등)은 임의로 만들지 말 것" +
+    "- 위에 주어진 사실(공연 정보·추가 참고) 범위 안에서만 작성하고, 없는 구체 사실(가격·날짜·출연진 등)은 임의로 만들지 말 것" +
     toneBlock;
+
+  // 수정 요청 모드 — 기존 초안을 사용자의 의견대로 다시 다듬는다(사실·의도는 유지).
+  if (prevDraft && revise) {
+    user = "방금 작성한 아래 블로그 초안을, 사용자의 수정 요청대로 고쳐 전체 글을 다시 완성해 주세요. " +
+      "요청과 무관한 부분은 기존 톤과 사실을 유지하고, 결과는 '제목 한 줄 + 본문'만 출력하세요.\n\n" +
+      "# 기존 초안\n" + prevDraft + "\n\n" +
+      "# 수정 요청\n" + revise + "\n\n" +
+      "---\n아래는 이 글의 원래 입력 정보입니다(사실·의도 유지에 참고하세요):\n\n" + user;
+  }
 
   const model = env.BLOG_MODEL || "claude-opus-4-8";
   // 인증: 구독 OAuth 토큰(CLAUDE_CODE_OAUTH_TOKEN 값) 우선, 없으면 API 키.
@@ -774,6 +807,61 @@ async function generateBlogDraft(env, b) {
   return text;
 }
 __name(generateBlogDraft, "generateBlogDraft");
+
+// === 홍보물 이미지 OCR — Claude 비전으로 포스터/리플릿의 '사실'을 육하원칙 JSON으로 추출 ===
+// img = { mime, data(base64, dataURL 접두사 제거) }. 이미지에 적힌 내용만 추출(추측 금지) → 사람이 검증.
+async function extractPromoInfo(env, img) {
+  const model = env.OCR_MODEL || env.BLOG_MODEL || "claude-opus-4-8";
+  const headers = { "content-type": "application/json", "anthropic-version": "2023-06-01" };
+  if (env.ANTHROPIC_AUTH_TOKEN) {
+    headers["authorization"] = "Bearer " + env.ANTHROPIC_AUTH_TOKEN;
+    headers["anthropic-beta"] = "oauth-2025-04-20";
+  } else {
+    headers["x-api-key"] = env.ANTHROPIC_API_KEY;
+  }
+  const system = "당신은 공연·전시 홍보물(포스터·리플릿) 이미지를 읽어 사실 정보를 정확히 추출하는 도우미입니다. " +
+    "이미지에 실제로 적혀 있는 내용만 추출하세요. 보이지 않거나 확실하지 않은 항목은 빈 문자열로 두고, 절대 추측하거나 지어내지 마세요. " +
+    "한국어로, 적힌 표현을 최대한 그대로 옮기세요.";
+  const ask = "이 홍보물에서 정보를 읽어 아래 JSON 형식으로만 출력하세요. 설명·코드블록·머리말 없이 JSON 객체만 출력합니다.\n\n" +
+    "{\n" +
+    '  "title": "공연·행사명(부제 포함)",\n' +
+    '  "overview": "무엇을·왜를 한두 문장으로 요약한 개요",\n' +
+    '  "when": "일시 — 날짜·요일·시간(여러 회차면 모두)",\n' +
+    '  "where": "장소(공연장·홀 이름)",\n' +
+    '  "who": "출연·연주·지휘·주최·주관·기획 등 사람/기관",\n' +
+    '  "price": "티켓 가격(등급별)·할인·예매처·문의 연락처",\n' +
+    '  "detail": "프로그램·곡목·출연진·줄거리·관람등급·러닝타임 등 본문에 쓸 상세 내용을 이미지 문구 위주로 길게"\n' +
+    "}";
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model, max_tokens: 2000,
+      system,
+      messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: img.mime || "image/jpeg", data: img.data } },
+        { type: "text", text: ask }
+      ] }]
+    })
+  });
+  if (!resp.ok) {
+    const errTxt = await resp.text();
+    throw new Error("Anthropic " + resp.status + ": " + errTxt.slice(0, 300));
+  }
+  const data = await resp.json();
+  let txt = (data.content || []).filter((x) => x.type === "text").map((x) => x.text).join("").trim();
+  txt = txt.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  let obj = {};
+  try { obj = JSON.parse(txt); } catch (e) {
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (m) { try { obj = JSON.parse(m[0]); } catch (e2) { obj = { detail: txt }; } }
+    else obj = { detail: txt };
+  }
+  const out = {};
+  ["title", "overview", "when", "where", "who", "price", "detail"].forEach((k) => { out[k] = String(obj[k] || "").trim(); });
+  return out;
+}
+__name(extractPromoInfo, "extractPromoInfo");
 
 var index_default = {
   async scheduled(event, env, ctx) {
@@ -945,13 +1033,28 @@ var index_default = {
         let bb = {};
         try { bb = await request.json(); } catch (e) {}
         const topic = String(bb.topic || "").slice(0, 2000).trim();
-        const keys = (Array.isArray(bb.keys) ? bb.keys : []).map((k) => String(k || "").trim()).filter(Boolean);
-        if (!topic || !keys.length) return json({ error: "주제와 핵심 메시지가 필요해요" }, env, 400);
+        if (!topic) return json({ error: "글의 주제(공연·행사명)가 필요해요" }, env, 400);
         try {
           const text = await generateBlogDraft(env, bb);
           return json({ text }, env);
         } catch (e) {
           console.error("[content/blog]", e);
+          return json({ error: String((e && e.message) || e) }, env, 502);
+        }
+      }
+
+      // === 홍보물 이미지 OCR — Claude 비전으로 사실 추출 (Graph 토큰 불요) ===
+      if (url.pathname === "/api/content/ocr" && request.method === "POST") {
+        if (!env.ANTHROPIC_API_KEY && !env.ANTHROPIC_AUTH_TOKEN) return json({ error: "no_api_key", note: "ANTHROPIC_AUTH_TOKEN 또는 ANTHROPIC_API_KEY 미설정" }, env, 503);
+        let bb = {};
+        try { bb = await request.json(); } catch (e) {}
+        const data = String(bb.data || "").replace(/^data:[^,]*,/, "").trim();
+        if (!data) return json({ error: "이미지 데이터가 필요해요" }, env, 400);
+        try {
+          const info = await extractPromoInfo(env, { mime: bb.mime || "image/jpeg", data });
+          return json({ info }, env);
+        } catch (e) {
+          console.error("[content/ocr]", e);
           return json({ error: String((e && e.message) || e) }, env, 502);
         }
       }
