@@ -13047,7 +13047,7 @@ var _NB_TEMPLATES=[
   ['review','후기·현장형','1) 방문 계기 / 기대\n2) 현장 분위기 묘사\n3) 공연 하이라이트\n4) 솔직한 감상\n5) 추천 + 다음 공연 안내'],
   ['info','정보 요약형','1) 핵심 정보 먼저 (일시·장소·가격·예매)\n2) 공연 개요\n3) 관람 포인트\n4) 예매 링크 / 문의']
 ];
-var _nbState={length:'보통', voice:'정중하고 따뜻한', emoji:true, intentSel:'', intentNote:'', audWho:[], audThink:[], audFeel:[], facts:{}, extra:'', tplMode:'auto', tplSel:'', tplText:'', output:'', ocrThumb:'', ocrBusy:false, _toneDraft:'', escHandler:null};
+var _nbState={length:'보통', voice:'정중하고 따뜻한', emoji:true, intentSel:'', intentNote:'', audWho:[], audThink:[], audFeel:[], facts:{}, extra:'', tplMode:'auto', tplSel:'', tplText:'', output:'', comments:[], ocrThumb:'', ocrBusy:false, _toneDraft:'', escHandler:null};
 
 // 상단 '콘텐츠 제작' 드롭다운 (네이버 블로그 + 향후 채널 확장)
 function _contentMenuBuild(menu){
@@ -13069,17 +13069,18 @@ function openNaverBlogTool(){
     +'<div id="nblog-body" style="flex:1;overflow:auto;padding:20px 24px;min-width:0;min-height:0"></div>'
     +'</div></div>';
   if(_nbState.escHandler)document.removeEventListener('keydown',_nbState.escHandler);
-  _nbState.escHandler=function(e){if(e.key==='Escape')closeNaverBlogTool();};
+  _nbState.escHandler=function(e){if(e.key==='Escape'){var cm=document.getElementById('nb-cmt-modal');if(cm&&cm.innerHTML){_nbCmtClose();return;}closeNaverBlogTool();}};
   document.addEventListener('keydown',_nbState.escHandler);
   _nbRender();_nbGitRefresh();
 }
 function closeNaverBlogTool(){
   if(_nbState.escHandler)document.removeEventListener('keydown',_nbState.escHandler);
   _nbSaveState();
+  var cm=document.getElementById('nb-cmt-modal');if(cm)cm.innerHTML='';
   var el=document.getElementById('nblog-board');if(el)el.innerHTML='';
 }
 function _nbSaveState(){
-  try{localStorage.setItem(_NB_DRAFT_KEY,JSON.stringify({length:_nbState.length,voice:_nbState.voice,emoji:_nbState.emoji,intentSel:_nbState.intentSel||'',intentNote:_nbState.intentNote||'',audWho:_nbState.audWho||[],audThink:_nbState.audThink||[],audFeel:_nbState.audFeel||[],facts:_nbState.facts||{},extra:_nbState.extra||'',tplMode:_nbState.tplMode||'auto',tplSel:_nbState.tplSel||'',tplText:_nbState.tplText||'',output:_nbState.output||''}));}catch(e){}
+  try{localStorage.setItem(_NB_DRAFT_KEY,JSON.stringify({length:_nbState.length,voice:_nbState.voice,emoji:_nbState.emoji,intentSel:_nbState.intentSel||'',intentNote:_nbState.intentNote||'',audWho:_nbState.audWho||[],audThink:_nbState.audThink||[],audFeel:_nbState.audFeel||[],facts:_nbState.facts||{},extra:_nbState.extra||'',tplMode:_nbState.tplMode||'auto',tplSel:_nbState.tplSel||'',tplText:_nbState.tplText||'',output:_nbState.output||'',comments:_nbState.comments||[]}));}catch(e){}
 }
 function _nbSet(key,val){_nbState[key]=val;_nbSaveState();_nbRender();}
 
@@ -13166,6 +13167,68 @@ async function _nbRefine(){
     showToast('수정 요청을 반영했어요 ✨','success');
   }catch(e){showToast('수정 실패: '+String((e&&e.message)||e),'error');}
   finally{var i2=document.getElementById('nb-revise');if(i2)i2.disabled=false;}
+}
+
+// 💬 코멘트 모달 — 1차 초안 후 계속 코멘트를 남겨 다듬는 스레드(좌:현재 초안 / 우:코멘트). 각 코멘트는 기존 초안+의견으로 재생성.
+function _nbCmtOpen(){
+  if(!String(_nbState.output||'').trim()){showToast('먼저 초안을 생성해 주세요','error');return;}
+  var el=document.getElementById('nb-cmt-modal');
+  if(!el){el=document.createElement('div');el.id='nb-cmt-modal';document.body.appendChild(el);}
+  _nbCmtRender();
+  setTimeout(function(){var i=document.getElementById('nb-cmt-input');if(i)i.focus();},40);
+}
+function _nbCmtClose(){var el=document.getElementById('nb-cmt-modal');if(el)el.innerHTML='';}
+function _nbCmtRender(){
+  var el=document.getElementById('nb-cmt-modal');if(!el)return;
+  var s=_nbState,cmts=s.comments||[];
+  var thread=cmts.length
+    ? cmts.map(function(c,i){return '<div style="margin-bottom:9px"><div style="background:var(--accent);color:#fff;padding:8px 11px;border-radius:12px 12px 3px 12px;font-size:12.5px;line-height:1.55;max-width:92%;margin-left:auto;white-space:pre-wrap">'+escapeHtml(c.text)+'</div><div style="font-size:10px;color:#bbb;text-align:right;margin-top:2px">#'+(i+1)+' 반영됨</div></div>';}).join('')
+    : '<div class="nb-note">바꾸고 싶은 점을 코멘트로 남기면 그 의견을 반영해 다시 써 드려요. <b>여러 번 이어서</b> 코멘트할 수 있어요.<br><br>예) "두 번째 문단을 더 짧게" · "가격 정보를 앞쪽으로" · "좀 더 친근한 말투로" · "마지막에 예매 독려 한 줄"</div>';
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,_nbCmtClose)">'
+    +'<div class="modal" style="width:94vw;max-width:880px;height:88vh;max-height:88vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff">'
+    +'<button class="modal-x" onclick="_nbCmtClose()" title="닫기" style="position:absolute;top:13px;right:13px;z-index:10">✕</button>'
+    +'<div style="padding:15px 22px;border-bottom:1px solid #eee;font-size:15px;font-weight:700">💬 코멘트로 다듬기 <span style="font-size:11px;color:#aaa;font-weight:500">· 의견을 남기면 반영해 다시 써요</span></div>'
+    +'<div style="flex:1;display:flex;min-height:0">'
+      +'<div style="flex:1.25;border-right:1px solid #eee;display:flex;flex-direction:column;min-width:0">'
+        +'<div style="padding:8px 16px;font-size:11px;color:#888;font-weight:700;border-bottom:1px solid #f3f3f7;flex-shrink:0">현재 초안 <span style="color:#bbb;font-weight:500">· 직접 수정해도 돼요</span></div>'
+        +'<textarea id="nb-cmt-draft" style="flex:1;border:0;padding:14px 17px;font-size:13px;line-height:1.85;resize:none;outline:none;font-family:inherit;color:var(--text);white-space:pre-wrap" oninput="_nbState.output=this.value;_nbSaveState()">'+escapeHtml(s.output||'')+'</textarea>'
+      +'</div>'
+      +'<div style="flex:1;display:flex;flex-direction:column;min-width:0;background:#fafaff">'
+        +'<div style="padding:8px 16px;font-size:11px;color:#888;font-weight:700;border-bottom:1px solid #f3f3f7;flex-shrink:0">코멘트 ('+cmts.length+')</div>'
+        +'<div id="nb-cmt-thread" style="flex:1;overflow:auto;padding:14px 16px;min-height:0">'+thread+'</div>'
+        +'<div style="border-top:1px solid #eee;padding:10px 14px;flex-shrink:0">'
+          +'<textarea id="nb-cmt-input" class="nb-input" style="min-height:56px;resize:vertical" placeholder="이 초안에서 바꾸고 싶은 점을 적어 주세요" onkeydown="if(event.key===\'Enter\'&&(event.metaKey||event.ctrlKey))_nbCmtSend()"></textarea>'
+          +'<div class="nb-row" style="margin-top:7px;justify-content:space-between;align-items:center">'
+            +'<span style="font-size:10.5px;color:#c4c4c4">⌘/Ctrl+Enter 로 전송</span>'
+            +'<button type="button" id="nb-cmt-send" class="nb-btn primary" onclick="_nbCmtSend()" style="padding:8px 16px">반영하기 ↻</button>'
+          +'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    +'</div></div>';
+}
+async function _nbCmtSend(){
+  var inp=document.getElementById('nb-cmt-input');if(!inp)return;
+  var txt=String(inp.value||'').trim();
+  if(!txt){showToast('코멘트를 입력해 주세요','error');inp.focus();return;}
+  var prev=String(_nbState.output||'').trim();
+  if(!prev){showToast('초안이 없어요','error');return;}
+  var btn=document.getElementById('nb-cmt-send');if(btn){btn.disabled=true;btn.textContent='반영 중…';}
+  inp.disabled=true;
+  try{
+    var o=_nbBuildPayload();o.prevDraft=prev;o.revise=txt;
+    var r=await api('POST','/api/content/blog',o);
+    if(!r||!r.text)throw new Error('빈 응답');
+    _nbState.comments=(_nbState.comments||[]).concat([{text:txt,ts:Date.now()}]);
+    _nbState.output=r.text;_nbSaveState();
+    _nbCmtRender();                 // 모달 갱신(새 초안+코멘트)
+    var bd=document.getElementById('nblog-body');if(bd)_nbRender();  // 뒤 메인 도구 초안도 동기화
+    showToast('코멘트를 반영했어요 ✨','success');
+  }catch(e){
+    showToast('반영 실패: '+String((e&&e.message)||e),'error');
+    var b2=document.getElementById('nb-cmt-send');if(b2){b2.disabled=false;b2.textContent='반영하기 ↻';}
+    var i2=document.getElementById('nb-cmt-input');if(i2)i2.disabled=false;
+  }
 }
 
 // 톤 참조 — git(docs/tone-refs.json)에 저장. _nbState._toneLib(메모리 캐시)+localStorage 미러로 즉시 표시, GitHub Contents API로 동기화.
@@ -13324,14 +13387,10 @@ function _nbRender(){
        +'<button type="button" class="nb-btn ghost" onclick="_nbCopy()">📋 복사</button>'
        +'<a class="nb-btn ghost" href="https://blog.naver.com/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">네이버 블로그 열기 ↗</a>'
      +'</div>'
-     +'<div class="nb-field" style="margin-top:12px">'
-       +'<label class="nb-label">✏️ 수정 요청 <span style="color:#bbb;font-weight:500">— 한 번에 완벽하긴 어려워요. 고칠 점을 적고 다시 만드세요.</span></label>'
-       +'<div class="nb-row" style="gap:7px;align-items:stretch">'
-         +'<input id="nb-revise" class="nb-input" style="flex:1" placeholder="예: 더 짧게 / 첫 문단을 임팩트 있게 / 가격을 강조" '+(s.output?'':'disabled')+' onkeydown="if(event.key===\'Enter\')_nbRefine()">'
-         +'<button type="button" class="nb-btn primary" '+(s.output?'':'disabled')+' onclick="_nbRefine()" style="flex-shrink:0">↻ 다시</button>'
-       +'</div>'
+     +'<div class="nb-row" style="margin-top:10px">'
+       +'<button type="button" class="nb-btn '+(s.output?'primary':'ghost')+'" '+(s.output?'':'disabled')+' onclick="_nbCmtOpen()">💬 코멘트로 다듬기'+((s.comments&&s.comments.length)?' ('+s.comments.length+')':'')+'</button>'
      +'</div>'
-     +'<div class="nb-note">✨ <b>초안 생성</b>은 의도·타겟 관점·홍보물 정보·톤 참조를 반영해요. (AI 미연결 시 임시 초안으로 대체)</div>'
+     +'<div class="nb-note">✨ <b>초안 생성</b>은 의도·타겟 관점·홍보물 정보·톤 참조를 반영해요. 한 번에 완벽하긴 어려우니 <b>💬 코멘트로 다듬기</b>로 의견을 남기며 이어서 고치세요. (AI 미연결 시 임시 초안으로 대체)</div>'
    +'</div>'
    +'</div>';
 }
