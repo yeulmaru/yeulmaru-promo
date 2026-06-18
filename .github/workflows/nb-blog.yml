@@ -62,7 +62,9 @@ jobs:
               prompt += "사실 정보(일시·장소·출연·가격 등)는 아래 '공연 정보'·'OCR 원문'·'추가 참고' 범위 안에서만 쓰고, 없는 사실을 지어내지 마세요. ";
               prompt += "유명하지 않은 공연일 수 있으니 주어진 정보만으로도 충실하고 매력적으로. ";
               prompt += "결과는 곧바로 붙여넣을 수 있게 '제목 한 줄 + 본문'만, 설명·머리말·코드블록 없이 본문 텍스트만 출력하세요.\n\n";
-              prompt += "# 글의 주제(공연·행사명)\n" + String(p.topic || '').slice(0, 2000).trim() + "\n\n";
+              const _topic = String(p.topic || '').slice(0, 2000).trim();
+              if (_topic) prompt += "# 글의 주제(공연·행사명)\n" + _topic + "\n\n";
+              else prompt += "# 글의 주제(공연·행사명)\n아래 'OCR 원문'에서 공연·행사명(부제 포함)을 그대로 파악해 제목과 본문에 사용하세요.\n\n";
               if (p.intent) prompt += "# 이 글을 쓰는 의도·목적 ★가장 중요\n" + String(p.intent).slice(0, 1500).trim() + "\n\n";
               if (p.target) prompt += "# 주요 타겟 독자\n" + String(p.target).slice(0, 500).trim() + "\n\n";
               if (factLines.length) prompt += "# 공연·행사 정보 (검증된 사실)\n" + factLines.join('\n') + "\n\n";
