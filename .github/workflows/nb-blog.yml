@@ -1,0 +1,114 @@
+name: 앱 블로그/분석 (claude -p · repository_dispatch)
+
+# 앱(index.html)이 repository_dispatch[nb-blog]로 입력을 던지면 claude -p(구독 OAuth)로
+# 초안(mode=blog) 또는 OCR 분석(mode=structure)을 만들어 drafts/<id>.json 으로 커밋.
+# 앱은 그 파일을 폴링해 결과를 받는다. (Worker는 OCR=Google Vision만 담당)
+on:
+  repository_dispatch:
+    types: [nb-blog]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nb-blog
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Generate via claude -p
+        uses: actions/github-script@v7
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_EMS1130G }}
+        with:
+          retries: 3
+          script: |
+            const { execFileSync } = require('child_process');
+            const fs = require('fs');
+            const p = context.payload.client_payload || {};
+            const id = String(p.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80) || ('x' + Date.now());
+            const mode = (p.mode === 'structure') ? 'structure' : 'blog';
+
+            // ---- 프롬프트 구성 ----
+            let prompt = '';
+            if (mode === 'structure') {
+              prompt = "당신은 공연·전시 홍보물에서 OCR로 추출한 한국어 텍스트를 받아 사실 정보를 정확히 정리하는 도우미입니다. " +
+                "주어진 텍스트에 실제로 있는 내용만 쓰고, 없거나 불확실하면 빈 문자열로 두세요. 추측·창작 금지. " +
+                "아래 JSON 형식으로만 출력하세요(설명·코드블록 없이 JSON 객체만):\n" +
+                '{ "title":"공연·행사명(부제 포함)", "overview":"무엇을·왜 한두 문장", "when":"일시(날짜·요일·시간, 회차 모두)", ' +
+                '"where":"장소(공연장·홀)", "who":"출연·연주·지휘·주최·주관·기획", "price":"가격(등급별)·할인·예매처·문의", ' +
+                '"detail":"프로그램·곡목·줄거리·관람등급·러닝타임 등 본문용 상세" }\n\n# OCR 원문\n' +
+                String(p.ocrText || '').slice(0, 12000);
+            } else {
+              const lenMap = { '짧게': '600~900자 내외로 짧고 간결하게', '보통': '1,200~1,800자 분량으로', '길게': '2,500자 이상 충분히 길고 풍성하게' };
+              const F = (p.facts && typeof p.facts === 'object') ? p.facts : {};
+              const FLABEL = { overview: '개요(무엇을·왜)', when: '일시(언제)', where: '장소(어디서)', who: '출연·주최(누가)', price: '가격·예매·문의', detail: '상세 내용' };
+              const factLines = [];
+              ['overview', 'when', 'where', 'who', 'price', 'detail'].forEach((k) => { const v = String(F[k] || '').trim(); if (v) factLines.push('- ' + FLABEL[k] + ': ' + v); });
+              const refs = Array.isArray(p.refs) ? p.refs.map((r) => String((r && r.text) || '').trim()).filter(Boolean).slice(-5) : [];
+              const prevDraft = String(p.prevDraft || '').slice(0, 12000).trim();
+              const revise = String(p.revise || '').slice(0, 1000).trim();
+
+              prompt = "당신은 GS칼텍스 예울마루(전남 여수의 복합문화예술공간) 홍보 담당자입니다. ";
+              prompt += "네이버 블로그에 올릴 한국어 포스팅 초안을 작성하세요. 가장 중요한 건 '의도·목적'을 분명히 달성하는 것 — 글 전체가 그 의도를 향하게 하고 모호해지지 않게. ";
+              prompt += "사실 정보(일시·장소·출연·가격 등)는 아래 '공연 정보'·'OCR 원문'·'추가 참고' 범위 안에서만 쓰고, 없는 사실을 지어내지 마세요. ";
+              prompt += "유명하지 않은 공연일 수 있으니 주어진 정보만으로도 충실하고 매력적으로. ";
+              prompt += "결과는 곧바로 붙여넣을 수 있게 '제목 한 줄 + 본문'만, 설명·머리말·코드블록 없이 본문 텍스트만 출력하세요.\n\n";
+              prompt += "# 글의 주제(공연·행사명)\n" + String(p.topic || '').slice(0, 2000).trim() + "\n\n";
+              if (p.intent) prompt += "# 이 글을 쓰는 의도·목적 ★가장 중요\n" + String(p.intent).slice(0, 1500).trim() + "\n\n";
+              if (p.target) prompt += "# 주요 타겟 독자\n" + String(p.target).slice(0, 500).trim() + "\n\n";
+              if (factLines.length) prompt += "# 공연·행사 정보 (검증된 사실)\n" + factLines.join('\n') + "\n\n";
+              if (p.ocrText) prompt += "# 홍보물 OCR 원문 (사실 출처 — 이 안에서만)\n" + String(p.ocrText).slice(0, 8000).trim() + "\n\n";
+              if (p.extra) prompt += "# 추가 참고 자료\n" + String(p.extra).slice(0, 4000).trim() + "\n\n";
+              if (p.template) prompt += "# 글의 구성 틀 (이 순서·구성을 따를 것)\n" + String(p.template).slice(0, 1500).trim() + "\n\n";
+              prompt += "# 작성 지침\n- 분량: " + (lenMap[p.length] || lenMap['보통']) + "\n- 말투/톤: " + String(p.voice || '정중하고 따뜻한') + " 느낌\n- 이모지: " + (p.emoji === false ? '사용하지 않음' : '문단 사이에 어울리게 적당히 사용') + "\n- 해시태그는 넣지 않음\n- 주어진 사실 범위 안에서만, 없는 구체 사실은 지어내지 말 것\n";
+              if (refs.length) prompt += "\n# 톤 참조 — 이전에 작성한 글들 (말투·문장 길이·문단 구성·이모지 습관을 비슷하게)\n" + refs.map((t, i) => '[예시 ' + (i + 1) + ']\n' + String(t).slice(0, 4000)).join('\n\n') + "\n";
+              if (prevDraft && revise) {
+                prompt = "방금 작성한 아래 블로그 초안을, 사용자의 수정 요청대로 고쳐 전체 글을 다시 완성하세요. 요청과 무관한 부분은 기존 톤·사실 유지. '제목 한 줄 + 본문'만 출력.\n\n# 기존 초안\n" + prevDraft + "\n\n# 수정 요청\n" + revise + "\n\n---\n아래는 원래 입력 정보(참고):\n\n" + prompt;
+              }
+            }
+
+            // ---- claude -p 실행 ----
+            let raw = '', err = '';
+            try {
+              raw = execFileSync('claude', ['-p', '--model', 'claude-opus-4-8', '--effort', 'max', '--max-turns', '1'], { input: prompt, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }).trim();
+            } catch (e) {
+              err = String((e && (e.stderr || '')) + ' ' + (e && (e.message || e))).trim().slice(0, 1500);
+            }
+
+            // ---- 결과 객체 ----
+            let out;
+            if (!raw) {
+              out = { id, mode, ok: false, error: err || '빈 응답', ts: new Date().toISOString() };
+            } else if (mode === 'structure') {
+              let t = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+              let obj = {};
+              try { obj = JSON.parse(t); } catch (e) { const m = t.match(/\{[\s\S]*\}/); obj = m ? JSON.parse(m[0]) : { detail: t }; }
+              const info = {};
+              ['title', 'overview', 'when', 'where', 'who', 'price', 'detail'].forEach((k) => { info[k] = String(obj[k] || '').trim(); });
+              out = { id, mode, ok: true, info, ts: new Date().toISOString() };
+            } else {
+              out = { id, mode, ok: true, text: raw, ts: new Date().toISOString() };
+            }
+
+            // ---- 결과 커밋 (앱이 폴링) ----
+            fs.mkdirSync('drafts', { recursive: true });
+            fs.writeFileSync('drafts/' + id + '.json', JSON.stringify(out));
+            execFileSync('git', ['config', 'user.name', 'github-actions[bot]']);
+            execFileSync('git', ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com']);
+            execFileSync('git', ['add', 'drafts/' + id + '.json']);
+            execFileSync('git', ['commit', '-m', 'chore(draft): ' + id + ' [skip ci]']);
+            let pushed = false;
+            for (let i = 0; i < 6; i++) {
+              try { execFileSync('git', ['push', 'origin', 'HEAD:main']); pushed = true; break; }
+              catch (e) { try { execFileSync('git', ['pull', '--rebase', 'origin', 'main']); } catch (e2) {} }
+            }
+            if (!pushed) core.setFailed('push 실패');
