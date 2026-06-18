@@ -6362,12 +6362,12 @@ function getCancelOrigGroup(r){
 // UI 표시용 상태/진행 매핑
 function getUiStatusLabel(rawStatus, prevStatus){
   const s = String(rawStatus||'').trim();
-  if (s === '보류') return '신청 중';  // 보류는 신청 중 그룹에 표시
+  if (s === '보류') return '보류';  // 보류는 '신청 중'과 별개 상태(사실상 반려 · 신청자 재신청 대기)
   return s || '-';
 }
 function getUiProgressLabel(rawStatus, prevStatus){
   const s = String(rawStatus||'').trim();
-  if (s === '보류') return '보류';
+  if (s === '보류') return '재신청 대기';  // 공이 신청자에게: 재신청하거나, 2회째 보류면 취소
   if (s === '취소') return statusToPrimary(prevStatus) || '신청 중';
   return '-';
 }
@@ -6858,12 +6858,12 @@ function renderPromoBoard(){
   function recIsMine(r){return _isMineRec(r,myApplicant);}
   const myRows=isAdmin?records.filter(recIsMine):records.filter(recIsMine);
   const summaryBase=isAdmin?records:myRows;
-  // 신청 중 카운트 단일화: 대표상태(statusToPrimary)로 통일 — 보류는 '신청 중'에 포함(제품 결정).
-  // 목록/뱃지가 보류를 '신청 중'으로 표시하므로 요약 카운트도 동일 기준을 쓴다.
-  const myPending=summaryBase.filter(function(r){return statusToPrimary(r['진행 상태'])==='신청 중';}).length;
+  // 신청 중 카운트 = raw '신청 중'만 (보류 제외). 보류는 '사실상 반려'(신청자 재신청 대기 / 2회째 보류 시 자동 취소)라
+  // 신청 중이 아님 → 요약·🔔배지·신청대기 섹션 전부 raw 기준으로 일치.
+  const myPending=summaryBase.filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
   const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
   const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
-  const pendingCnt=records.filter(function(r){return statusToPrimary(r['진행 상태'])==='신청 중';}).length;
+  const pendingCnt=records.filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
   // 오늘 건수 (완료/취소 제외)
   const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
   // === 헤더 ===
@@ -7105,14 +7105,14 @@ function renderPromoBoard(){
       const status=r['진행 상태']||'-';
       const uiStatus=getUiStatusLabel(status, r['직전 상태']);
       const uiProgress=getUiProgressLabel(status, r['직전 상태']);
-      const _pColor=uiProgress==='보류'?'var(--peach-text)':(uiProgress==='-'?'#ccc':'#999');
+      const _pColor=uiProgress==='재신청 대기'?'#C97A11':(uiProgress==='-'?'#ccc':'#999');
       const _pWeight=uiProgress==='-'?'400':'600';
       const isApplying=status==='신청 중';
       const isWaiting=status==='신청 중';
       const isPendingLike=isApplying||isWaiting;
       // 상태별 색상: 신청 중=살구, 예정=초록, 완료=파랑, 취소=회색
-      const sColor=uiStatus==='완료'?'#2563EB':uiStatus==='취소'?'#888':uiStatus==='예정'?'#0F8B4C':uiStatus==='신청 중'?'var(--peach-text)':'#888';
-      const sBg=uiStatus==='완료'?'#DBEAFE':uiStatus==='취소'?'#f0f0f0':uiStatus==='예정'?'#E8F5EC':uiStatus==='신청 중'?'var(--peach-light)':'#f5f5f5';
+      const sColor=uiStatus==='완료'?'#2563EB':uiStatus==='취소'?'#888':uiStatus==='예정'?'#0F8B4C':uiStatus==='신청 중'?'var(--peach-text)':uiStatus==='보류'?'#C97A11':'#888';
+      const sBg=uiStatus==='완료'?'#DBEAFE':uiStatus==='취소'?'#f0f0f0':uiStatus==='예정'?'#E8F5EC':uiStatus==='신청 중'?'var(--peach-light)':uiStatus==='보류'?'#FFF4DC':'#f5f5f5';
       const m2=String(r['월']||'').padStart(2,'0'),d2=String(r['일']||'').padStart(2,'0');
       let timeStr='';
       const ts=r['입력시간(KST)'];
