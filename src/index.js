@@ -888,12 +888,54 @@ async function ocrClova(env, b64, mime) {
 }
 __name(ocrClova, "ocrClova");
 
-// Google Cloud Vision — DOCUMENT_TEXT_DETECTION. env: GOOGLE_VISION_KEY (API 키).
+// Google 서비스 계정(OAuth2) — 조직 정책으로 API 키가 막힌 경우(401 "API keys are not supported").
+// env: GOOGLE_SA_EMAIL(client_email), GOOGLE_SA_PRIVATE_KEY(private_key PEM). JWT(RS256)→access token 교환.
+var _gSaTok = null, _gSaExp = 0;
+function _b64url(buf) {
+  const bytes = (buf instanceof Uint8Array) ? buf : new Uint8Array(buf);
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+__name(_b64url, "_b64url");
+function _b64urlStr(str) { return _b64url(new TextEncoder().encode(str)); }
+__name(_b64urlStr, "_b64urlStr");
+async function gSaAccessToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (_gSaTok && _gSaExp > now + 60) return _gSaTok;
+  const email = env.GOOGLE_SA_EMAIL;
+  const pem = String(env.GOOGLE_SA_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  if (!email || !pem) throw new Error("Google 서비스계정 미설정");
+  const b64 = pem.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der.buffer, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const head = _b64urlStr(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const claim = _b64urlStr(JSON.stringify({ iss: email, scope: "https://www.googleapis.com/auth/cloud-vision", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 }));
+  const signingInput = head + "." + claim;
+  const sig = await crypto.subtle.sign({ name: "RSASSA-PKCS1-v1_5" }, key, new TextEncoder().encode(signingInput));
+  const jwt = signingInput + "." + _b64url(sig);
+  const resp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + encodeURIComponent(jwt)
+  });
+  if (!resp.ok) throw new Error("Google token " + resp.status + ": " + (await resp.text()).slice(0, 200));
+  const d = await resp.json();
+  _gSaTok = d.access_token; _gSaExp = now + (d.expires_in || 3600);
+  return _gSaTok;
+}
+__name(gSaAccessToken, "gSaAccessToken");
+
+// Google Cloud Vision — DOCUMENT_TEXT_DETECTION. 서비스계정(Bearer) 우선, 없으면 API 키(?key=).
 async function ocrGoogleVision(env, b64) {
+  const hasSa = !!(env.GOOGLE_SA_EMAIL && env.GOOGLE_SA_PRIVATE_KEY);
   const key = env.GOOGLE_VISION_KEY;
-  if (!key) throw new Error("Google Vision 미설정");
-  const resp = await fetch("https://vision.googleapis.com/v1/images:annotate?key=" + encodeURIComponent(key), {
-    method: "POST", headers: { "Content-Type": "application/json" },
+  if (!hasSa && !key) throw new Error("Google Vision 미설정");
+  const headers = { "Content-Type": "application/json" };
+  let endpoint = "https://vision.googleapis.com/v1/images:annotate";
+  if (hasSa) headers["Authorization"] = "Bearer " + await gSaAccessToken(env);
+  else endpoint += "?key=" + encodeURIComponent(key);
+  const resp = await fetch(endpoint, {
+    method: "POST", headers,
     body: JSON.stringify({ requests: [{ image: { content: b64 }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }], imageContext: { languageHints: ["ko", "en"] } }] })
   });
   if (!resp.ok) throw new Error("Google Vision " + resp.status + ": " + (await resp.text()).slice(0, 200));
@@ -908,7 +950,7 @@ __name(ocrGoogleVision, "ocrGoogleVision");
 async function runExternalOcr(env, b64, mime) {
   const pref = String(env.OCR_PROVIDER || "").toLowerCase();
   const hasClova = !!(env.CLOVA_OCR_INVOKE_URL && env.CLOVA_OCR_SECRET);
-  const hasGoogle = !!env.GOOGLE_VISION_KEY;
+  const hasGoogle = !!(env.GOOGLE_VISION_KEY || (env.GOOGLE_SA_EMAIL && env.GOOGLE_SA_PRIVATE_KEY));
   const order = pref === "google" ? ["google", "clova"] : ["clova", "google"];
   let lastErr = null;
   for (const p of order) {
@@ -1146,7 +1188,7 @@ var index_default = {
         const data = String(bb.data || "").replace(/^data:[^,]*,/, "").trim();
         const mime = bb.mime || "image/jpeg";
         if (!data) return json({ error: "이미지 데이터가 필요해요" }, env, 400);
-        const hasExternal = (env.CLOVA_OCR_INVOKE_URL && env.CLOVA_OCR_SECRET) || env.GOOGLE_VISION_KEY;
+        const hasExternal = (env.CLOVA_OCR_INVOKE_URL && env.CLOVA_OCR_SECRET) || env.GOOGLE_VISION_KEY || (env.GOOGLE_SA_EMAIL && env.GOOGLE_SA_PRIVATE_KEY);
         const hasClaude = env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN;
         try {
           if (hasExternal) {
