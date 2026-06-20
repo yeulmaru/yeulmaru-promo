@@ -1416,6 +1416,22 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 table.promo-board-table thead th{position:sticky;top:0;z-index:7;background:var(--accent)}
 table.promo-board-table thead th:first-child{border-top-left-radius:11px}
 table.promo-board-table thead th:last-child{border-top-right-radius:11px}
+/* === UX 브리프 #4 — 필터·정렬 바 통일 (.fbar-*). 판매/사업/일정관리 보드 공용 칩·세그.
+   상태 명료화: 선택 = accent 채움(흰 글씨) · 비선택 = 흰 배경·중립 글씨. .nb-chip.on / .ana-seg button.on 과 동일 시각언어.
+   ⚠️ 필터 LOGIC·state·handler 불변 — 이 클래스는 컨트롤 마크업/스타일만 통일한다. */
+.fbar-lbl{font-size:11px;color:var(--neutral-text);font-weight:600;margin-right:2px}
+/* 세그먼트(상호배타) — 상태탭·수익성·회차·진행일. .fbar-seg 안의 button 들이 한 그룹. */
+.fbar-seg{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fbar-seg button{padding:6px 13px;border-radius:8px;border:1.5px solid var(--neutral-d);background:#fff;color:var(--neutral-text);font-family:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.fbar-seg button:hover{border-color:var(--accent);color:var(--accent)}
+.fbar-seg button.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(74,77,231,.2)}
+/* 단일 칩(다중 토글) — 같은 시각언어, 선택 시 accent 채움. 내장 체크박스 허용. */
+.fbar-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--neutral-d);background:#fff;color:var(--neutral-text);font-family:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s;user-select:none}
+.fbar-chip:hover{border-color:var(--accent);color:var(--accent)}
+.fbar-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(74,77,231,.2)}
+.fbar-chip input{width:14px;height:14px;margin:0;flex-shrink:0;cursor:pointer;accent-color:var(--accent)}
+.fbar-chip.on input{accent-color:#fff}
+.fbar-chip.lock{cursor:not-allowed;opacity:.85}
 </style>
   <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) — 공식 docs 권장 이중 fallback -->
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
