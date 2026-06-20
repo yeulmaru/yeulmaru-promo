@@ -1408,6 +1408,10 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-hm-cell.clk{cursor:pointer}
 .ana-sec{font-size:14px;font-weight:700;color:#333;margin:6px 0 10px}
 .ana-pop{position:fixed;z-index:100050;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,0.18);padding:14px 16px;max-width:320px;font-size:12px;color:#444;line-height:1.55}
+/* #8 일정관리 보드 thead 고정 — 본문 스크롤 중 헤더 행 상단 고정. 불투명 배경(rgba 0.95 → 솔리드)으로 행 비침 방지. 둥근 상단 모서리는 wrapper overflow:hidden 대신 코너 th radius로 유지. 컬럼 폭/리사이즈 핸들 불변. */
+table.promo-board-table thead th{position:sticky;top:0;z-index:7;background:var(--accent)}
+table.promo-board-table thead th:first-child{border-top-left-radius:11px}
+table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 </style>
   <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) — 공식 docs 권장 이중 fallback -->
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
@@ -7518,8 +7522,8 @@ function renderPromoBoard(){
       const dot=hasFilter?'<span style="margin-left:3px;font-size:8px;color:#ffd24a;vertical-align:middle">●</span>':'';
       return '<th data-col="'+col+'" '+clickAttr+' style="padding:10px 12px;text-align:left;'+widthStyle+'cursor:pointer;user-select:none;color:#fff;'+activeStyle+'" title="'+ttl+'">'+label+'<span style="margin-left:5px;font-size:'+arrowSize+';color:'+arrowColor+'">'+arrow+'</span>'+dot+'<span class="col-resize-handle" onmousedown="_onColResizeStart(event,this.parentElement)" onclick="event.stopPropagation()"></span></th>';
     }
-    // 모서리 둥근 wrapper + 살짝 투명도 헤더
-    html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;table-layout:fixed"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
+    // 모서리 둥근 wrapper + 살짝 투명도 헤더 (#8 thead 고정: overflow:hidden 제거 → sticky 가능, 둥근 모서리는 th 코너 radius로 대체)
+    html+='<div style="border-radius:12px;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;table-layout:fixed"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
     html+=_sh('no','NO',60);
     html+=_sh('status','상태',80);
     html+=_sh('progress','진행',70);
