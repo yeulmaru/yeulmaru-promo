@@ -740,7 +740,9 @@ button{font-family:inherit;cursor:pointer}
 /* readonly 시간 input — 음영 강화 */
 .sp-time-input-ro{background:#e5e5e5 !important;color:#777 !important;cursor:not-allowed !important;opacity:1 !important}
 /* 컬럼 리사이즈 핸들 — 평소엔 안 보이고 호버 시 살짝 */
-table.promo-board-table{table-layout:fixed}
+table.promo-board-table{table-layout:fixed;font-size:var(--cell-fs)}
+/* #7 셀 밀도 단일 출처 — 토큰 기본값(인라인 패딩과 동일 값이라 픽셀 무변경). 인라인 패딩이 우선하므로 NO/액션 등 예외 폭(4px/8px)은 그대로 유지됨. */
+table.promo-board-table td,table.promo-board-table th{padding:var(--cell-pad-y) var(--cell-pad-x)}
 table.promo-board-table th{position:relative;overflow:hidden}
 .col-resize-handle{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;background:transparent;transition:background 0.18s;z-index:5}
 .col-resize-handle:hover{background:rgba(255,255,255,0.35)}
@@ -1304,6 +1306,8 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
   --z-sticky:10; --z-nav:90; --z-dropdown:1000; --z-modal:2000; --z-confirm:2100; --z-toast:3000;
   --c1:#4A4DE7; --c2:#D88455; --c3:#1A6B3C; --c4:#C02872; --c5:#2D8AB3; --c6:#F5B400;
   --kakao:#F5B400;
+  /* #7 행 밀도 토큰 (일정관리 보드 셀 현재 값 그대로 — 픽셀 무변경, 단일 출처) */
+  --cell-pad-y:10px; --cell-pad-x:12px; --cell-fs:13px;
 }
 .btn{font-family:inherit;font-weight:700;border:1px solid transparent;
   border-radius:var(--r-btn);cursor:pointer;line-height:1;
@@ -1408,6 +1412,10 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-hm-cell.clk{cursor:pointer}
 .ana-sec{font-size:14px;font-weight:700;color:#333;margin:6px 0 10px}
 .ana-pop{position:fixed;z-index:100050;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,0.18);padding:14px 16px;max-width:320px;font-size:12px;color:#444;line-height:1.55}
+/* #8 일정관리 보드 thead 고정 — 본문 스크롤 중 헤더 행 상단 고정. 불투명 배경(rgba 0.95 → 솔리드)으로 행 비침 방지. 둥근 상단 모서리는 wrapper overflow:hidden 대신 코너 th radius로 유지. 컬럼 폭/리사이즈 핸들 불변. */
+table.promo-board-table thead th{position:sticky;top:0;z-index:7;background:var(--accent)}
+table.promo-board-table thead th:first-child{border-top-left-radius:11px}
+table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 </style>
   <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) — 공식 docs 권장 이중 fallback -->
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
@@ -4231,7 +4239,8 @@ function _salesDrawTarget(animate){
   var list=_salesTargetList();if(!list.length){div.innerHTML='<div style="color:#aaa;text-align:center;padding:30px;font-size:12px">판매추이 데이터가 있는 공연이 없습니다</div>';return;}
   var meta={};list.forEach(function(p){meta[p.name]=p;});
   var shows=_stShows().map(function(n){return meta[n];}).filter(Boolean);
-  var PAL=['#E5484D','#4A4DE7','#10B981','#E08600','#7C3AED','#0EA5E9','#DB2777'];
+  // #9 공연 순번 색은 의미 없는 시리즈 → 공통 팔레트(_CPAL). 카테고리(공공/상업) 색은 별도(s.cat) 유지.
+  var PAL=_CPAL;
   var allRows=(_salesState.daily&&_salesState.daily.rows)||[];
   var series=[];
   shows.forEach(function(p,si){
@@ -4439,6 +4448,9 @@ function _bizCard(label,val){
 }
 var _BIZ_GENRE_COLORS={'클래식':'#4A4DE7','뮤지컬':'#2563EB','대중':'#0891B2','발레/연극':'#D97706','어린이·가족':'#DB2777','기타':'#9CA3AF'};
 var _BIZ_TYPE_COLORS={'기획':'#4A4DE7','대관':'#D97706','기타':'#9CA3AF'};
+/* #9 임의 다중 시리즈(공연 순번 등 의미 없는 색)용 공통 팔레트 — 토큰 --c1..--c6 고정 순서.
+   ※ 수익성(공공/상업)·장르·플랫폼 등 '의미 있는' 색에는 절대 쓰지 않음(위 맵 그대로 유지). */
+var _CPAL=['#4A4DE7','#D88455','#1A6B3C','#C02872','#2D8AB3','#F5B400'];
 function _bizEnsurePlotly(cb){
   if(window.Plotly){cb();return;}
   if(window._plotlyQ){window._plotlyQ.push(cb);return;}
@@ -7518,8 +7530,8 @@ function renderPromoBoard(){
       const dot=hasFilter?'<span style="margin-left:3px;font-size:8px;color:#ffd24a;vertical-align:middle">●</span>':'';
       return '<th data-col="'+col+'" '+clickAttr+' style="padding:10px 12px;text-align:left;'+widthStyle+'cursor:pointer;user-select:none;color:#fff;'+activeStyle+'" title="'+ttl+'">'+label+'<span style="margin-left:5px;font-size:'+arrowSize+';color:'+arrowColor+'">'+arrow+'</span>'+dot+'<span class="col-resize-handle" onmousedown="_onColResizeStart(event,this.parentElement)" onclick="event.stopPropagation()"></span></th>';
     }
-    // 모서리 둥근 wrapper + 살짝 투명도 헤더
-    html+='<div style="border-radius:12px;overflow:hidden;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;table-layout:fixed"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
+    // 모서리 둥근 wrapper + 살짝 투명도 헤더 (#8 thead 고정: overflow:hidden 제거 → sticky 가능, 둥근 모서리는 th 코너 radius로 대체)
+    html+='<div style="border-radius:12px;border:1px solid #f0f0f0;margin-bottom:10px"><table class="promo-board-table" style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;table-layout:fixed"><thead><tr style="background:rgba(74,77,231,0.95);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">';
     html+=_sh('no','NO',60);
     html+=_sh('status','상태',80);
     html+=_sh('progress','진행',70);
