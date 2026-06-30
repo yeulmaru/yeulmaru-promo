@@ -7444,6 +7444,8 @@ function renderPromoBoard(){
   }else{
     rows=records.slice();
   }
+  // 임시저장('임시')은 관리/보드 목록에서 제외 — 캘린더에서만 본인에게 노출
+  rows=rows.filter(function(r){return (r['진행 상태']||'').toString().trim()!=='임시';});
   // viewMode 'mine' — 본인 신청만 (admin은 본인 개념 없으니 적용 안 함)
   if(!isAdmin&&_promoFilter.viewMode==='mine'){
     if(myApplicant){
@@ -7582,11 +7584,11 @@ function renderPromoBoard(){
   // 신청 중 카운트 = raw '신청 중'만 (보류 제외). 보류는 '사실상 반려'(신청자 재신청 대기 / 2회째 보류 시 자동 취소)라
   // 신청 중이 아님 → 요약·🔔배지·신청대기 섹션 전부 raw 기준으로 일치.
   const myPending=summaryBase.filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
-  const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
-  const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
+  const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
+  const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
   const pendingCnt=records.filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
   // 오늘 건수 (완료/취소 제외)
-  const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
+  const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
   // === 헤더 ===
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
   html+='<h3 style="margin:0;flex:1;text-align:left">일정 확인 및 관리';
@@ -7611,7 +7613,7 @@ function renderPromoBoard(){
   }
   html+='</div>';
   // === 오늘 요약 한 줄 박스 ===
-  const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소';}).length;
+  const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
   const todayDoneCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']==='완료';}).length;
   // 한 줄 요약 박스
   html+='<div style="display:flex;align-items:center;gap:14px;padding:10px 16px;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;font-size:12px;margin-bottom:14px;flex-wrap:wrap;text-align:left">';
@@ -7933,6 +7935,9 @@ function onPromoSearch(v){
   _promoSearchTimer=setTimeout(function(){_promoFilter.q=v;renderPromoBoard();},400);
 }
 function openPromoBoardRow(dateKey,rowIndex,fromBoard){
+  // 임시저장('임시') 본인 건 → 위저드 이어쓰기
+  var _dr=records.find(function(r){return r._rowIndex===rowIndex;});
+  if(_dr&&(_dr['진행 상태']||'').toString().trim()==='임시'){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(_dr,_ma)){closePromoBoard();_pwResumeDraft(rowIndex);return;}}
   // 일정 조회 보드에서 호출 시 fromBoard=true → 모달 닫을 때 보드로 복귀
   // 사이드 패널에서 호출 시 fromBoard 생략 → 모달만 닫고 종료
   closePromoBoard();
@@ -8345,9 +8350,18 @@ async function closePromoWizard(force){
   }
   // 완료 화면이거나 force면 바로 닫기
   if(force||_pwStep===99||_pwStep===1&&!_pwData.program&&!_pwData.isCustom){_doClose();return;}
-  // 진행 중 → confirm
-  const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을까요?');
-  if(ok)_doClose();
+  // edit 모드(기존 레코드 변경)는 임시저장 대상 아님 — 기존 확인 유지
+  if(_pwMode==='edit'){
+    const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을까요?');
+    if(ok)_doClose();
+    return;
+  }
+  // 신청/이어쓰기 작성 중 → 임시저장 제안
+  const save=await showConfirm('작성 중인 내용을 임시저장할까요?',{title:'임시저장',okText:'임시저장',cancelText:'아니요'});
+  if(save){ if(await _pwSaveDraft())_doClose(); return; }
+  // 임시저장 안 함 → 그냥 닫을지 / 계속 작성할지
+  const discard=await showConfirm('저장하지 않고 닫을까요? 작성 중인 내용이 사라져요.',{okText:'닫기',cancelText:'계속 작성',danger:true});
+  if(discard)_doClose();
 }
 function renderPwStep(){
   const bar=document.getElementById('pw-progress-bar');
@@ -8934,8 +8948,11 @@ async function submitPromoRequest(){
     // - 슈퍼 admin: myApplicant 없음 → 황세웅으로 fallback (DB 동일 레벨)
     // → DB 관점에서 모든 등록은 사람 이름 단위 (admin/user 마커 없음)
     const requesterName = _myAppl || '황세웅';
+    // 임시저장 이어쓰기 제출이면 그 행을 PATCH해 전환 (No 보존 · 중복 행 방지)
+    const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
+    const _subNo=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
     const row=[
-      records.length+1,
+      _subNo,
       ts,
       serial,
       y,m,d,
@@ -8962,7 +8979,11 @@ async function submitPromoRequest(){
       '',
       _recPerfId(_pwData.program)  // AB: 공연ID
     ];
-    await api('POST','/api/records',{values:row});
+    if(_pwData._draftRow){
+      await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
+    }else{
+      await api('POST','/api/records',{values:row});
+    }
     // ⚠️ myApplicant는 절대 _pwData.applicant(게시 담당자, P열)로 덮어쓰지 않음.
     // 로그인 시 line 1400에서 본인 이름으로 이미 저장됨. 위저드에서 갱신 불필요.
     // 이전 코드 (if userRole!=='admin' setItem _pwData.applicant)는
@@ -8981,6 +9002,71 @@ async function submitPromoRequest(){
   }finally{
     hideOverlayLoad();
   }
+}
+
+// ===== 임시저장(draft) — 진행 상태='임시', 신청자 본인에게만 노출 =====
+// _pwData → records row (status='임시'). 신규=POST, 이어쓰기(_draftRow)=PATCH. 검증·알림 없음.
+async function _pwSaveDraft(){
+  try{
+    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
+    const cat=typeMap[_pwData.programType]||_pwData.programType||'기타';
+    const dateStr=_pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    const[y,m,d]=dateStr.split('-').map(Number);
+    const DAYS=['일','월','화','수','목','금','토'];
+    const dn=DAYS[new Date(y,m-1,d).getDay()];
+    const ts=dateStr+' '+(_pwData.time||'10:00')+':00';
+    const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
+    const format=resolvePwFormat();
+    const content=buildPwContentText();
+    let _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
+    const requesterName=_myAppl||'황세웅';
+    const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
+    const _no=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
+    const row=[
+      _no, ts, serial, y,m,d, dn+'요일',
+      _pwData.plat1||'', _pwData.plat2||'-', cat, _pwData.program||'',
+      '예술사업팀', _pwData.title||'', format, content,
+      _pwData.applicant||'', '임시', _pwData.memo||'', requesterName,
+      '','','','', nowKstStr(), '','','',
+      _recPerfId(_pwData.program||'')
+    ];
+    showOverlayLoad('임시저장 중...');
+    if(_pwData._draftRow){
+      await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
+    }else{
+      await api('POST','/api/records',{values:row});
+    }
+    await syncReload();
+    showToast('임시저장했어요 — 캘린더에 (임시)로 표시돼요','success');
+    return true;
+  }catch(e){
+    showToast('임시저장 실패: '+e.message,'error');
+    return false;
+  }finally{
+    hideOverlayLoad();
+  }
+}
+// 캘린더/패널에서 임시저장 클릭 → 위저드 이어쓰기 (제출 시 그 행을 PATCH해 '신청 중'/'예정'으로 전환)
+function _pwResumeDraft(rowIndex){
+  if(!_perfReady||!PERFS.length){showToast('프로그램 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요','info');return;}
+  var rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  if(!rec){showToast('임시저장을 찾을 수 없어요','error');return;}
+  try{if(typeof closePanel==='function'&&panelOpen)closePanel();}catch(e){}
+  _pwMode='request';
+  _pwStep=1;_pwSubStep=1;
+  _prefillPwDataFromRec(rec);
+  _pwData._draftRow=rec._rowIndex;   // 이 임시 행을 이어쓰기/제출 시 갱신 (중복 생성 방지)
+  _pwData.fromCalendar=false;
+  var _h3=document.querySelector('#promo-wizard h3');if(_h3)_h3.textContent='임시저장 이어쓰기';
+  document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
+  document.getElementById('promo-wizard').classList.add('show');
+  renderPwStep();
+}
+// 본인 임시저장 삭제 (하드 삭제 — 임시본은 일회성)
+async function _pwDeleteDraft(rowIndex){
+  const ok=await showConfirm('이 임시저장을 삭제할까요?',{okText:'삭제',cancelText:'취소',danger:true});
+  if(!ok)return;
+  try{await api('DELETE','/api/records/'+rowIndex);await syncReload();showToast('임시저장을 삭제했어요');}catch(e){showToast('삭제 실패: '+e.message,'error');}
 }
 
 // ===== 신청 위저드 신규 보조 함수들 =====
@@ -11232,8 +11318,8 @@ async function openScheduleAdmin(){
 function renderScheduleList(){
   const body=document.getElementById('sched-admin-body');
   if(!body)return;
-  // 필터링
-  let rows=records.slice();
+  // 필터링 (임시저장 '임시'는 일정 관리 목록에서 제외)
+  let rows=records.slice().filter(function(r){return (r['진행 상태']||'').toString().trim()!=='임시';});
   if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
   if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
   if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
@@ -11418,8 +11504,8 @@ function addScheduleFromList(){
 }
 
 function exportScheduleCsv(){
-  // 현재 필터된 일정 rows를 CSV로 다운로드
-  let rows=records.slice();
+  // 현재 필터된 일정 rows를 CSV로 다운로드 (임시저장 '임시' 제외)
+  let rows=records.slice().filter(function(r){return (r['진행 상태']||'').toString().trim()!=='임시';});
   if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
   if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
   if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
@@ -12247,9 +12333,12 @@ function isToday(d){return dk(d)===dk(new Date());}
 function isPast(d){const t=new Date();t.setHours(0,0,0,0);const dd=new Date(d);dd.setHours(0,0,0,0);return dd<t;}
 function getRecsForDate(d){
   // 캘린더 표시 정책: 신청 중, 예정, 완료 표시 (완료는 취소선). 취소/보류만 숨김
+  // 임시저장('임시')은 본인에게만 캘린더 노출 (그 계정에 한해서)
+  var _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
   return records.filter(function(r){
     const st=(r['진행 상태']||'').toString();
     if(st==='취소'||st==='보류')return false;
+    if(st==='임시'&&!_isMineRec(r,_myAppl))return false;
     return excelToKey(r['날짜'])===dk(d);
   });
 }
@@ -12510,6 +12599,7 @@ function renderCal(){
         var p=r['플랫폼 1']||'',p2=r['플랫폼 2']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
         var done=st==='완료';
         var applying=st==='신청 중';
+        var draft=st==='임시';
         var ts=r['입력시간(KST)'],hhmm='';
         if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1];
         else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
@@ -12520,8 +12610,9 @@ function renderCal(){
         var titleCol=done?'#bbb':past?'var(--past-text)':'var(--text)';
         var deco=done?'text-decoration:line-through;text-decoration-color:#555;text-decoration-thickness:1.5px;text-decoration-skip-ink:none;':'';
         var applyingBadge=applying?'<span style="display:inline-block;background:#fff8f3;color:#b35a30;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-right:3px;border:1px solid rgba(216,132,85,0.3);letter-spacing:0">신청중</span>':'';
-        var rowOpacity=applying?'0.85':(done?'0.78':'1');
-        var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':'';
+        var draftBadge=draft?'<span style="display:inline-block;background:#EEF0FF;color:var(--accent);font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-right:3px;border:1px solid rgba(74,77,231,0.35);letter-spacing:0">임시</span>':'';
+        var rowOpacity=applying?'0.85':(draft?'0.8':(done?'0.78':'1'));
+        var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':draft?'border:1px dashed rgba(74,77,231,0.5);background:rgba(238,240,255,0.45);':'';
         // 우클릭 메뉴: 항상 부착 — onEvContextMenu에서 케이스별 분기
         var _ctxAttr=' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"';
         h+='<div class="ev'+(done?' done':'')+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'"'+(function(){
@@ -12536,7 +12627,7 @@ function renderCal(){
   else if(st==='취소') _tipMsg += '취소한 콘텐츠입니다.';
   else _tipMsg += '등록한 콘텐츠입니다.';
   return ' data-tooltip="'+_tipMsg+'"';
-})()+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600"'+(applying?'':' title="'+(p2&&p2!=='-'?p2:p).replace(/"/g,'&quot;')+'"')+'>'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
+})()+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600"'+(applying?'':' title="'+(p2&&p2!=='-'?p2:p).replace(/"/g,'&quot;')+'"')+'>'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+draftBadge+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
@@ -12864,13 +12955,18 @@ function openPanel(dateObj,recs){
     h+='<div class="p-row1">';
     if(time)h+='<span class="p-time">'+time+'</span>';
     if(st)h+='<span class="meta-chip '+statusClass(st)+'">'+escapeHtml(st)+'</span>';
-    // 삭제 버튼: admin이거나, 본인이 신청한 "신청 중" 건
+    // 삭제 버튼: admin이거나, 본인이 신청한 "신청 중" 건, 또는 본인 임시저장
     var _showDel=userRole==='admin';
     if(!_showDel){
       var _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
       if(_myAppl&&(r['게시 담당자']||'')===_myAppl&&st==='신청 중')_showDel=true;
+      if(_myAppl&&st==='임시'&&_isMineRec(r,_myAppl))_showDel=true;
     }
-    if(_showDel)h+='<button class="p-del" onclick="event.stopPropagation();deleteRec('+ri+',\''+dkey+'\')" title="'+(userRole==='admin'?'삭제':'신청 취소')+'">✕</button>';
+    if(_showDel){
+      var _delCall=(st==='임시')?'_pwDeleteDraft('+ri+')':'deleteRec('+ri+',\''+dkey+'\')';
+      var _delTitle=(userRole==='admin'&&st!=='임시')?'삭제':(st==='임시'?'임시저장 삭제':'신청 취소');
+      h+='<button class="p-del" onclick="event.stopPropagation();'+_delCall+'" title="'+_delTitle+'">✕</button>';
+    }
     h+='</div>';
     h+='<div class="p-row2">';
     h+='<img class="p-plat-mini" src="'+icon+'" alt="'+escapeHtml(p1)+'" onerror="this.outerHTML=\'<span class=&quot;p-plat-mini-fallback&quot; style=&quot;background:'+col+'&quot;>'+escapeHtml(fallbackTxt)+'</span>\'">';
@@ -13631,6 +13727,8 @@ function editRec(rowIndex,dateKey,ev,forceReadOnly){
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
   var rec=records.find(function(r){return r._rowIndex===rowIndex;});
   if(!rec)return;
+  // 임시저장('임시') 본인 건 → 위저드 이어쓰기로 복귀
+  if((rec['진행 상태']||'').toString().trim()==='임시'){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(rec,_ma)){_pwResumeDraft(rowIndex);return;}}
   // === user 본인 '신청 중'만 → 변경 위저드 (예정은 읽기전용, A-2) ===
   if(userRole!=='admin'&&!forceReadOnly){
     var myAppl='';try{myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
