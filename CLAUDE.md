@@ -1,9 +1,24 @@
 # yeulmaru-promo — CLAUDE.md (인계 문서)
 
 > **예울마루 홍보 계획표 웹앱.** GS칼텍스 예울마루 직원이 홍보 콘텐츠 신청·관리하는 단일파일 웹앱. 엑셀+VBA 매크로 대체.
-> **Last updated**: 2026-06-11 (KST) · 최신 작업 = 규정 세분화·예울이·드롭다운·신청시간 9~18 (PR #12 머지 대기)
+> **Last updated**: 2026-06-30 (KST) · 최신 작업 = 홍보기간 분리(신청 게이트 판매→홍보)·로딩 레이스 수정·불편사항 접수(QA) 창구 (PR 작업 중)
 >
 > 이 파일은 **매 세션 새 Claude에게 넘기는 인계서**다. 여기 적힌 건 "이미 정해진 사실"이니 다시 캐묻거나 추측으로 뒤집지 말 것. 코드 세부(컬럼순서·함수 시그니처)는 `index.html`을 직접 검색. 과거 전체 이력은 `docs/CLAUDE_full_backup_260601.md`.
+
+---
+
+## 🆕 세션 (2026-06-30, 원격 클코 web) — 홍보기간 분리 + 로딩 레이스 수정 + 불편사항 접수(QA) 창구 (PR 작업 중)
+
+- **🆕 홍보기간 = 신청 게이트(판매기간과 분리, 사용자 스펙)**: 기존엔 **판매기간(`판매시작일~판매종료일`)이 캘린더 홍보 신청 가능 게이트**였음 → 판매 전엔 홍보 신청 불가. 이제 **홍보기간(`홍보시작일~홍보종료일`)을 별도 게이트**로 분리. **저장 위치 = '프로그램' 시트에 컬럼 2개 추가(K=홍보시작일·L=홍보종료일)** — ⚠️ 사용자는 "새 DB 테이블"을 요청했으나, 별도 시트는 ①Worker SHEET_MAP 수정+재배포 필요 ②하반기 공연 `공연ID` 빈칸이라 조인키 불가(NO로 우회해야) 두 이유로 **컬럼 추가가 더 견고**하다고 판단해 그렇게 구현(프론트엔 홍보 vs 판매가 별도 필드로 완전 분리됨). 물리적 별도 시트가 꼭 필요하면 전환 가능 — 사용자 확인 대기.
+- **컬럼 추가 = positional 안전(A~J 그대로, K·L append)**. `programToPerf`에 `ps`(홍보시작)·`pe`(홍보종료) 필드 추가. **게이트 4곳을 ss/se→ps/pe로 스왑**: 위저드 Step1 프로그램 필터(refKey가 홍보기간 안), `submitPromoEdit` 인라인 변경검증, `_validateScheduleChange`(submit/copy/move/change 공용 chokepoint). **`updatePerfOpen`의 `p.o`는 그대로 '판매중' 표시 플래그(사업분석/날짜패널/스코프 표시 전용)로 유지** — 게이트와 분리(p.o를 홍보로 바꾸면 날짜패널·스코프 등 무관한 표시까지 바뀜 → 표면적 최소화). **폴백**: 홍보기간 미설정 시 `pe=p.pe||p.e`(프로그램 종료일), `ps` 없으면 하한 없음 → **마이그레이션 전에도 '오늘~프로그램 종료일'로 graceful 동작**.
+- **프로그램 폼**: 📣 홍보 신청 가능 기간 행(필수, `required`) 추가 — **기본값 홍보시작=오늘·홍보종료=프로그램 종료일**(`_progSyncPromoEnd`로 종료일 입력 시 자동동기화). **판매시작일/종료일은 (선택·사업분석용)으로 라벨 변경**(이미 required 아님). saveProgram values에 K·L append. 프로그램 관리 표에 '홍보' 컬럼 추가.
+- **⚠️ 필수 백엔드 1회 실행(사용자)**: `DB_PW=<구슈퍼비번> node docs/260630_promo_period_ingest.mjs --write` — '프로그램' 시트에 **홍보시작일·홍보종료일 헤더(K1·L1) 추가 + 기존 행 백필(오늘~종료일)**. 헤더 없으면 폼에서 저장한 홍보기간이 read에서 키로 안 잡힘(저장은 되나 조회 불가). 실행 전엔 프론트 폴백으로 앱은 정상. **Worker 재배포 불필요**(program slug 이미 매핑, positional A~L).
+- **🐛 로딩 레이스 수정(item 1)**: `programToPerf` 기본 `o:1→0`(updatePerfOpen 전 미확정 상태), 전역 `_perfReady` 플래그(initApp에서 false→updatePerfOpen 후 true), **`openPromoWizard` 가드**(`!_perfReady||!PERFS.length`면 토스트 후 return) — 로딩 전 navbar '신청'/조기 클릭으로 **하반기 공연이 위저드 선택지로 새던 현상** 차단.
+- **🆕 불편사항 접수(QA) 창구(item 5)**: 예울이 FAB **위**에 강조 버튼(`.qa-fab`, 확성기 SVG + '불편사항 접수' 필 라벨, 코랄 그라데이션+펄스). `_qaMount`(initApp), `_qaOpen/_qaClose/_qaSubmit` 모달(분류 select + 내용 textarea). **Worker `/api/qa`**(POST=로그인 사용자/GET=admin) + `handleAddQa` → **'불편사항' 시트 자동생성**(헤더 ID/KST/사용자/부서/분류/내용/상태/처리메모). ⚠️ **Worker 재배포 필요** — 미배포 시 프론트가 **`/api/chatbot/log`에 종류='불편사항'으로 폴백 적재(데이터 유실 방지)**, 배포 후 전용 시트로.
+- **🆕 카카오 본문 필수 글자수 76→30(사용자: 30~76)**: `validatePwSubStep` 카카오 분기 2곳(`format==='텍스트'`·`key==='text'`) `length<76→<30`, 메시지 '최소 30자는 입력해주세요. (현재 N자)'. **maxlength=76 유지**(상한). 위저드 힌트/placeholder '30자 이상 76자까지 입력해 주세요'. `_pwMinSkip`(admin confirm 스킵) 그대로.
+- **🆕 임시저장(draft) — records '임시' 상태(사용자: 캘린더에도 (임시) 표시 선택)**: 위저드 닫을 때(`closePromoWizard`, request/이어쓰기 모드) **'임시저장 하시겠습니까?'**(2단 confirm: 임시저장→저장후닫기 / 아니요→'닫기 vs 계속작성'). `_pwSaveDraft`=`_pwData`→records row(진행 상태=`임시`, 신청자=본인), 신규 POST/이어쓰기 PATCH(No 보존). `_pwResumeDraft`(캘린더·패널 클릭→`editRec`/`openPromoBoardRow`에서 '임시'+본인이면 라우팅)=`_prefillPwDataFromRec`+`_draftRow` 세팅→이어쓰기, **제출 시 그 행 PATCH해 '신청 중'/'예정' 전환(중복 방지)**. `_pwDeleteDraft`=하드 삭제. **'임시'는 본인에게만**: `getRecsForDate`(캘린더·패널, `_isMineRec`), 그 외 **집계/관리에서 전면 제외**(renderPromoBoard·renderScheduleList·exportScheduleCsv·요약카운트 myToday/myUpcoming/todayActiveCnt/todayAllCnt). 캘린더 셀/패널에 (임시) 뱃지+점선. ⚠️ DB에 '임시' 행이 실제 생김(Worker/시트 변경 없음, 기존 records 파이프 재사용) — 별도 시트/슬러그 불필요. 카카오/문자 충돌검사는 이미 무력화(영향 없음).
+- **🆕 임시저장 v2 — 전용 '임시저장' 컬럼 + load-time 분리(사용자: "진행 상태 한 열에 두면 앞으로 누수 위험, 열 인덱싱 하나 더 추가")**: records '홍보기록' 시트에 **AC열 '임시저장'**(값 'Y') 추가. `loadData`에서 **`_isDraftRec`로 records ↔ `_DRAFTS` 분리** → **records엔 임시저장이 절대 안 들어감 → 현재·미래의 모든 상태 필터가 구조적으로 안전**(개별 제외 불필요). `getRecsForDate`가 본인 `_DRAFTS`만 병합(캘린더 노출). `_findAnyRec`(records+_DRAFTS)로 캘린더/패널 상호작용 4곳(editRec·onEvContextMenu·openPromoBoardRow·_pwResumeDraft) 조회. **`_isDraftRec`=플래그 'Y' OR 진행 상태 '임시'**(폴백) → **헤더 마이그 전에도 분리 동작**(status='임시'로). _pwSaveDraft 행에 29번째 'Y' append, submitPromoRequest는 '' append(이어쓰기 제출=플래그 해제→records 편입). **Worker 변경 불필요**(records 쓰기 values.length로 폭 자동확장). ⚠️ **권장 1회 실행**: `DB_PW=<비번> node docs/260630_records_draft_col_ingest.mjs --write`(AC1 헤더 추가). v1의 status 기반 제외 필터들은 이제 무해한 dead(records에 '임시' 없음). 
+- **검증**: node 문법체크 통과(index.html 3블록 + src/index.js + 마이그 스크립트 2종). 라이브 검증은 사용자 배포 후 필요. **임시저장은 Worker 변경 불필요 → 푸시 즉시 동작**(GitHub Pages 빌드 후, 헤더 마이그 권장).
 
 ---
 

@@ -426,6 +426,7 @@ button{font-family:inherit;cursor:pointer}
   /* drawer/챗봇/토스트 — 하단 네비 위로 */
   .panel{bottom:calc(58px + env(safe-area-inset-bottom)) !important}
   .cb-fab{bottom:calc(74px + env(safe-area-inset-bottom)) !important;right:14px !important;width:48px !important;height:48px !important}
+  .qa-fab{bottom:calc(132px + env(safe-area-inset-bottom)) !important;right:14px !important;padding:8px 13px 8px 11px !important;font-size:11.5px !important}
   .cb-win{bottom:calc(132px + env(safe-area-inset-bottom)) !important}
   .toast{bottom:calc(80px + env(safe-area-inset-bottom))}
   /* 더보기 시트 */
@@ -899,6 +900,17 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .cb-fab:active{transform:scale(0.94)}
 .cb-fab svg{width:26px;height:26px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
 .cb-fab::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid rgba(74,77,231,0.35);animation:cbPulse 2.6s ease-out 1s 3}
+/* === 불편사항 접수(QA) 버튼 — 예울이 FAB 위, 강조 === */
+.qa-fab{position:fixed;right:26px;bottom:94px;z-index:95;display:flex;align-items:center;gap:7px;padding:9px 15px 9px 13px;border:none;border-radius:24px;background:linear-gradient(135deg,#FF8F5E 0%,#FB6A6A 58%,#F2545B 100%);color:#fff;cursor:pointer;font-family:inherit;font-weight:700;font-size:12.5px;box-shadow:0 8px 22px rgba(242,84,91,0.4),0 2px 8px rgba(0,0,0,0.12);transition:transform .22s cubic-bezier(.34,1.4,.64,1),box-shadow .22s;animation:cbPop .5s cubic-bezier(.34,1.56,.64,1) backwards .15s}
+.qa-fab:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 14px 30px rgba(242,84,91,0.5)}
+.qa-fab:active{transform:scale(0.96)}
+.qa-fab svg{width:18px;height:18px;flex:none}
+.qa-fab::after{content:'';position:absolute;inset:-3px;border-radius:24px;border:2px solid rgba(242,84,91,0.45);animation:cbPulse 2.6s ease-out 1.4s 3;pointer-events:none}
+.qa-fab-label{white-space:nowrap;letter-spacing:-0.2px}
+/* === 카카오 본문 이모지 피커 === */
+.pw-emoji-pop{position:fixed;z-index:10000;width:284px;max-height:208px;overflow-y:auto;background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;box-shadow:0 14px 44px rgba(0,0,0,0.2);padding:8px;display:flex;flex-wrap:wrap;gap:2px;animation:acctDrop .16s ease}
+.pw-emoji-x{width:32px;height:32px;border:none;background:transparent;border-radius:8px;font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pw-emoji-x:hover{background:#F0EEFA}
 @keyframes cbPop{from{transform:scale(0) rotate(-30deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
 @keyframes cbPulse{0%{transform:scale(1);opacity:.8}70%,100%{transform:scale(1.35);opacity:0}}
 .cb-win{position:fixed;right:26px;bottom:96px;width:350px;height:520px;max-height:calc(100vh - 130px);background:rgba(255,255,255,0.92);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);border:1px solid rgba(255,255,255,0.7);border-radius:24px;box-shadow:0 32px 90px rgba(74,77,231,0.22),0 10px 28px rgba(0,0,0,0.10),inset 0 1px 0 rgba(255,255,255,0.8);z-index:96;display:none;flex-direction:column;overflow:hidden;transform-origin:bottom right}
@@ -1816,6 +1828,8 @@ const VENUE_PINS = [
 ];
 
 let PERFS=[];
+let _perfReady=false;   // [버그수정] 프로그램 로드+updatePerfOpen 완료 여부 — 홍보 위저드 조기 오픈(미로딩 상태) 차단용
+let _DRAFTS=[];         // 임시저장 전용 배열 — loadData에서 '임시저장' 컬럼으로 records와 분리(집계/관리에 구조적으로 안 섞임)
 function getPerfs(d){var k=dk(d),now=new Date();now.setHours(0,0,0,0);return PERFS.filter(function(p){return k>=p.s&&k<=p.e}).map(function(p){var sd=new Date(p.s);sd.setHours(0,0,0,0);var ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});var diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});});}
 function getExhibitStatus(d){
 var k=dk(d),now=new Date();now.setHours(0,0,0,0);
@@ -2583,9 +2597,11 @@ function programToPerf(p){
     n:p['줄임말']||'',
     f:p['풀네임']||'',
     t:typeMap[p['콘텐츠구분']]||'c',
-    o:1,
-    ss:excelSerialToISO(p['판매시작일']),
+    o:0,   // [버그수정] 로딩 중 기본 0(닫힘) — updatePerfOpen() 실행 전 위저드가 열려도 미확정 하반기 공연이 선택지로 새지 않게
+    ss:excelSerialToISO(p['판매시작일']),   // 판매기간 = 사업 분석용(선택). 신청 게이트 아님
     se:excelSerialToISO(p['판매종료일']),
+    ps:excelSerialToISO(p['홍보시작일']),   // 홍보 시작일 — 캘린더 홍보 신청 가능 게이트(필수). 미설정 시 폴백
+    pe:excelSerialToISO(p['홍보종료일']),   // 홍보 종료일 (미설정 시 프로그램 종료일 폴백)
     m:p['담당자']||'',
     l:p['장소']||'',
     u:p['URL']||p['공연 URL']||p['상세 링크']||p['링크']||'',
@@ -2818,7 +2834,8 @@ function tsFilename(label,ext='csv'){
 function updatePerfOpen(){
   var now=new Date();now.setHours(0,0,0,0);
   PERFS.forEach(function(p){
-    // 판매 중 기준: 판매시작일 <= 오늘 <= 판매종료일
+    // p.o = '판매 중' 표시 플래그(사업 분석/현황 표시 전용) — 판매시작일 <= 오늘 <= 판매종료일.
+    // ⚠️ 홍보 신청 가능 게이트가 아님. 신청 가능 여부는 홍보기간(ps~pe)으로 별도 판정(위저드/_validateScheduleChange).
     if(!p.ss||!p.se){p.o=0;return;}
     var ss=new Date(p.ss);ss.setHours(0,0,0,0);
     var se=new Date(p.se);se.setHours(0,0,0,0);
@@ -2826,8 +2843,10 @@ function updatePerfOpen(){
   });
 }
 async function initApp(){
+  _perfReady=false;
   buildNav();startClock();updateRoleTag();
   try{_chatbotMount();}catch(_e){console.warn('[chatbot mount]',_e);}
+  try{_qaMount();}catch(_e){console.warn('[qa mount]',_e);}
   try{_initLongPress();}catch(_e){}
   loadWeather(); if(!window._wxTimer)window._wxTimer=setInterval(loadWeather,1800000);
   _presBeat(); _presPoll(); if(!window._presTimer)window._presTimer=setInterval(function(){_presBeat();_presPoll();},35000);
@@ -2842,6 +2861,7 @@ async function initApp(){
   try{await loadCafeJangdo();}catch(e){console.warn('[initApp loadCafeJangdo]',e);}
   try{await loadApplySettings();}catch(e){console.warn('[initApp loadApplySettings]',e);}
   updatePerfOpen();
+  _perfReady=true;   // 프로그램·홍보기간 로드 완료 — 이제 홍보 위저드 오픈 허용
   loadData();
   // MS(OneDrive) 토큰 미리 확보 — 폴더 선택 때 팝업 안 뜨게 (재방문 silent / 첫 로그인 popup 1회)
   _msalPrefetch();
@@ -7090,10 +7110,15 @@ function _isMineRec(rec, myAppl){
   }
   return false;
 }
+// === 임시저장(draft) 판정 — '임시저장' 컬럼='Y' (마이그레이션 전 헤더 없으면 false → status='임시' 폴백) ===
+function _isDraftRec(r){return !!(r && (String(r['임시저장']||'').toUpperCase()==='Y' || String(r['진행 상태']||'').trim()==='임시'));}
+// 캘린더/패널 상호작용용 행 조회 — records + _DRAFTS 모두 탐색 (임시저장은 records에 없으므로)
+function _findAnyRec(ri){return records.find(function(r){return r._rowIndex===ri;})||(_DRAFTS||[]).find(function(r){return r._rowIndex===ri;});}
 // === admin 섹션 분류 헬퍼 (전역) ===
 // 0=신청 대기, 1=오늘, 2=미래 예정, 3=지난 일정, 4=취소
 function _getAdminSection(rec, todayKey){
   const st = (rec['진행 상태']||'').toString();
+  if(st==='임시') return -1;  // 임시저장은 보드 섹션 분류 대상 아님 (renderPromoBoard에서 이미 제외)
   if(st==='신청 중') return 0;
   if(st==='취소') return 4;
   const dk = (rec['연도']||'')+'-'+String(rec['월']||'').padStart(2,'0')+'-'+String(rec['일']||'').padStart(2,'0');
@@ -7429,6 +7454,8 @@ function renderPromoBoard(){
   }else{
     rows=records.slice();
   }
+  // 임시저장('임시')은 관리/보드 목록에서 제외 — 캘린더에서만 본인에게 노출
+  rows=rows.filter(function(r){return (r['진행 상태']||'').toString().trim()!=='임시';});
   // viewMode 'mine' — 본인 신청만 (admin은 본인 개념 없으니 적용 안 함)
   if(!isAdmin&&_promoFilter.viewMode==='mine'){
     if(myApplicant){
@@ -7567,11 +7594,11 @@ function renderPromoBoard(){
   // 신청 중 카운트 = raw '신청 중'만 (보류 제외). 보류는 '사실상 반려'(신청자 재신청 대기 / 2회째 보류 시 자동 취소)라
   // 신청 중이 아님 → 요약·🔔배지·신청대기 섹션 전부 raw 기준으로 일치.
   const myPending=summaryBase.filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
-  const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
-  const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
+  const myToday=summaryBase.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
+  const myUpcoming=summaryBase.filter(function(r){const dk=getRecDateKey(r);return dk>todayKey&&dk<=addDaysKey(todayKey,7)&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
   const pendingCnt=records.filter(function(r){return (r['진행 상태']||'')==='신청 중';}).length;
   // 오늘 건수 (완료/취소 제외)
-  const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소';}).length;
+  const todayActiveCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='완료'&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
   // === 헤더 ===
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee">';
   html+='<h3 style="margin:0;flex:1;text-align:left">일정 확인 및 관리';
@@ -7596,7 +7623,7 @@ function renderPromoBoard(){
   }
   html+='</div>';
   // === 오늘 요약 한 줄 박스 ===
-  const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소';}).length;
+  const todayAllCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']!=='취소'&&r['진행 상태']!=='임시';}).length;
   const todayDoneCnt=records.filter(function(r){return getRecDateKey(r)===todayKey&&r['진행 상태']==='완료';}).length;
   // 한 줄 요약 박스
   html+='<div style="display:flex;align-items:center;gap:14px;padding:10px 16px;background:#fafafa;border:1px solid #f0f0f0;border-radius:10px;font-size:12px;margin-bottom:14px;flex-wrap:wrap;text-align:left">';
@@ -7918,6 +7945,9 @@ function onPromoSearch(v){
   _promoSearchTimer=setTimeout(function(){_promoFilter.q=v;renderPromoBoard();},400);
 }
 function openPromoBoardRow(dateKey,rowIndex,fromBoard){
+  // 임시저장('임시') 본인 건 → 위저드 이어쓰기
+  var _dr=_findAnyRec(rowIndex);
+  if(_dr&&_isDraftRec(_dr)){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(_dr,_ma)){closePromoBoard();_pwResumeDraft(rowIndex);return;}}
   // 일정 조회 보드에서 호출 시 fromBoard=true → 모달 닫을 때 보드로 복귀
   // 사이드 패널에서 호출 시 fromBoard 생략 → 모달만 닫고 종료
   closePromoBoard();
@@ -7942,6 +7972,11 @@ let _pwSelectedSteps=[];       // [1,3,4] 선택된 step 배열
 let _pwSelectedIdx=0;          // 현재 진행 중 idx
 let _pwOriginalRec=null;       // 원본 row (diff용)
 function openPromoWizard(prefillDate){
+  // [버그수정] 프로그램·홍보기간 로딩 완료 전에는 열지 않음 — 미확정 하반기 공연이 선택지로 새던 현상 차단
+  if(!_perfReady||!PERFS.length){
+    showToast('프로그램 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요','info');
+    return;
+  }
   _pwMode='request';
   document.querySelector('#promo-wizard h3').textContent='홍보 신청';
   _pwStep=1;
@@ -8061,7 +8096,7 @@ function _renderChangeMenu(rec){
   var _cmStatus=rec['진행 상태']||'';
   var _cmMyAppl='';try{_cmMyAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
   var _cmMine=(typeof _isMineRec==='function')?_isMineRec(rec,_cmMyAppl):((rec['게시 담당자']||'')===_cmMyAppl);
-  var _cmCancelable=(_cmStatus!=='완료'&&_cmStatus!=='취소');
+  var _cmCancelable=(_cmStatus!=='완료'&&_cmStatus!=='취소'&&_cmStatus!=='임시');
   if(_cmMine && _cmCancelable){
     html+='<button class="m-btn" onclick="closeChangeMenu();cancelPromoRequest('+rec._rowIndex+')" style="background:#fff;color:#e5484d;border:1.5px solid #e5484d;font-weight:600;margin-right:auto">신청 취소</button>';
   }
@@ -8261,9 +8296,9 @@ async function submitPromoEdit(){
       var _dateChanged=_dtCh&&(_pwData.date!==_recDate(orig));  // 날짜 자체가 바뀌었는가 (시간만 변경 구분)
       // 날짜/시간 변경 시: 접수·홍보시간대·제외·담당자 검증
       if(_dtCh){ var _c=canApplyOnDateTime(_effDate,_effTime); if(!_c.ok){showToast('변경 불가: '+_c.reason,'error');return;} }
-      // 날짜 or 프로그램 변경 시: 판매기간 검증
+      // 날짜 or 프로그램 변경 시: 홍보기간 검증 (홍보시작일~홍보종료일, 종료일 미설정 시 프로그램 종료일)
       var _perf=_findPerfByName(_effProg);
-      if(_perf){ if(_perf.ss&&_effDate<_perf.ss){showToast('변경 불가: 프로그램 판매 시작('+_perf.ss+') 전이라 홍보할 수 없어요','error');return;} if(_perf.se&&_effDate>_perf.se){showToast('변경 불가: 프로그램 판매 종료('+_perf.se+') 후라 홍보할 수 없어요','error');return;} }
+      if(_perf){ var _ppe=_perf.pe||_perf.e; if(_perf.ps&&_effDate<_perf.ps){showToast('변경 불가: 홍보 시작('+_perf.ps+') 전이라 홍보할 수 없어요','error');return;} if(_ppe&&_effDate>_ppe){showToast('변경 불가: 홍보 종료('+_ppe+') 후라 홍보할 수 없어요','error');return;} }
       // 카카오/문자 2일연속·중복은 날짜 기반 — 날짜가 바뀌거나 플랫폼이 바뀔 때만 검증(시간/제목만 변경은 제외). 자기 자신 제외
       if(_dateChanged||_platCh){ var _kc=_kakaoSmsConflict(_effPlat,_effDate,_effAppl,_pwEditTarget); if(_kc){showToast('변경 불가: '+_kc,'error');return;} }
     }
@@ -8325,9 +8360,18 @@ async function closePromoWizard(force){
   }
   // 완료 화면이거나 force면 바로 닫기
   if(force||_pwStep===99||_pwStep===1&&!_pwData.program&&!_pwData.isCustom){_doClose();return;}
-  // 진행 중 → confirm
-  const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을까요?');
-  if(ok)_doClose();
+  // edit 모드(기존 레코드 변경)는 임시저장 대상 아님 — 기존 확인 유지
+  if(_pwMode==='edit'){
+    const ok=await showConfirm('작성 중인 내용이 사라집니다. 닫을까요?');
+    if(ok)_doClose();
+    return;
+  }
+  // 신청/이어쓰기 작성 중 → 임시저장 제안
+  const save=await showConfirm('작성 중인 내용을 임시저장할까요?',{title:'임시저장',okText:'임시저장',cancelText:'아니요'});
+  if(save){ if(await _pwSaveDraft())_doClose(); return; }
+  // 임시저장 안 함 → 그냥 닫을지 / 계속 작성할지
+  const discard=await showConfirm('저장하지 않고 닫을까요? 작성 중인 내용이 사라져요.',{okText:'닫기',cancelText:'계속 작성',danger:true});
+  if(discard)_doClose();
 }
 function renderPwStep(){
   const bar=document.getElementById('pw-progress-bar');
@@ -8342,9 +8386,10 @@ function renderPwStep(){
     // 우클릭 진입 시 그 날짜 기준, 일반 진입은 today fallback
     const _refKey=_pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
     const activePerfs=PERFS.filter(function(p){
-      if(p.o!==1)return false;
-      // 판매종료일 있는 경우만 체크 (없으면 표시)
-      if(p.se&&p.se<_refKey)return false;
+      // 홍보 신청 가능 = 기준일이 홍보기간 안. 홍보종료일 미설정 시 프로그램 종료일 폴백, 홍보시작일 미설정 시 하한 없음.
+      var _pe=p.pe||p.e;
+      if(!_pe||_pe<_refKey)return false;     // 홍보/프로그램 종료일이 기준일 이전 → 제외
+      if(p.ps&&p.ps>_refKey)return false;     // 홍보 시작 전 → 제외
       return true;
     });
     const groups=[
@@ -8913,8 +8958,11 @@ async function submitPromoRequest(){
     // - 슈퍼 admin: myApplicant 없음 → 황세웅으로 fallback (DB 동일 레벨)
     // → DB 관점에서 모든 등록은 사람 이름 단위 (admin/user 마커 없음)
     const requesterName = _myAppl || '황세웅';
+    // 임시저장 이어쓰기 제출이면 그 행을 PATCH해 전환 (No 보존 · 중복 행 방지)
+    const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
+    const _subNo=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
     const row=[
-      records.length+1,
+      _subNo,
       ts,
       serial,
       y,m,d,
@@ -8939,9 +8987,14 @@ async function submitPromoRequest(){
       '',
       '',
       '',
-      _recPerfId(_pwData.program)  // AB: 공연ID
+      _recPerfId(_pwData.program),  // AB: 공연ID
+      ''   // AC: 임시저장 — 실제 신청은 빈값 (이어쓰기 제출이면 'Y'→'' 전환되어 _DRAFTS에서 빠지고 records로 편입)
     ];
-    await api('POST','/api/records',{values:row});
+    if(_pwData._draftRow){
+      await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
+    }else{
+      await api('POST','/api/records',{values:row});
+    }
     // ⚠️ myApplicant는 절대 _pwData.applicant(게시 담당자, P열)로 덮어쓰지 않음.
     // 로그인 시 line 1400에서 본인 이름으로 이미 저장됨. 위저드에서 갱신 불필요.
     // 이전 코드 (if userRole!=='admin' setItem _pwData.applicant)는
@@ -8960,6 +9013,72 @@ async function submitPromoRequest(){
   }finally{
     hideOverlayLoad();
   }
+}
+
+// ===== 임시저장(draft) — 진행 상태='임시', 신청자 본인에게만 노출 =====
+// _pwData → records row (status='임시'). 신규=POST, 이어쓰기(_draftRow)=PATCH. 검증·알림 없음.
+async function _pwSaveDraft(){
+  try{
+    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
+    const cat=typeMap[_pwData.programType]||_pwData.programType||'기타';
+    const dateStr=_pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    const[y,m,d]=dateStr.split('-').map(Number);
+    const DAYS=['일','월','화','수','목','금','토'];
+    const dn=DAYS[new Date(y,m-1,d).getDay()];
+    const ts=dateStr+' '+(_pwData.time||'10:00')+':00';
+    const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
+    const format=resolvePwFormat();
+    const content=buildPwContentText();
+    let _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
+    const requesterName=_myAppl||'황세웅';
+    const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
+    const _no=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
+    const row=[
+      _no, ts, serial, y,m,d, dn+'요일',
+      _pwData.plat1||'', _pwData.plat2||'-', cat, _pwData.program||'',
+      '예술사업팀', _pwData.title||'', format, content,
+      _pwData.applicant||'', '임시', _pwData.memo||'', requesterName,
+      '','','','', nowKstStr(), '','','',
+      _recPerfId(_pwData.program||''),
+      'Y'   // AC: 임시저장 플래그 (records 분리 키). 진행 상태='임시'는 사람이 읽기 위한 표시·폴백
+    ];
+    showOverlayLoad('임시저장 중...');
+    if(_pwData._draftRow){
+      await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
+    }else{
+      await api('POST','/api/records',{values:row});
+    }
+    await syncReload();
+    showToast('임시저장했어요 — 캘린더에 (임시)로 표시돼요','success');
+    return true;
+  }catch(e){
+    showToast('임시저장 실패: '+e.message,'error');
+    return false;
+  }finally{
+    hideOverlayLoad();
+  }
+}
+// 캘린더/패널에서 임시저장 클릭 → 위저드 이어쓰기 (제출 시 그 행을 PATCH해 '신청 중'/'예정'으로 전환)
+function _pwResumeDraft(rowIndex){
+  if(!_perfReady||!PERFS.length){showToast('프로그램 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요','info');return;}
+  var rec=_findAnyRec(rowIndex);
+  if(!rec){showToast('임시저장을 찾을 수 없어요','error');return;}
+  try{if(typeof closePanel==='function'&&panelOpen)closePanel();}catch(e){}
+  _pwMode='request';
+  _pwStep=1;_pwSubStep=1;
+  _prefillPwDataFromRec(rec);
+  _pwData._draftRow=rec._rowIndex;   // 이 임시 행을 이어쓰기/제출 시 갱신 (중복 생성 방지)
+  _pwData.fromCalendar=false;
+  var _h3=document.querySelector('#promo-wizard h3');if(_h3)_h3.textContent='임시저장 이어쓰기';
+  document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
+  document.getElementById('promo-wizard').classList.add('show');
+  renderPwStep();
+}
+// 본인 임시저장 삭제 (하드 삭제 — 임시본은 일회성)
+async function _pwDeleteDraft(rowIndex){
+  const ok=await showConfirm('이 임시저장을 삭제할까요?',{okText:'삭제',cancelText:'취소',danger:true});
+  if(!ok)return;
+  try{await api('DELETE','/api/records/'+rowIndex);await syncReload();showToast('임시저장을 삭제했어요');}catch(e){showToast('삭제 실패: '+e.message,'error');}
 }
 
 // ===== 신청 위저드 신규 보조 함수들 =====
@@ -9710,9 +9829,9 @@ function renderPwSubDetail(body,next){
     // 카카오톡 — 76자 제한
     if(p1==='카카오톡'){
       html='<div class="pw-question">카카오톡 텍스트를 작성해주세요</div>';
-      html+='<div class="pw-hint">76자까지 입력할 수 있어요</div>';
-      html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span></label>';
-      html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="76자까지 입력할 수 있어요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
+      html+='<div class="pw-hint">30자 이상 76자까지 입력해 주세요</div>';
+      html+=_pwKakaoLabelBar();
+      html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="30자 이상 76자까지 입력해 주세요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
       html+='<div style="display:flex;justify-content:flex-end;margin-top:6px"><span id="pw-kakao-count" style="font-size:11px;color:#888">'+(_pwData.kakaoText||'').length+' / 76</span></div>';
       body.innerHTML=html;next.textContent='다음';return;
     }
@@ -9758,15 +9877,63 @@ function renderPwSubDetail(body,next){
   next.textContent='다음';
 }
 
+// === 카카오 본문 이모지 피커 ===
+var _PW_EMOJIS=['😊','😄','😍','🥰','😉','😎','🤩','🙂','😆','👍','🙌','👏','🙏','👉','💪','🤝',
+'❤️','🧡','💛','💚','💙','💜','🩷','💖','✨','🌟','⭐','🔥','💯','🎉','🎊','🎁','🎈','🎀',
+'📣','📢','✅','❗','❓','💡','📌','📅','🕐','📍','🎫','🎭','🎨','🎵','🎤','🎬','🎶','🎟️',
+'🌊','🏖️','🌴','🌸','🌷','🌻','☀️','🌙','💧','🍀','🍰','☕','💐','🛍️','🚌'];
+function _pwKakaoLabelBar(){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px">'+
+    '<label style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span></label>'+
+    '<button type="button" class="pw-emoji-btn" onclick="_pwEmojiToggle(event)" title="이모지 넣기" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#FFF7E6;border:1px solid rgba(240,180,80,0.45);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:#B8860B">😊 이모지</button>'+
+    '</div>';
+}
+function _pwEmojiToggle(ev){
+  if(ev)ev.stopPropagation();
+  var ex=document.getElementById('pw-emoji-pop');
+  if(ex){ex.remove();document.removeEventListener('click',_pwEmojiOutside,true);return;}
+  var btn=ev&&ev.currentTarget;
+  var pop=document.createElement('div');
+  pop.id='pw-emoji-pop';pop.className='pw-emoji-pop';
+  pop.innerHTML=_PW_EMOJIS.map(function(e){return '<button type="button" class="pw-emoji-x" onclick="_pwEmojiInsert(\''+e+'\')">'+e+'</button>';}).join('');
+  document.body.appendChild(pop);
+  var r=btn?btn.getBoundingClientRect():{bottom:120,left:120};
+  var left=Math.max(8,Math.min(r.left||120,window.innerWidth-pop.offsetWidth-8));
+  pop.style.top=((r.bottom||120)+6)+'px';
+  pop.style.left=left+'px';
+  setTimeout(function(){document.addEventListener('click',_pwEmojiOutside,true);},0);
+}
+function _pwEmojiOutside(e){
+  var pop=document.getElementById('pw-emoji-pop');
+  if(!pop)return;
+  if(pop.contains(e.target))return;                                  // 이모지 클릭은 유지
+  if(e.target.closest&&e.target.closest('.pw-emoji-btn'))return;     // 토글 버튼은 자체 처리
+  pop.remove();document.removeEventListener('click',_pwEmojiOutside,true);
+}
+function _pwEmojiInsert(emoji){
+  var ta=document.getElementById('pw-kakao-text');
+  if(!ta)return;
+  var max=parseInt(ta.getAttribute('maxlength'))||76;
+  var start=(ta.selectionStart!=null)?ta.selectionStart:ta.value.length;
+  var end=(ta.selectionEnd!=null)?ta.selectionEnd:ta.value.length;
+  var nv=ta.value.slice(0,start)+emoji+ta.value.slice(end);
+  if(nv.length>max){showToast('최대 '+max+'자까지 입력할 수 있어요','error');return;}
+  ta.value=nv;
+  var pos=start+emoji.length;
+  ta.focus();try{ta.setSelectionRange(pos,pos);}catch(e){}
+  _pwData.kakaoText=ta.value;
+  if(typeof pwCharCount==='function')pwCharCount('pw-kakao-text','pw-kakao-count',max);
+}
+
 // === Step 4 — 텍스트 입력 (카카오/인스타 별도 step) ===
 function renderPwSubText(body,next){
   const p1=_pwData.plat1;
   let html='';
   if(p1==='카카오톡'){
     html+='<div class="pw-question">카카오톡 텍스트를 작성해주세요</div>';
-    html+='<div class="pw-hint">'+escapeHtml(_pwData.format||'이미지/영상')+' + 텍스트가 함께 발송돼요 · 76자까지 입력할 수 있어요</div>';
-    html+='<label style="display:block;font-size:11px;color:#888;margin:14px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">본문<span style="color:var(--peach);margin-left:3px">*</span></label>';
-    html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="76자까지 입력할 수 있어요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
+    html+='<div class="pw-hint">'+escapeHtml(_pwData.format||'이미지/영상')+' + 텍스트가 함께 발송돼요 · 30자 이상 76자까지 입력해 주세요</div>';
+    html+=_pwKakaoLabelBar();
+    html+='<textarea id="pw-kakao-text" maxlength="76" rows="4" oninput="pwCharCount(\'pw-kakao-text\',\'pw-kakao-count\',76)" placeholder="30자 이상 76자까지 입력해 주세요" style="width:100%;padding:10px 14px;background:#F8F7FC;border:1.5px solid rgba(0,0,0,0.06);border-radius:12px;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit;line-height:1.5">'+escapeHtml(_pwData.kakaoText)+'</textarea>';
     html+='<div style="display:flex;justify-content:flex-end;margin-top:6px"><span id="pw-kakao-count" style="font-size:11px;color:#888">'+(_pwData.kakaoText||'').length+' / 76</span></div>';
   }else if(p1==='인스타그램'){
     const tpl=_pwData.instaText||getInstaTemplate();
@@ -10158,14 +10325,14 @@ function validatePwSubStep(){
       if(!pwHasFolder()){showFieldError('pw-folder-0','참고 자료 경로를 입력해 주세요');return false;}
       // 카카오 본문은 다음 단계(key==='text')에서 검증 — 여기(폴더 단계)서 검증하면 중복 안내
     }else if(fmt==='텍스트'){
-      if(p1==='카카오톡'&&_pwData.kakaoText.trim().length<76){if(!_pwMinSkip('pw-kakao-text','카카오톡 본문 76자를 채워 주세요 (현재 '+_pwData.kakaoText.trim().length+'자)'))return false;}
+      if(p1==='카카오톡'&&_pwData.kakaoText.trim().length<30){if(!_pwMinSkip('pw-kakao-text','최소 30자는 입력해주세요. (현재 '+_pwData.kakaoText.trim().length+'자)'))return false;}
       if(p1==='인스타그램'&&!_pwData.instaText.trim()){if(!_pwMinSkip('pw-insta-text','본문을 입력해 주세요'))return false;}
       if(p1==='B2B'&&p2==='GS칼텍스 여수공장 인트라넷'&&!_pwData.b2bIntraText.trim()){if(!_pwMinSkip('pw-b2b-text','본문을 입력해 주세요'))return false;}
       if(p1==='기타'&&!(_pwData.freeText||'').trim()){if(!_pwMinSkip('pw-free-text','본문을 입력해 주세요'))return false;}
     }
   }else if(key==='text'){
     const p1=_pwData.plat1;
-    if(p1==='카카오톡'&&_pwData.kakaoText.trim().length<76){if(!_pwMinSkip('pw-kakao-text','카카오톡 본문 76자를 채워 주세요 (현재 '+_pwData.kakaoText.trim().length+'자)'))return false;}
+    if(p1==='카카오톡'&&_pwData.kakaoText.trim().length<30){if(!_pwMinSkip('pw-kakao-text','최소 30자는 입력해주세요. (현재 '+_pwData.kakaoText.trim().length+'자)'))return false;}
     if(p1==='인스타그램'&&!_pwData.instaText.trim()){if(!_pwMinSkip('pw-insta-text','본문을 입력해 주세요'))return false;}
   }else if(key==='intent'){
     if(!(_pwData.intent||'').trim()){showFieldError('pw-intent','홍보 의도를 입력해 주세요');return false;}
@@ -11178,8 +11345,9 @@ function _validateScheduleChange(rec, newDate, newTime, opts){
   var chk=canApplyOnDateTime(newDate,newTime); if(!chk.ok)return chk;
   var perf=_findPerfByName(opts.program!=null?opts.program:(rec?rec['프로그램']:''));
   if(perf){
-    if(perf.ss && newDate<perf.ss)return {ok:false, reason:'프로그램 판매 시작('+perf.ss+') 전이라 홍보할 수 없어요'};
-    if(perf.se && newDate>perf.se)return {ok:false, reason:'프로그램 판매 종료('+perf.se+') 후라 홍보할 수 없어요'};
+    var _ppe=perf.pe||perf.e;
+    if(perf.ps && newDate<perf.ps)return {ok:false, reason:'홍보 시작('+perf.ps+') 전이라 홍보할 수 없어요'};
+    if(_ppe && newDate>_ppe)return {ok:false, reason:'홍보 종료('+_ppe+') 후라 홍보할 수 없어요'};
   }
   var kc=_kakaoSmsConflict(opts.plat1, newDate, opts.applicant, opts.ignoreRowIndex);
   if(kc)return {ok:false, reason:kc};
@@ -11210,8 +11378,8 @@ async function openScheduleAdmin(){
 function renderScheduleList(){
   const body=document.getElementById('sched-admin-body');
   if(!body)return;
-  // 필터링
-  let rows=records.slice();
+  // 필터링 (임시저장 '임시'는 일정 관리 목록에서 제외)
+  let rows=records.slice().filter(function(r){return (r['진행 상태']||'').toString().trim()!=='임시';});
   if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
   if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
   if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
@@ -11248,7 +11416,7 @@ function buildScheduleListHtml(rows){
   // 필터 옵션 추출 (전체 records 기반, 필터 무관)
   const allMonths=[...new Set(records.map(r=>String(r['월']||'')))].filter(Boolean).sort((a,b)=>Number(a)-Number(b));
   const allCats=[...new Set(records.map(r=>r['콘텐츠 구분']||''))].filter(Boolean);
-  const allStatuses=[...new Set(records.map(r=>r['진행 상태']||''))].filter(Boolean);
+  const allStatuses=[...new Set(records.map(r=>r['진행 상태']||''))].filter(function(s){return s&&s!=='임시';});
   
   // 오늘 / 비-오늘 분리 (오늘은 항상 상단 고정)
   const todayRows=rows.filter(r=>getRecDateKey(r)===todayKey);
@@ -11396,8 +11564,8 @@ function addScheduleFromList(){
 }
 
 function exportScheduleCsv(){
-  // 현재 필터된 일정 rows를 CSV로 다운로드
-  let rows=records.slice();
+  // 현재 필터된 일정 rows를 CSV로 다운로드 (임시저장 '임시' 제외)
+  let rows=records.slice().filter(function(r){return (r['진행 상태']||'').toString().trim()!=='임시';});
   if(_schedFilter.month!=='all')rows=rows.filter(r=>String(r['월'])===_schedFilter.month);
   if(_schedFilter.cat!=='all')rows=rows.filter(r=>(r['콘텐츠 구분']||'')===_schedFilter.cat);
   if(_schedFilter.status!=='all')rows=rows.filter(r=>(r['진행 상태']||'')===_schedFilter.status);
@@ -11937,13 +12105,14 @@ function buildProgramListHtml(programs){
   html+='';
   html+='<button onclick="openProgramForm(null)" style="padding:7px 16px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">등록</button>';
   html+='</div>';
-  html+='<table class="adm-tbl"><thead><tr><th>NO</th><th>구분</th><th>풀네임</th><th>줄임말</th><th>판매</th><th>진행</th><th>담당</th><th>장소</th><th></th></tr></thead><tbody>';
+  html+='<table class="adm-tbl"><thead><tr><th>NO</th><th>구분</th><th>풀네임</th><th>줄임말</th><th>홍보</th><th>판매</th><th>진행</th><th>담당</th><th>장소</th><th></th></tr></thead><tbody>';
   programs.forEach(p=>{
     html+='<tr>';
     html+='<td>'+escapeHtml(p['NO']||'')+'</td>';
     html+='<td>'+escapeHtml(p['콘텐츠구분']||'')+'</td>';
     html+='<td style="font-weight:600">'+escapeHtml(p['풀네임']||'')+'</td>';
     html+='<td style="color:#888">'+escapeHtml(p['줄임말']||'')+'</td>';
+    html+='<td style="font-size:11px;white-space:nowrap;color:var(--accent)">'+excelDateDisplay(p['홍보시작일'])+'<br>'+excelDateDisplay(p['홍보종료일'])+'</td>';
     html+='<td style="font-size:11px;white-space:nowrap">'+excelDateDisplay(p['판매시작일'])+'<br>'+excelDateDisplay(p['판매종료일'])+'</td>';
     html+='<td style="font-size:11px;white-space:nowrap">'+excelDateDisplay(p['시작일'])+'<br>'+excelDateDisplay(p['종료일'])+'</td>';
     html+='<td>'+escapeHtml(p['담당자']||'')+'</td>';
@@ -11960,6 +12129,7 @@ function buildProgramListHtml(programs){
 function openProgramForm(rowIndex){
   const existing=rowIndex?_programsCache.find(p=>p._rowIndex===rowIndex):null;
   const nextNo=Math.max(0,..._programsCache.map(p=>Number(p['NO'])||0))+1;
+  const _todayIso=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const v={
     NO:existing?existing['NO']:nextNo,
     구분:existing?existing['콘텐츠구분']:(CONTENT_TYPES[0]||'공연'),
@@ -11969,6 +12139,8 @@ function openProgramForm(rowIndex){
     판매종료:existing?excelDateInputValue(existing['판매종료일']):'',
     시작:existing?excelDateInputValue(existing['시작일']):'',
     종료:existing?excelDateInputValue(existing['종료일']):'',
+    홍보시작:existing?(excelDateInputValue(existing['홍보시작일'])||_todayIso):_todayIso,   // 기본값: 오늘
+    홍보종료:existing?(excelDateInputValue(existing['홍보종료일'])||excelDateInputValue(existing['종료일'])):'',   // 기본값: 프로그램 종료일
     담당자:existing?existing['담당자']:'',
     장소:existing?existing['장소']:'대극장'
   };
@@ -11979,8 +12151,11 @@ function openProgramForm(rowIndex){
   html+='<div style="display:flex;gap:10px"><div style="flex:0 0 80px"><label>NO</label><input name="NO" type="number" value="'+v.NO+'" readonly></div><div style="flex:1"><label>콘텐츠구분<span class="req">*</span></label><select name="콘텐츠구분" required onchange="refreshManagerOptions(this.value)">'+CONTENT_TYPES.map(t=>'<option value="'+escapeHtml(t)+'" '+(t===v.구분?'selected':'')+'>'+escapeHtml(t)+'</option>').join('')+'</select></div></div>';
   html+='<div><label>풀네임<span class="req">*</span></label><input name="풀네임" type="text" value="'+escapeHtml(v.풀네임)+'" required></div>';
   html+='<div><label>줄임말<span class="req">*</span></label><input name="줄임말" type="text" value="'+escapeHtml(v.줄임말)+'" required></div>';
-  html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>판매시작일</label><input name="판매시작일" type="date" value="'+v.판매시작+'"></div><div style="flex:1"><label>판매종료일</label><input name="판매종료일" type="date" value="'+v.판매종료+'"></div></div>';
-  html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>시작일<span class="req">*</span></label><input name="시작일" type="date" value="'+v.시작+'" required></div><div style="flex:1"><label>종료일<span class="req">*</span></label><input name="종료일" type="date" value="'+v.종료+'" required></div></div>';
+  html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>시작일<span class="req">*</span></label><input name="시작일" type="date" value="'+v.시작+'" required></div><div style="flex:1"><label>종료일<span class="req">*</span></label><input id="prog-end" name="종료일" type="date" value="'+v.종료+'" required onchange="_progSyncPromoEnd()"></div></div>';
+  // 홍보 신청 가능 기간 (필수) — 기본값: 시작일=오늘, 종료일=프로그램 종료일. 캘린더 홍보 신청 게이트
+  html+='<div style="background:#F6F5FF;border:1px solid rgba(74,77,231,0.15);border-radius:10px;padding:10px 12px"><div style="font-size:11.5px;color:var(--accent);font-weight:700;margin-bottom:7px">📣 홍보 신청 가능 기간 <span style="font-weight:400;color:#888">— 캘린더에서 이 프로그램 홍보를 신청할 수 있는 기간</span></div><div style="display:flex;gap:10px"><div style="flex:1"><label>홍보시작일<span class="req">*</span></label><input id="prog-promo-start" name="홍보시작일" type="date" value="'+v.홍보시작+'" required></div><div style="flex:1"><label>홍보종료일<span class="req">*</span></label><input id="prog-promo-end" name="홍보종료일" type="date" value="'+v.홍보종료+'" required></div></div></div>';
+  // 판매 기간 (선택) — 사업 분석용. 홍보 신청 가능 여부와 무관
+  html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>판매시작일 <span style="font-size:10px;color:#888;font-weight:400">(선택·사업분석용)</span></label><input name="판매시작일" type="date" value="'+v.판매시작+'"></div><div style="flex:1"><label>판매종료일 <span style="font-size:10px;color:#888;font-weight:400">(선택)</span></label><input name="판매종료일" type="date" value="'+v.판매종료+'"></div></div>';
   html+='<div><label>담당자 <span style="font-size:10px;color:#888;font-weight:400">(콘텐츠구분 따라 필터)</span></label><select name="담당자">'+buildManagerOptions(v.구분,v.담당자)+'</select></div>';
   html+='<div><label>장소</label><input name="장소" type="text" value="'+escapeHtml(v.장소)+'"></div>';
   html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:14px;border-top:1px solid #eee">';
@@ -11995,6 +12170,12 @@ function openProgramForm(rowIndex){
 function closeProgramForm(){
   const el=document.getElementById('program-form-modal');
   if(el)el.innerHTML='';
+}
+// 종료일 입력 시 홍보종료일이 비어있으면 자동 동기화 (기본값: 프로그램 종료일)
+function _progSyncPromoEnd(){
+  const endEl=document.getElementById('prog-end');
+  const pe=document.getElementById('prog-promo-end');
+  if(endEl&&pe&&endEl.value&&!pe.value)pe.value=endEl.value;
 }
 
 async function saveProgram(rowIndex){
@@ -12011,7 +12192,9 @@ async function saveProgram(rowIndex){
     isoToExcelSerial(fd.get('시작일')),
     isoToExcelSerial(fd.get('종료일')),
     fd.get('담당자')||'',
-    fd.get('장소')||''
+    fd.get('장소')||'',
+    isoToExcelSerial(fd.get('홍보시작일')),   // K열 (신규 컬럼)
+    isoToExcelSerial(fd.get('홍보종료일'))    // L열 (신규 컬럼)
   ];
   showOverlayLoad('\uC800\uC7A5 \uC911\uC785\uB2C8\uB2E4...');
   try{
@@ -12133,7 +12316,7 @@ function _petEnter(){
 async function loadData(){
   var cal=document.getElementById('cal');
   if(cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중이에요... \uD83D\uDE09',65);}
-  try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
+  try{const d=await api('GET','/api/records');var _all=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});_DRAFTS=_all.filter(_isDraftRec);records=_all.filter(function(r){return !_isDraftRec(r);});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
   // 특별 일정 — 실패해도 records 렌더는 진행
   try{await loadPromoSpecial();}catch(e){console.warn('[loadData] promoSpecial',e);}
   _typingId++;render();_petEnter();if(typeof _refreshSeenMod==='function')_refreshSeenMod();}
@@ -12209,12 +12392,20 @@ function dk(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0'
 function isToday(d){return dk(d)===dk(new Date());}
 function isPast(d){const t=new Date();t.setHours(0,0,0,0);const dd=new Date(d);dd.setHours(0,0,0,0);return dd<t;}
 function getRecsForDate(d){
-  // 캘린더 표시 정책: 신청 중, 예정, 완료 표시 (완료는 취소선). 취소/보류만 숨김
-  return records.filter(function(r){
+  // 캘린더 표시 정책: 신청 중·예정·완료 (완료는 취소선). 취소/보류 숨김.
+  // 임시저장: 마이그 후엔 _DRAFTS(별도 배열, 본인 것만 병합) / 마이그 전엔 records에 status='임시'로 남음 → 둘 다 본인만
+  var _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
+  var _k=dk(d);
+  var out=records.filter(function(r){
     const st=(r['진행 상태']||'').toString();
     if(st==='취소'||st==='보류')return false;
-    return excelToKey(r['날짜'])===dk(d);
+    if(st==='임시'&&!_isMineRec(r,_myAppl))return false;   // 폴백: 마이그 전 records에 남은 임시
+    return excelToKey(r['날짜'])===_k;
   });
+  (_DRAFTS||[]).forEach(function(r){
+    if(_isMineRec(r,_myAppl)&&excelToKey(r['날짜'])===_k)out.push(r);
+  });
+  return out;
 }
 
 function calDates(y,m){const first=new Date(y,m-1,1),dow=first.getDay(),offset=(dow-2+7)%7,start=new Date(y,m-1,1-offset),out=[];for(let w=0;w<6;w++){for(let d=0;d<6;d++){const dt=new Date(start);dt.setDate(dt.getDate()+w*7+d);out.push(dt);}}return out;}
@@ -12473,6 +12664,7 @@ function renderCal(){
         var p=r['플랫폼 1']||'',p2=r['플랫폼 2']||'',title=r['콘텐츠 제목']||'',col=platColor(p),st=r['진행 상태']||'예정';
         var done=st==='완료';
         var applying=st==='신청 중';
+        var draft=st==='임시';
         var ts=r['입력시간(KST)'],hhmm='';
         if(typeof ts==='string'&&ts.indexOf(' ')>-1)hhmm=ts.split(' ')[1];
         else if(typeof ts==='number'){var tm=Math.round((ts%1)*1440),hh=Math.floor(tm/60),mm=tm%60;hhmm=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
@@ -12483,8 +12675,9 @@ function renderCal(){
         var titleCol=done?'#bbb':past?'var(--past-text)':'var(--text)';
         var deco=done?'text-decoration:line-through;text-decoration-color:#555;text-decoration-thickness:1.5px;text-decoration-skip-ink:none;':'';
         var applyingBadge=applying?'<span style="display:inline-block;background:#fff8f3;color:#b35a30;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-right:3px;border:1px solid rgba(216,132,85,0.3);letter-spacing:0">신청중</span>':'';
-        var rowOpacity=applying?'0.85':(done?'0.78':'1');
-        var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':'';
+        var draftBadge=draft?'<span style="display:inline-block;background:#EEF0FF;color:var(--accent);font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-right:3px;border:1px solid rgba(74,77,231,0.35);letter-spacing:0">임시</span>':'';
+        var rowOpacity=applying?'0.85':(draft?'0.8':(done?'0.78':'1'));
+        var border=applying?'border:1px dashed rgba(216,132,85,0.5);background:rgba(255,248,243,0.4);':draft?'border:1px dashed rgba(74,77,231,0.5);background:rgba(238,240,255,0.45);':'';
         // 우클릭 메뉴: 항상 부착 — onEvContextMenu에서 케이스별 분기
         var _ctxAttr=' oncontextmenu="onEvContextMenu(event,'+(r._rowIndex)+',\''+key+'\')"';
         h+='<div class="ev'+(done?' done':'')+(td&&evPast?' ev-past':'')+(applying?' ev-applying':'')+'"'+(function(){
@@ -12497,9 +12690,10 @@ function renderCal(){
   if(applying) _tipMsg += '신청 중입니다.';
   else if(done) _tipMsg += '완료한 콘텐츠입니다.';
   else if(st==='취소') _tipMsg += '취소한 콘텐츠입니다.';
+  else if(st==='임시') _tipMsg += '임시저장한 콘텐츠입니다.';
   else _tipMsg += '등록한 콘텐츠입니다.';
   return ' data-tooltip="'+_tipMsg+'"';
-})()+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600"'+(applying?'':' title="'+(p2&&p2!=='-'?p2:p).replace(/"/g,'&quot;')+'"')+'>'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+title+'</span></div>';
+})()+' '+(userRole==='admin'&&!applying?'draggable="true" ondragstart="onEvDragStart(event,'+(r._rowIndex)+',\''+key+'\')" ondragend="onEvDragEnd(event)"':'')+' onclick="event.stopPropagation();editRec('+(r._rowIndex)+',\''+key+'\',event,true)"'+_ctxAttr+' style="cursor:'+(userRole==='admin'?'grab':'pointer')+';'+deco+border+'opacity:'+rowOpacity+'"><span class="ev-time" style="color:'+timeCol+';font-weight:600">'+hhmm+'</span><span class="ev-plat" style="color:'+platCol+';font-weight:600"'+(applying?'':' title="'+(p2&&p2!=='-'?p2:p).replace(/"/g,'&quot;')+'"')+'>'+platDisplay(p,p2)+'</span><span class="ev-title" style="color:'+titleCol+'">'+applyingBadge+draftBadge+title+'</span></div>';
       });
       h+='</div>';
       h+=renderExhibitBadge(d,nm,past);
@@ -12680,7 +12874,7 @@ function onEvContextMenu(event,rowIndex,dateKey){
   event.preventDefault();
   event.stopPropagation();
   closeCellContextMenu();
-  const rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  const rec=_findAnyRec(rowIndex);
   if(!rec)return;
 
   let menuHtml='';
@@ -12705,6 +12899,11 @@ function onEvContextMenu(event,rowIndex,dateKey){
         '<div class="ccm-item" onclick="closeCellContextMenu();approvePromoFromBoard('+rowIndex+')"><span class="emo" style="color:#0F8B4C">✓</span>승인 (예정으로)</div>'+
         '<div class="ccm-divider"></div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();deleteRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">🗑️</span>삭제</div>';
+    }else if(adminStatus==='임시'){
+      // 임시저장 — 이어쓰기 / 삭제
+      menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();_pwResumeDraft('+rowIndex+')"><span class="emo">✏️</span>이어쓰기</div>'+
+        '<div class="ccm-divider"></div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();_pwDeleteDraft('+rowIndex+')"><span class="emo">🗑️</span>임시저장 삭제</div>';
     }else{
       // 완료/취소 — 복사 / 삭제 (admin only, 캘린더에선 안 보임. 일정관리 페이지 우클릭만)
       menuHtml='<div class="ccm-item" onclick="closeCellContextMenu();copyRec('+rowIndex+',\''+dateKey+'\')"><span class="emo">📋</span>복사</div>'+
@@ -12731,6 +12930,11 @@ function onEvContextMenu(event,rowIndex,dateKey){
       menuHtml='<div style="padding:10px 14px;font-size:12px;line-height:1.4;background:#fff8e6;border-radius:8px;margin:2px 2px 4px;max-width:220px"><div style="color:var(--accent);font-weight:700;margin-bottom:7px">⏸ 보류된 신청</div><span style="color:#333;font-size:11px">내용 확인 후 재신청 가능</span></div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();reapplyPromoRequest('+rowIndex+')"><span class="emo" style="color:#0F8B4C">↻</span>재신청</div>'+
         '<div class="ccm-item" onclick="closeCellContextMenu();cancelPromoRequest('+rowIndex+')"><span class="emo" style="color:#E24B4A">✕</span>취소</div>';
+    }else if(status==='임시'){
+      // 본인 + 임시저장 — 이어쓰기 / 삭제
+      menuHtml='<div style="padding:9px 12px;font-size:12px;line-height:1.4;background:#EEF0FF;border-radius:8px;margin:2px 2px 4px;max-width:220px"><div style="color:var(--accent);font-weight:700">📝 임시저장</div><span style="color:#555;font-size:11px">이어쓰기로 마저 작성하세요</span></div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();_pwResumeDraft('+rowIndex+')"><span class="emo">✏️</span>이어쓰기</div>'+
+        '<div class="ccm-item" onclick="closeCellContextMenu();_pwDeleteDraft('+rowIndex+')"><span class="emo" style="color:#E24B4A">🗑️</span>삭제</div>';
     }else{
       // 본인 + 완료/취소 — 안내만
       const stColor = status==='완료'?'#2563EB':'#888';
@@ -12827,13 +13031,18 @@ function openPanel(dateObj,recs){
     h+='<div class="p-row1">';
     if(time)h+='<span class="p-time">'+time+'</span>';
     if(st)h+='<span class="meta-chip '+statusClass(st)+'">'+escapeHtml(st)+'</span>';
-    // 삭제 버튼: admin이거나, 본인이 신청한 "신청 중" 건
+    // 삭제 버튼: admin이거나, 본인이 신청한 "신청 중" 건, 또는 본인 임시저장
     var _showDel=userRole==='admin';
     if(!_showDel){
       var _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
       if(_myAppl&&(r['게시 담당자']||'')===_myAppl&&st==='신청 중')_showDel=true;
+      if(_myAppl&&st==='임시'&&_isMineRec(r,_myAppl))_showDel=true;
     }
-    if(_showDel)h+='<button class="p-del" onclick="event.stopPropagation();deleteRec('+ri+',\''+dkey+'\')" title="'+(userRole==='admin'?'삭제':'신청 취소')+'">✕</button>';
+    if(_showDel){
+      var _delCall=(st==='임시')?'_pwDeleteDraft('+ri+')':'deleteRec('+ri+',\''+dkey+'\')';
+      var _delTitle=(userRole==='admin'&&st!=='임시')?'삭제':(st==='임시'?'임시저장 삭제':'신청 취소');
+      h+='<button class="p-del" onclick="event.stopPropagation();'+_delCall+'" title="'+_delTitle+'">✕</button>';
+    }
     h+='</div>';
     h+='<div class="p-row2">';
     h+='<img class="p-plat-mini" src="'+icon+'" alt="'+escapeHtml(p1)+'" onerror="this.outerHTML=\'<span class=&quot;p-plat-mini-fallback&quot; style=&quot;background:'+col+'&quot;>'+escapeHtml(fallbackTxt)+'</span>\'">';
@@ -13592,8 +13801,10 @@ function closeModal(){
 
 function editRec(rowIndex,dateKey,ev,forceReadOnly){
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
-  var rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  var rec=_findAnyRec(rowIndex);
   if(!rec)return;
+  // 임시저장 본인 건 → 위저드 이어쓰기로 복귀
+  if(_isDraftRec(rec)){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(rec,_ma)){_pwResumeDraft(rowIndex);return;}}
   // === user 본인 '신청 중'만 → 변경 위저드 (예정은 읽기전용, A-2) ===
   if(userRole!=='admin'&&!forceReadOnly){
     var myAppl='';try{myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
@@ -14467,6 +14678,65 @@ function _cbLog(kind,query,answer,match){
     }).catch(function(e){console.warn('[cbLog]',e.message);});
   }catch(e){}
 }
+
+// === 불편사항 접수(QA) — 예울이 FAB 위 강조 버튼 + 접수 모달 ===
+function _qaMount(){
+  if(document.getElementById('qa-fab'))return;
+  const b=document.createElement('button');
+  b.id='qa-fab';b.className='qa-fab';b.title='불편사항 접수';b.onclick=_qaOpen;
+  // 픽토그램: 확성기(메가폰) — "의견을 들려주세요"
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l4.5 3.5a1 1 0 0 0 1.5-.9V7.4a1 1 0 0 0-1.5-.9L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a3 3 0 0 1 0 6"/><path d="M19 6a7 7 0 0 1 0 12"/></svg><span class="qa-fab-label">불편사항 접수</span>';
+  document.body.appendChild(b);
+}
+function _qaOpen(){
+  try{if(typeof _ddCloseAll==='function')_ddCloseAll();}catch(e){}
+  let el=document.getElementById('qa-modal');
+  if(!el){el=document.createElement('div');el.id='qa-modal';document.body.appendChild(el);}
+  const cats=['오류·버그','사용 불편','기능 제안','기타'];
+  let h='<div class="modal-bg show" style="z-index:9600" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,_qaClose)"><div class="modal" style="width:94vw;max-width:440px;padding:22px;position:relative">';
+  h+='<button class="modal-x" onclick="_qaClose()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button>';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:20px">📣</span><h3 style="margin:0">불편사항 접수</h3></div>';
+  h+='<div style="font-size:12.5px;color:#666;line-height:1.65;margin-bottom:16px">쓰시면서 불편했던 점·오류·바라는 점을 자유롭게 남겨주세요. 담당자가 확인해 개선할게요 🙂</div>';
+  h+='<label style="display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:5px">분류</label>';
+  h+='<select id="qa-cat" style="width:100%;padding:9px 12px;border:1.5px solid rgba(0,0,0,0.08);border-radius:10px;font-size:13px;margin-bottom:13px;box-sizing:border-box;font-family:inherit;background:#F8F7FC">'+cats.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('')+'</select>';
+  h+='<label style="display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:5px">내용<span style="color:var(--peach-text,#D88455);margin-left:2px">*</span></label>';
+  h+='<textarea id="qa-text" rows="5" placeholder="예: ○○ 화면에서 △△ 버튼을 누르면 ~~ 하면 좋겠어요" style="width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,0.08);border-radius:10px;font-size:13px;box-sizing:border-box;font-family:inherit;background:#F8F7FC;resize:vertical;line-height:1.55"></textarea>';
+  h+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">';
+  h+='<button onclick="_qaClose()" style="padding:9px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">취소</button>';
+  h+='<button id="qa-submit" onclick="_qaSubmit()" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">접수하기</button>';
+  h+='</div></div></div>';
+  el.innerHTML=h;
+  setTimeout(function(){const t=document.getElementById('qa-text');if(t)t.focus();},60);
+}
+function _qaClose(){const el=document.getElementById('qa-modal');if(el)el.innerHTML='';}
+async function _qaSubmit(){
+  const ta=document.getElementById('qa-text'),cat=document.getElementById('qa-cat');
+  const content=((ta&&ta.value)||'').trim();
+  if(content.length<5){showToast('불편하셨던 내용을 조금만 더 적어주세요 (5자 이상)','error');if(ta)ta.focus();return;}
+  const payload={
+    id:'q'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    kst:new Date(Date.now()+9*36e5).toISOString().slice(0,16).replace('T',' '),
+    user:sessionStorage.getItem('myApplicant')||'(미상)',
+    dept:sessionStorage.getItem('myUserDept')||'',
+    category:(cat&&cat.value)||'기타',
+    content:content.slice(0,1000)
+  };
+  const btn=document.getElementById('qa-submit');if(btn){btn.disabled=true;btn.textContent='접수 중...';}
+  let okFlag=false;
+  try{
+    await api('POST','/api/qa',payload);okFlag=true;
+  }catch(e){
+    // 폴백: /api/qa 미배포(404 등) 시 챗봇로그 시트에 '불편사항'으로 적재 — 데이터 유실 방지
+    try{
+      await api('POST','/api/chatbot/log',{id:payload.id,kst:payload.kst,user:payload.user,dept:payload.dept,kind:'불편사항',query:'['+payload.category+'] '+payload.content,answer:'',match:''});
+      okFlag=true;
+    }catch(e2){console.warn('[qaSubmit]',e2&&e2.message);}
+  }
+  if(!okFlag){if(btn){btn.disabled=false;btn.textContent='접수하기';}showToast('접수에 실패했어요. 잠시 후 다시 시도해 주세요','error');return;}
+  _qaClose();
+  showToast('소중한 의견 감사합니다! 접수되었어요 🙏','success');
+}
+
 function _chatbotMount(){
   if(document.getElementById('cb-fab'))return;
   const fab=document.createElement('button');
@@ -14596,6 +14866,7 @@ function _cbProgAnswer(p,typed){
   if(p.s)h+='기간: '+escapeHtml(_rangeShort(p.s,p.e));
   if(p.l)h+='\n장소: '+escapeHtml(p.l);
   h+='\n구분: '+(tMap[p.t]||'공연');
+  if(p.ps||p.pe)h+='\n홍보 기간: '+escapeHtml(_rangeShort(p.ps||p.s,p.pe||p.e));
   if(p.ss)h+='\n판매 기간: '+escapeHtml(_rangeShort(p.ss,p.se));
   if(p.m)h+='\n담당자: '+escapeHtml(p.m);
   if(p.u){
