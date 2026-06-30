@@ -1829,6 +1829,7 @@ const VENUE_PINS = [
 
 let PERFS=[];
 let _perfReady=false;   // [버그수정] 프로그램 로드+updatePerfOpen 완료 여부 — 홍보 위저드 조기 오픈(미로딩 상태) 차단용
+let _DRAFTS=[];         // 임시저장 전용 배열 — loadData에서 '임시저장' 컬럼으로 records와 분리(집계/관리에 구조적으로 안 섞임)
 function getPerfs(d){var k=dk(d),now=new Date();now.setHours(0,0,0,0);return PERFS.filter(function(p){return k>=p.s&&k<=p.e}).map(function(p){var sd=new Date(p.s);sd.setHours(0,0,0,0);var ed=new Date(p.e);ed.setHours(0,0,0,0);if(ed<now)return Object.assign({},p,{dday:null});if(now>=sd&&now<=ed)return Object.assign({},p,{dday:0});var diff=Math.round((sd-now)/86400000);return Object.assign({},p,{dday:diff});});}
 function getExhibitStatus(d){
 var k=dk(d),now=new Date();now.setHours(0,0,0,0);
@@ -7109,6 +7110,10 @@ function _isMineRec(rec, myAppl){
   }
   return false;
 }
+// === 임시저장(draft) 판정 — '임시저장' 컬럼='Y' (마이그레이션 전 헤더 없으면 false → status='임시' 폴백) ===
+function _isDraftRec(r){return !!(r && (String(r['임시저장']||'').toUpperCase()==='Y' || String(r['진행 상태']||'').trim()==='임시'));}
+// 캘린더/패널 상호작용용 행 조회 — records + _DRAFTS 모두 탐색 (임시저장은 records에 없으므로)
+function _findAnyRec(ri){return records.find(function(r){return r._rowIndex===ri;})||(_DRAFTS||[]).find(function(r){return r._rowIndex===ri;});}
 // === admin 섹션 분류 헬퍼 (전역) ===
 // 0=신청 대기, 1=오늘, 2=미래 예정, 3=지난 일정, 4=취소
 function _getAdminSection(rec, todayKey){
@@ -7941,8 +7946,8 @@ function onPromoSearch(v){
 }
 function openPromoBoardRow(dateKey,rowIndex,fromBoard){
   // 임시저장('임시') 본인 건 → 위저드 이어쓰기
-  var _dr=records.find(function(r){return r._rowIndex===rowIndex;});
-  if(_dr&&(_dr['진행 상태']||'').toString().trim()==='임시'){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(_dr,_ma)){closePromoBoard();_pwResumeDraft(rowIndex);return;}}
+  var _dr=_findAnyRec(rowIndex);
+  if(_dr&&_isDraftRec(_dr)){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(_dr,_ma)){closePromoBoard();_pwResumeDraft(rowIndex);return;}}
   // 일정 조회 보드에서 호출 시 fromBoard=true → 모달 닫을 때 보드로 복귀
   // 사이드 패널에서 호출 시 fromBoard 생략 → 모달만 닫고 종료
   closePromoBoard();
@@ -8982,7 +8987,8 @@ async function submitPromoRequest(){
       '',
       '',
       '',
-      _recPerfId(_pwData.program)  // AB: 공연ID
+      _recPerfId(_pwData.program),  // AB: 공연ID
+      ''   // AC: 임시저장 — 실제 신청은 빈값 (이어쓰기 제출이면 'Y'→'' 전환되어 _DRAFTS에서 빠지고 records로 편입)
     ];
     if(_pwData._draftRow){
       await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
@@ -9033,7 +9039,8 @@ async function _pwSaveDraft(){
       '예술사업팀', _pwData.title||'', format, content,
       _pwData.applicant||'', '임시', _pwData.memo||'', requesterName,
       '','','','', nowKstStr(), '','','',
-      _recPerfId(_pwData.program||'')
+      _recPerfId(_pwData.program||''),
+      'Y'   // AC: 임시저장 플래그 (records 분리 키). 진행 상태='임시'는 사람이 읽기 위한 표시·폴백
     ];
     showOverlayLoad('임시저장 중...');
     if(_pwData._draftRow){
@@ -9054,7 +9061,7 @@ async function _pwSaveDraft(){
 // 캘린더/패널에서 임시저장 클릭 → 위저드 이어쓰기 (제출 시 그 행을 PATCH해 '신청 중'/'예정'으로 전환)
 function _pwResumeDraft(rowIndex){
   if(!_perfReady||!PERFS.length){showToast('프로그램 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요','info');return;}
-  var rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  var rec=_findAnyRec(rowIndex);
   if(!rec){showToast('임시저장을 찾을 수 없어요','error');return;}
   try{if(typeof closePanel==='function'&&panelOpen)closePanel();}catch(e){}
   _pwMode='request';
@@ -12309,7 +12316,7 @@ function _petEnter(){
 async function loadData(){
   var cal=document.getElementById('cal');
   if(cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중이에요... \uD83D\uDE09',65);}
-  try{const d=await api('GET','/api/records');records=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
+  try{const d=await api('GET','/api/records');var _all=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});_DRAFTS=_all.filter(_isDraftRec);records=_all.filter(function(r){return !_isDraftRec(r);});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:#E24B4A;font-size:14px">데이터 로드 실패</div>';return;}
   // 특별 일정 — 실패해도 records 렌더는 진행
   try{await loadPromoSpecial();}catch(e){console.warn('[loadData] promoSpecial',e);}
   _typingId++;render();_petEnter();if(typeof _refreshSeenMod==='function')_refreshSeenMod();}
@@ -12385,15 +12392,20 @@ function dk(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0'
 function isToday(d){return dk(d)===dk(new Date());}
 function isPast(d){const t=new Date();t.setHours(0,0,0,0);const dd=new Date(d);dd.setHours(0,0,0,0);return dd<t;}
 function getRecsForDate(d){
-  // 캘린더 표시 정책: 신청 중, 예정, 완료 표시 (완료는 취소선). 취소/보류만 숨김
-  // 임시저장('임시')은 본인에게만 캘린더 노출 (그 계정에 한해서)
+  // 캘린더 표시 정책: 신청 중·예정·완료 (완료는 취소선). 취소/보류 숨김.
+  // 임시저장: 마이그 후엔 _DRAFTS(별도 배열, 본인 것만 병합) / 마이그 전엔 records에 status='임시'로 남음 → 둘 다 본인만
   var _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
-  return records.filter(function(r){
+  var _k=dk(d);
+  var out=records.filter(function(r){
     const st=(r['진행 상태']||'').toString();
     if(st==='취소'||st==='보류')return false;
-    if(st==='임시'&&!_isMineRec(r,_myAppl))return false;
-    return excelToKey(r['날짜'])===dk(d);
+    if(st==='임시'&&!_isMineRec(r,_myAppl))return false;   // 폴백: 마이그 전 records에 남은 임시
+    return excelToKey(r['날짜'])===_k;
   });
+  (_DRAFTS||[]).forEach(function(r){
+    if(_isMineRec(r,_myAppl)&&excelToKey(r['날짜'])===_k)out.push(r);
+  });
+  return out;
 }
 
 function calDates(y,m){const first=new Date(y,m-1,1),dow=first.getDay(),offset=(dow-2+7)%7,start=new Date(y,m-1,1-offset),out=[];for(let w=0;w<6;w++){for(let d=0;d<6;d++){const dt=new Date(start);dt.setDate(dt.getDate()+w*7+d);out.push(dt);}}return out;}
@@ -12862,7 +12874,7 @@ function onEvContextMenu(event,rowIndex,dateKey){
   event.preventDefault();
   event.stopPropagation();
   closeCellContextMenu();
-  const rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  const rec=_findAnyRec(rowIndex);
   if(!rec)return;
 
   let menuHtml='';
@@ -13789,10 +13801,10 @@ function closeModal(){
 
 function editRec(rowIndex,dateKey,ev,forceReadOnly){
   if(ev&&ev.target&&ev.target.closest('.p-del'))return;
-  var rec=records.find(function(r){return r._rowIndex===rowIndex;});
+  var rec=_findAnyRec(rowIndex);
   if(!rec)return;
-  // 임시저장('임시') 본인 건 → 위저드 이어쓰기로 복귀
-  if((rec['진행 상태']||'').toString().trim()==='임시'){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(rec,_ma)){_pwResumeDraft(rowIndex);return;}}
+  // 임시저장 본인 건 → 위저드 이어쓰기로 복귀
+  if(_isDraftRec(rec)){var _ma='';try{_ma=sessionStorage.getItem('myApplicant')||'';}catch(e){}if(_isMineRec(rec,_ma)){_pwResumeDraft(rowIndex);return;}}
   // === user 본인 '신청 중'만 → 변경 위저드 (예정은 읽기전용, A-2) ===
   if(userRole!=='admin'&&!forceReadOnly){
     var myAppl='';try{myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
