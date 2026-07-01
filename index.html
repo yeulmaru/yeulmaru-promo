@@ -12162,8 +12162,9 @@ function openProgramForm(rowIndex){
   html+='<div><label>풀네임<span class="req">*</span></label><input name="풀네임" type="text" value="'+escapeHtml(v.풀네임)+'" required></div>';
   html+='<div><label>줄임말<span class="req">*</span></label><input name="줄임말" type="text" value="'+escapeHtml(v.줄임말)+'" required></div>';
   html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>시작일<span class="req">*</span></label><input name="시작일" type="date" value="'+v.시작+'" required></div><div style="flex:1"><label>종료일<span class="req">*</span></label><input id="prog-end" name="종료일" type="date" value="'+v.종료+'" required></div></div>';
-  // 홍보 노출 시작일(노출일) — 공연은 이 값이 있어야 홍보 신청 대상이 됨(opt-in). 홍보 종료는 공연 종료일과 동일하게 자동 적용.
-  html+='<div style="background:#F6F5FF;border:1px solid rgba(74,77,231,0.15);border-radius:10px;padding:10px 12px"><div style="font-size:11.5px;color:var(--accent);font-weight:700;margin-bottom:7px">📣 홍보 노출 시작일 <span style="font-weight:400;color:#888">— 이 날짜부터 캘린더에서 홍보 신청 가능. <b>공연</b>은 비워두면 홍보 대상에서 제외돼요 (전시·예술교육·대관은 비워도 항상 노출). 홍보 종료는 공연 종료일과 동일.</span></div><div style="display:flex;gap:10px"><div style="flex:1"><label>홍보시작일(노출일)</label><input id="prog-promo-start" name="홍보시작일" type="date" value="'+v.홍보시작+'"></div></div></div>';
+  // 홍보 신청 받기 ON/OFF — ON이면 노출일부터 홍보 신청 가능(공연). OFF면 노출일 비활성·저장 시 빈값(=홍보 대상 아님). 전시·교육·대관은 상시 노출.
+  var _promoOn=!!v.홍보시작;
+  html+='<div style="background:#F6F5FF;border:1px solid rgba(74,77,231,0.15);border-radius:10px;padding:10px 12px"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px"><div style="flex:1;font-size:11.5px;color:var(--accent);font-weight:700">📣 홍보 신청 받기 <span style="font-weight:400;color:#888">— ON이면 노출일부터 캘린더에서 홍보 신청 가능(공연). OFF면 홍보 대상에서 제외. 전시·예술교육·대관은 상시 노출. 홍보 종료는 공연 종료일과 동일.</span></div><span class="sw'+(_promoOn?' on':'')+'" id="prog-promo-sw" onclick="_progPromoToggle()" title="홍보 신청 받기 ON/OFF" style="margin-top:1px"><span class="sw-k"></span></span></div><div style="display:flex;gap:10px"><div style="flex:1"><label>홍보시작일(노출일)</label><input id="prog-promo-start" name="홍보시작일" type="date" value="'+v.홍보시작+'"'+(_promoOn?'':' disabled')+' style="'+(_promoOn?'':'opacity:0.5;background:#f0f0f0')+'"></div></div></div>';
   // 판매 기간 (선택) — 사업 분석용. 홍보 신청 가능 여부와 무관
   html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>판매시작일 <span style="font-size:10px;color:#888;font-weight:400">(선택·사업분석용)</span></label><input name="판매시작일" type="date" value="'+v.판매시작+'"></div><div style="flex:1"><label>판매종료일 <span style="font-size:10px;color:#888;font-weight:400">(선택)</span></label><input name="판매종료일" type="date" value="'+v.판매종료+'"></div></div>';
   html+='<div><label>담당자 <span style="font-size:10px;color:#888;font-weight:400">(콘텐츠구분 따라 필터)</span></label><select name="담당자">'+buildManagerOptions(v.구분,v.담당자)+'</select></div>';
@@ -12180,6 +12181,21 @@ function openProgramForm(rowIndex){
 function closeProgramForm(){
   const el=document.getElementById('program-form-modal');
   if(el)el.innerHTML='';
+}
+// 홍보 신청 받기 ON/OFF — OFF면 노출일 입력 비활성(disabled → FormData 제외 → 빈값 저장 = 홍보 대상 아님), ON이면 활성(빈값 시 오늘 기본)
+function _progPromoToggle(){
+  var sw=document.getElementById('prog-promo-sw'), inp=document.getElementById('prog-promo-start');
+  if(!sw||!inp)return;
+  var on=!sw.classList.contains('on');
+  sw.classList.toggle('on',on);
+  inp.disabled=!on;
+  if(on){
+    inp.style.opacity='1'; inp.style.background='';
+    if(!inp.value){ var d=new Date(); inp.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    setTimeout(function(){try{inp.focus();}catch(e){}},0);
+  }else{
+    inp.style.opacity='0.5'; inp.style.background='#f0f0f0'; inp.value='';
+  }
 }
 
 async function saveProgram(rowIndex){
