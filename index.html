@@ -3135,7 +3135,7 @@ function _ddOpen(anchor,builder,minW){
 // 설정(관리) 드롭다운 — 관리자 패널 모달 대신 버튼 아래 메뉴
 function _ddAdmin(btn){
   _ddOpen(btn,function(menu){
-    const items=[['logs','로그 조회'],['platform','플랫폼 관리'],['users','사용자 관리'],['programs','프로그램 관리'],['applysettings','신청 일정 관리']];
+    const items=[['logs','로그 조회'],['platform','플랫폼 관리'],['users','사용자 관리'],['programs','프로그램 관리'],['applysettings','신청 일정 관리'],['qa','불편사항 관리']];
     menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">관리</div>'+items.map(function(it){
       return '<button type="button" onclick="_ddCloseAll();adminRoute(\''+it[0]+'\')" style="display:block;width:100%;padding:10px 14px;border:0;background:none;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">'+it[1]+'</button>';
     }).join('');
@@ -3257,7 +3257,8 @@ function openAdminPanel(){
     {id:'platform',label:'플랫폼 관리',desc:'플랫폼 시트 CRUD'},
     {id:'users',label:'사용자 관리',desc:'담당자 + 여부 필터'},
     {id:'programs',label:'프로그램 관리',desc:'프로그램 등록·변경·삭제'},
-    {id:'applysettings',label:'신청 일정 관리',desc:'접수월 · 제외일자/시간 설정'}
+    {id:'applysettings',label:'신청 일정 관리',desc:'접수월 · 제외일자/시간 설정'},
+    {id:'qa',label:'불편사항 관리',desc:'접수된 불편사항 확인·처리'}
   ];
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal admin-modal" style="width:520px;position:relative"><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div style="display:flex;align-items:center;margin-bottom:14px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">관리자 패널</h3></div><div style="font-size:12px;color:#888;margin-bottom:14px">관리할 항목을 골라 주세요</div><div class="admin-modal-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+items.map(it=>'<button class="admin-item" data-id="'+it.id+'" style="text-align:left;padding:14px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s"><div style="font-weight:700;font-size:14px;margin-bottom:4px">'+it.label+'</div><div style="font-size:11px;color:#888">'+it.desc+'</div></button>').join('')+'</div></div></div>';
   let el=document.getElementById('admin-panel');
@@ -10556,6 +10557,7 @@ function adminRoute(id){
   if(id==='schedule')return openPromoBoard();
   if(id==='logs')return openLogsAdmin();
   if(id==='applysettings')return openApplySettings();
+  if(id==='qa')return openQaBoard();
   showToast('['+id+'] 미구현','error');
 }
 
@@ -14735,8 +14737,98 @@ async function _qaSubmit(){
     }catch(e2){console.warn('[qaSubmit]',e2&&e2.message);}
   }
   if(!okFlag){if(btn){btn.disabled=false;btn.textContent='접수하기';}showToast('접수에 실패했어요. 잠시 후 다시 시도해 주세요','error');return;}
+  // 관리자 메시지함 알림 — 담당자 시트 관리자여부=true 전원(본인 제외)
+  try{
+    (MANAGERS||[]).filter(function(m){return isFlagOn(m['관리자여부']);}).forEach(function(m){
+      var _nm=(m['담당자']||'').trim();
+      if(!_nm||_nm===payload.user)return;
+      pushMessage({recipient:_nm,type:'중요',trigger:'불편사항 접수',
+        before:payload.user,after:payload.category,
+        reason:'🗣️ 불편사항이 접수됐어요',
+        refNo:payload.id,refSummary:'['+payload.category+'] '+payload.content.slice(0,50)});
+    });
+  }catch(_e){console.warn('[qa notify]',_e);}
   _qaClose();
   showToast('소중한 의견 감사합니다! 접수되었어요 🙏','success');
+}
+
+// === 불편사항 관리 (admin) — 접수 목록 확인 + 상태/처리메모 업데이트 ===
+var _qaData=[], _qaFilterState={status:'all',cat:'all'};
+async function openQaBoard(){
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1000px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="qa-board-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  let el=document.getElementById('admin-panel');
+  if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
+  el.innerHTML=html;
+  await _qaBoardLoad();
+}
+async function _qaBoardLoad(){
+  const body=document.getElementById('qa-board-body'); if(!body)return;
+  try{
+    const d=await api('GET','/api/qa');
+    _qaData=(d.qa||[]).filter(function(r){return String(r['ID']||r['내용']||'').trim()!=='';});
+    _qaBoardRender();
+  }catch(e){
+    body.innerHTML='<div style="padding:34px 20px;color:#c0392b;font-size:13px;line-height:1.75;text-align:left">불편사항 목록을 불러오지 못했어요.<br><span style="color:#666">API(Worker)에 <b>/api/qa</b>가 아직 배포되지 않았을 수 있어요. Cloudflare에서 Worker를 재배포한 뒤 다시 열어 주세요.</span><br><span style="color:#bbb;font-size:11px">('+escapeHtml((e&&e.message)||'')+')</span></div>';
+  }
+}
+function _qaSetFilter(k,v){ _qaFilterState[k]=v; _qaBoardRender(); }
+function _qaChip(k,v,label){
+  var on=_qaFilterState[k]===v;
+  return '<button onclick="_qaSetFilter(\''+k+'\',\''+v+'\')" style="padding:5px 12px;border-radius:14px;border:1px solid '+(on?'var(--accent)':'rgba(0,0,0,0.12)')+';background:'+(on?'var(--accent)':'#fff')+';color:'+(on?'#fff':'#666')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s">'+escapeHtml(label)+'</button>';
+}
+function _qaBoardRender(){
+  const body=document.getElementById('qa-board-body'); if(!body)return;
+  var statuses=['접수','처리중','완료'], cats=['오류·버그','사용 불편','기능 제안','기타'];
+  var order={'접수':0,'처리중':1,'완료':2};
+  var rows=_qaData.slice();
+  if(_qaFilterState.status!=='all')rows=rows.filter(function(r){return (r['상태']||'접수')===_qaFilterState.status;});
+  if(_qaFilterState.cat!=='all')rows=rows.filter(function(r){return (r['분류']||'')===_qaFilterState.cat;});
+  rows.sort(function(a,b){
+    var sa=(order[a['상태']||'접수']!=null?order[a['상태']||'접수']:0), sb=(order[b['상태']||'접수']!=null?order[b['상태']||'접수']:0);
+    if(sa!==sb)return sa-sb;
+    return String(b['KST']||'').localeCompare(String(a['KST']||''));
+  });
+  var unhandled=_qaData.filter(function(r){return (r['상태']||'접수')!=='완료';}).length;
+  var html='';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;padding-bottom:14px;padding-right:64px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">🗣️ 불편사항 관리</h3><span style="font-size:12px;color:#888">미처리 <b style="color:#c0392b">'+unhandled+'</b> · 전체 '+_qaData.length+'</span></div>';
+  html+='<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 14px">';
+  html+=_qaChip('status','all','전체')+statuses.map(function(s){return _qaChip('status',s,s);}).join('');
+  html+='<span style="width:1px;height:16px;background:#e0e0e0;margin:0 5px"></span>';
+  html+=_qaChip('cat','all','분류 전체')+cats.map(function(c){return _qaChip('cat',c,c);}).join('');
+  html+='</div>';
+  if(rows.length===0){
+    html+='<div style="text-align:center;padding:44px 0;color:#aaa;font-size:13px">해당하는 불편사항이 없어요.</div>';
+  }else{
+    html+='<table class="adm-tbl"><thead><tr><th style="width:118px">일시</th><th style="width:104px">접수자</th><th style="width:88px">분류</th><th>내용</th><th style="width:92px">상태</th><th style="width:210px">처리메모</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var ri=r._rowIndex, st=r['상태']||'접수';
+      var stColor=st==='완료'?'#2e7d32':(st==='처리중'?'#e67e22':'#c0392b');
+      html+='<tr>';
+      html+='<td style="font-size:11px;white-space:nowrap;color:#999">'+escapeHtml(r['KST']||'')+'</td>';
+      html+='<td style="font-size:12px">'+escapeHtml(r['사용자']||'')+((r['부서'])?('<br><span style="color:#aaa;font-size:10px">'+escapeHtml(r['부서'])+'</span>'):'')+'</td>';
+      html+='<td><span style="background:#F0EFFB;color:var(--accent);padding:2px 8px;border-radius:8px;font-size:11px;white-space:nowrap">'+escapeHtml(r['분류']||'기타')+'</span></td>';
+      html+='<td style="font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;min-width:180px">'+escapeHtml(r['내용']||'')+'</td>';
+      html+='<td><select id="qa-st-'+ri+'" style="width:100%;padding:5px 4px;border:1px solid rgba(0,0,0,0.14);border-radius:8px;font-size:12px;font-family:inherit;font-weight:700;color:'+stColor+'">'+statuses.map(function(s){return '<option value="'+s+'"'+(s===st?' selected':'')+'>'+s+'</option>';}).join('')+'</select></td>';
+      html+='<td><div style="display:flex;gap:5px;align-items:center"><input id="qa-memo-'+ri+'" value="'+escapeHtml(r['처리메모']||'')+'" placeholder="메모" style="flex:1;min-width:0;padding:6px 8px;border:1px solid rgba(0,0,0,0.14);border-radius:8px;font-size:12px;font-family:inherit"><button class="adm-btn" onclick="_qaSaveRow('+ri+')">저장</button></div></td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table>';
+  }
+  body.innerHTML=html;
+}
+async function _qaSaveRow(rowIndex){
+  var stSel=document.getElementById('qa-st-'+rowIndex), memoIn=document.getElementById('qa-memo-'+rowIndex);
+  if(!stSel)return;
+  var status=stSel.value, memo=((memoIn&&memoIn.value)||'').trim();
+  try{
+    await api('PATCH','/api/qa',{rowIndex:rowIndex,status:status,memo:memo});
+    var r=_qaData.find(function(x){return x._rowIndex===rowIndex;});
+    if(r){r['상태']=status;r['처리메모']=memo;}
+    showToast('저장됐어요','success');
+    _qaBoardRender();
+  }catch(e){
+    showToast('저장 실패: '+((e&&e.message)||''),'error');
+  }
 }
 
 function _chatbotMount(){
