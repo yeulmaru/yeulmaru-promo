@@ -8386,12 +8386,16 @@ function renderPwStep(){
     // 어떤 프로그램? — 판매 종료 안 된 것만 (신청 일자 ≤ 판매종료일)
     // 우클릭 진입 시 그 날짜 기준, 일반 진입은 today fallback
     const _refKey=_pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    // 과도기 폴백: 노출일이 설정된 공연이 하나도 없으면(=홍보 컬럼/데이터 미설정) opt-in 미적용 → 구 동작(전체 노출).
+    // 노출일을 한 건이라도 넣는 순간 opt-in 활성화 → 노출일 있는 공연만 노출.
+    const _promoCfg=PERFS.some(function(p){return p.t==='c'&&p.ps;});
     const activePerfs=PERFS.filter(function(p){
       // 홍보 노출 규칙(2026-07): 공연(c)은 '홍보시작일(노출일)'이 입력된 것만 홍보 신청 가능(opt-in).
       // 전시·예술교육·대관은 종료 전이면 항상 노출. 홍보종료일은 공연 종료일로 통합(_pe=p.pe||p.e).
       var _pe=p.pe||p.e;
       if(!_pe||_pe<_refKey)return false;      // 종료일이 기준일 이전 → 제외 (전 카테고리)
       if(p.t==='c'){                          // 공연: 노출일(홍보시작일) 있어야 홍보 대상
+        if(!_promoCfg)return true;            // 과도기(노출일 가진 공연 0개) → 전체 노출 폴백
         if(!p.ps||p.ps>_refKey)return false;  // 노출일 미설정 or 노출일 전 → 제외
         return true;
       }
@@ -11354,7 +11358,8 @@ function _validateScheduleChange(rec, newDate, newTime, opts){
   if(perf){
     var _ppe=perf.pe||perf.e;
     // 공연 opt-in: 노출일(홍보시작일) 미지정 공연은 신규 홍보 신청 불가 (전시·교육·대관은 항상 허용)
-    if(action==='submit' && perf.t==='c' && !perf.ps)return {ok:false, reason:'이 공연은 홍보 노출일이 지정되지 않아 홍보 신청할 수 없어요'};
+    // 과도기 폴백: 노출일 가진 공연이 하나도 없으면 opt-in 미적용(구 동작)
+    if(action==='submit' && perf.t==='c' && !perf.ps && (typeof PERFS!=='undefined'&&PERFS.some(function(x){return x.t==='c'&&x.ps;})))return {ok:false, reason:'이 공연은 홍보 노출일이 지정되지 않아 홍보 신청할 수 없어요'};
     if(perf.ps && newDate<perf.ps)return {ok:false, reason:'홍보 시작('+perf.ps+') 전이라 홍보할 수 없어요'};
     if(_ppe && newDate>_ppe)return {ok:false, reason:'홍보 종료('+_ppe+') 후라 홍보할 수 없어요'};
   }
@@ -12202,19 +12207,24 @@ async function saveProgram(rowIndex){
   const form=document.getElementById('prog-form');
   if(!form)return;
   const fd=new FormData(form);
+  // ⚠️ 실제 '프로그램' 시트 컬럼: A~J(NO·콘텐츠구분·풀네임·줄임말·판매시작·판매종료·시작·종료·담당자·장소)
+  //    · K=URL · L=공연ID · M=홍보시작일 · N=홍보종료일. URL/공연ID는 폼에 필드가 없으니 기존 값 보존.
+  const existing=rowIndex?(_programsCache.find(p=>p._rowIndex===rowIndex)||null):null;
   const values=[
-    Number(fd.get('NO'))||'',
-    fd.get('콘텐츠구분')||'',
-    fd.get('풀네임')||'',
-    fd.get('줄임말')||'',
-    isoToExcelSerial(fd.get('판매시작일')),
-    isoToExcelSerial(fd.get('판매종료일')),
-    isoToExcelSerial(fd.get('시작일')),
-    isoToExcelSerial(fd.get('종료일')),
-    fd.get('담당자')||'',
-    fd.get('장소')||'',
-    isoToExcelSerial(fd.get('홍보시작일')),   // K열 홍보시작일(노출일) — 공연 opt-in
-    isoToExcelSerial(fd.get('종료일'))        // L열 홍보종료일 = 공연 종료일로 통합
+    Number(fd.get('NO'))||'',               // A NO
+    fd.get('콘텐츠구분')||'',                // B 콘텐츠구분
+    fd.get('풀네임')||'',                    // C 풀네임
+    fd.get('줄임말')||'',                    // D 줄임말
+    isoToExcelSerial(fd.get('판매시작일')),  // E 판매시작일
+    isoToExcelSerial(fd.get('판매종료일')),  // F 판매종료일
+    isoToExcelSerial(fd.get('시작일')),      // G 시작일
+    isoToExcelSerial(fd.get('종료일')),      // H 종료일
+    fd.get('담당자')||'',                    // I 담당자
+    fd.get('장소')||'',                      // J 장소
+    existing?(existing['URL']||''):'',       // K URL (기존 보존)
+    existing?(existing['공연ID']||''):'',    // L 공연ID (기존 보존)
+    isoToExcelSerial(fd.get('홍보시작일')),  // M 홍보시작일(노출일) — 공연 opt-in
+    isoToExcelSerial(fd.get('종료일'))       // N 홍보종료일 = 공연 종료일로 통합
   ];
   showOverlayLoad('\uC800\uC7A5 \uC911\uC785\uB2C8\uB2E4...');
   try{
