@@ -12205,12 +12205,14 @@ function _genProgramId(iso){
   var d=String(iso||'').replace(/[^0-9]/g,'');   // '2026-01-09' → '20260109'
   if(d.length<8) return '';
   var yy=d.slice(2,8);   // '260109'
-  var n=0;
+  // [검증반영] 개수(COUNT)+1이 아니라 최대순번(MAX)+1 — 삭제/gap이 생겨도 기존 ID와 중복 안 되게(백필 스크립트와 동일 규칙).
+  var max=0,seen={},re=new RegExp('^'+yy+'_(\\d+)$');
   (typeof _programsCache!=='undefined'&&_programsCache?_programsCache:[]).forEach(function(p){
-    var pid=String(p['프로그램ID']||p['공연ID']||'').trim();
-    if(pid.indexOf(yy+'_')===0)n++;   // 같은 시작일 기존 개수 → 순번
+    var m=String(p['프로그램ID']||p['공연ID']||'').trim().match(re);
+    if(m){var nn=parseInt(m[1],10);seen[nn]=1;if(nn>max)max=nn;}
   });
-  return yy+'_'+String(n+1).padStart(2,'0');   // 예: 260109_01
+  var n=max+1;while(seen[n])n++;   // max+1이 원칙(빈 순번이라도 최대 다음), 만일의 중복까지 방어
+  return yy+'_'+String(n).padStart(2,'0');   // 예: 260109_03 (gap 있어도 중복 없음)
 }
 async function saveProgram(rowIndex){
   const form=document.getElementById('prog-form');
