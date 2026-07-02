@@ -7975,13 +7975,14 @@ let _pwSubStep=1;       // Step 4 내부 sub-step
 const PW_TOTAL=5;
 const PW_SUB_TOTAL=4;   // Step 4 sub-step 최대 (플랫폼1 → 플랫폼2/형식 → 세부 → 게시자)
 let _pwData={};
+var _pwBatchQueue=null, _pwBatchTotal=0;  // 배치(복수) 순차 본문 입력 큐 (null=배치 아님)
 let _pwMode='request';  // 'request' | 'admin' | 'edit'
 // === 변경 위저드 state ===
 let _pwEditTarget=null;        // 변경 대상 rowIndex
 let _pwSelectedSteps=[];       // [1,3,4] 선택된 step 배열
 let _pwSelectedIdx=0;          // 현재 진행 중 idx
 let _pwOriginalRec=null;       // 원본 row (diff용)
-function openPromoWizard(prefillDate){
+function openPromoWizard(prefillDate, batchJob){
   // [버그수정] 프로그램·홍보기간 로딩 완료 전에는 열지 않음 — 미확정 하반기 공연이 선택지로 새던 현상 차단
   if(!_perfReady||!PERFS.length){
     showToast('프로그램 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요','info');
@@ -8026,6 +8027,15 @@ function openPromoWizard(prefillDate){
   };
   document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
   document.getElementById('promo-wizard').classList.add('show');
+  // [배치 순차] 프로그램·날짜·플랫폼·제목 프리필 → 본문 입력(Step4)부터 시작. 제출 시 다음 건으로.
+  if(batchJob){
+    _pwData.program=batchJob.program; _pwData.programType=batchJob.programType; _pwData.programEndDate=batchJob.programEnd||'';
+    _pwData.date=batchJob.date; _pwData.time=batchJob.time||'10:00'; _pwData.plat1=batchJob.plat1; _pwData.title=batchJob.content||'';
+    _pwData.fromCalendar=false;
+    _pwStep=4; _pwSubStep=1;
+    var _bn=(_pwBatchTotal-((_pwBatchQueue&&_pwBatchQueue.length)||0)), _bt=_pwBatchTotal;
+    try{ document.querySelector('#promo-wizard h3').textContent='홍보 내용 입력 ('+_bn+'/'+_bt+') · '+escapeHtml(batchJob.program)+' · '+escapeHtml(batchJob.plat1); }catch(e){}
+  }
   renderPwStep();
 }
 function openAdminWizard(dateKey){
@@ -8196,20 +8206,22 @@ async function _batchSubmit(){
   var errs=[];
   jobs.forEach(function(j){ var v=_validateScheduleChange(null,j.date,j.time,{action:'submit',plat1:j.plat1,program:j.program,applicant:''}); if(!v.ok)errs.push(j.program+'('+j.plat1+'): '+v.reason); });
   if(errs.length){ showToast('등록 불가 — '+errs.length+'건:\n'+errs.slice(0,6).join('\n'),'error'); return; }
-  // 순차 POST (병렬 금지 — 서버가 매 건 nextRow 재계산). No=기준No+i(중복 방지)
-  showOverlayLoad('0/'+jobs.length+' 등록 중...');
-  var baseNo=records.length+1, ok=0, fail=[];
-  var status=(userRole==='admin'?'예정':'신청 중');
-  for(var i=0;i<jobs.length;i++){
-    var j=jobs[i];
-    var pw={program:j.program,programType:j.programType,programEndDate:j.programEnd,title:j.content,plat1:j.plat1,plat2:'',format:'',date:j.date,time:j.time||'10:00',applicant:'',memo:'',folders:[],kakaoText:'',instaText:'',blogDirection:'',b2bIntraText:'',b2bLink:'',smsBody:'',smsTarget:'',customPlatform:'',freeText:'',intent:'',ageRanges:[],ageAny:false,residence:'',residenceCustom:'',residenceAny:false,genre:'',genreAny:false};
-    try{ var row=_buildRecRow(pw,status,baseNo+i,false); await api('POST','/api/records',{values:row}); ok++; showOverlayLoad(ok+'/'+jobs.length+' 등록 중...'); }
-    catch(e){ fail.push(j.program+'('+j.plat1+'): '+e.message); }
+  // 순차 본문 입력: 각 건마다 위저드 본문 단계(플랫폼별 형식)를 순차로 띄우고, 제출 시 다음 건으로.
+  _pwBatchQueue=jobs.slice(); _pwBatchTotal=jobs.length;
+  closeBatchWizard();
+  _pwRunNextJob();
+}
+// 배치 순차 큐 — 다음 건 위저드(본문 단계) 열기 / 큐 끝나면 일괄 마무리(syncReload 1회)
+function _pwRunNextJob(){
+  if(_pwBatchQueue==null)return;
+  if(!_pwBatchQueue.length){
+    var _done=_pwBatchTotal; _pwBatchQueue=null; _pwBatchTotal=0;
+    try{ document.getElementById('promo-wizard').classList.remove('show'); }catch(e){}
+    syncReload().then(function(){ showToast(_done+'건 모두 등록됐어요 🎉','success'); });
+    return;
   }
-  await syncReload();
-  hideOverlayLoad();
-  if(fail.length){ showToast(ok+'건 완료 / '+fail.length+'건 실패:\n'+fail.slice(0,6).join('\n'),'error'); }
-  else{ closeBatchWizard(); showToast(ok+'건 모두 등록됐어요 🎉','success'); }
+  var job=_pwBatchQueue.shift();
+  openPromoWizard(job.date, job);
 }
 // ═══════════════════════════════════════════════════════════
 // ═══ 변경 위저드 (편집 모드) ═══
@@ -8543,6 +8555,7 @@ async function closePromoWizard(force){
   // _pwMode만 'request'로 풀려, 이후 저장이 수정(PATCH) 대신 신규 등록(POST)되어 중복 레코드가 생기던 버그
   function _doClose(){
     if(_pwMode==='edit'){_pwMode='request';_pwEditTarget=null;_pwSelectedSteps=[];_pwSelectedIdx=0;_pwOriginalRec=null;}
+    if(_pwBatchQueue!=null){ _pwBatchQueue=null; _pwBatchTotal=0; try{syncReload();}catch(e){} }  // 배치 순차 중단 — 이미 등록된 건은 반영
     document.getElementById('promo-wizard').classList.remove('show');
     document.getElementById('pw-acts').innerHTML='<button class="m-btn cancel" id="pw-back" onclick="promoBack()">이전</button><button class="m-btn save" id="pw-next" onclick="promoNext()">다음</button>';
   }
@@ -9176,7 +9189,8 @@ async function submitPromoRequest(){
   try{
     // 임시저장 이어쓰기 제출이면 그 행을 PATCH해 전환 (No 보존 · 중복 행 방지)
     const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
-    const _subNo=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
+    var _batchOff=(_pwBatchQueue!=null)?Math.max(0,_pwBatchTotal-_pwBatchQueue.length-1):0;  // 배치 순차: syncReload 전이라 records 미갱신 → No 오프셋(중복 방지)
+    const _subNo=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):(records.length+1+_batchOff);
     // 29컬럼 row = 공용 빌더(단건/임시저장/배치 단일 진실원). 진행상태 admin='예정'/user='신청 중'
     const row=_buildRecRow(_pwData, (userRole==='admin'?'예정':'신청 중'), _subNo, false);
     if(_pwData._draftRow){
@@ -9190,6 +9204,7 @@ async function submitPromoRequest(){
     // user의 myApplicant를 게시 담당자 값으로 오염시키는 버그였음.
     // 예: 심희은이 게시 담당자=황세웅으로 신청 → localStorage가 '황세웅'으로 덮어씌워짐
     // → UI가 "황세웅 님"으로 바뀌고 "내 신청만" 필터 작동 안 함.
+    if(_pwBatchQueue!=null){ hideOverlayLoad(); _pwRunNextJob(); return; }  // [배치 순차] syncReload·완료화면은 큐 끝에서 1회
     await syncReload();
     _pwStep=99;
     renderPwStep();
