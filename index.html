@@ -8367,12 +8367,15 @@ async function closePromoWizard(force){
     if(ok)_doClose();
     return;
   }
-  // 신청/이어쓰기 작성 중 → 임시저장 제안
-  const save=await showConfirm('작성 중인 내용을 임시저장할까요?',{title:'임시저장',okText:'임시저장',cancelText:'아니요'});
-  if(save){ if(await _pwSaveDraft())_doClose(); return; }
-  // 임시저장 안 함 → 그냥 닫을지 / 계속 작성할지
-  const discard=await showConfirm('저장하지 않고 닫을까요? 작성 중인 내용이 사라져요.',{okText:'닫기',cancelText:'계속 작성',danger:true});
-  if(discard)_doClose();
+  // 신청/이어쓰기 작성 중 → 한 창에서 3지선다: 계속 작성 | 임시 저장 | 닫기
+  const choice=await showChoice('작성 중인 내용을 어떻게 할까요?',[
+    {label:'계속 작성',value:'continue'},
+    {label:'임시 저장',value:'save'},
+    {label:'닫기',value:'close',danger:true}
+  ],{title:'임시저장'});
+  if(choice==='save'){ if(await _pwSaveDraft())_doClose(); return; }
+  if(choice==='close'){ _doClose(); return; }
+  // 'continue' 또는 Esc/배경 클릭(false) → 계속 작성 (아무 동작 없음)
 }
 function renderPwStep(){
   const bar=document.getElementById('pw-progress-bar');
