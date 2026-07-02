@@ -1686,8 +1686,7 @@ const DAYS=['화','수','목','금','토','일'];
 const DAY_NAMES=['일','월','화','수','목','금','토'];
 const MENUS=[
   {label:'캘린더',id:'cal'},
-  {label:'일정 확인 및 관리',id:'schedule'},
-  {label:'홍보 신청',id:'promo'},
+  {label:'일정 관리',id:'schedule'},
   {label:'콘텐츠 제작',id:'content'},
   {label:'플랫폼 현황',id:'platform'},
   {label:'사업 현황',id:'business'},
@@ -3238,11 +3237,10 @@ function buildNav(){
       if(m.id==='content'){_ddOpen(b,_contentMenuBuild,210);return;}
       if(m.id==='annual'){openAnnualCalendar();return;}
       if(m.id==='admin'){openAdminPanel();return;}
-      if(m.id==='schedule'){openPromoBoard();return;}
+      if(m.id==='schedule'){_ddOpen(b,_scheduleMenuBuild,210);return;}
       if(m.id==='platform'){openPlatformBoard();return;}
       if(m.id==='business'){openBusinessBoard();return;}
       if(m.id==='sales'){openSalesBoard();return;}
-      if(m.id==='promo'){openPromoWizard();return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
     b.onmouseenter=()=>movePill(b,pill);
@@ -8027,6 +8025,112 @@ function openAdminWizard(dateKey){
   // admin도 user와 동일한 위저드 사용 (DB 24컬럼 일치)
   // 진행 상태는 submitPromoRequest에서 userRole==='admin'이면 '예정'으로 자동 저장
   openPromoWizard(dateKey);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ═══ 배치(복수) 신청 — '일정 등록' (1차: 프로그램 복수 + 날짜·시간·플랫폼·제목) ═══
+// 여러 프로그램을 한 번에 골라 각 날짜/시간/플랫폼/제목을 지정하고 순차 등록.
+// 본문·타겟 등 상세는 등록 후 각 건을 변경 위저드로 채움(1차 청사진).
+// _buildRecRow·_validateScheduleChange·프로그램 필터를 재사용하고, 기존 스텝머신(renderPwStep)은
+// 건드리지 않는 독립 모달이라 단건 신청 회귀 위험 0. admin/user 공통(제출 시 진행상태 자동 분기).
+var _batchRows=[];      // {program, programType, programEnd, date, time, plat1, plat2, title}
+var _batchPrefill='';
+var _batchInp='padding:5px 8px;background:#F8F7FC;border:1px solid rgba(0,0,0,0.08);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;';
+function openBatchWizard(prefillDate){
+  if(!_perfReady||!PERFS.length){ showToast('프로그램 정보를 불러오는 중이에요. 잠시 후 다시 시도해 주세요','info'); return; }
+  _batchRows=[]; _batchPrefill=prefillDate||'';
+  var el=document.getElementById('batch-wizard');
+  if(!el){ el=document.createElement('div'); el.id='batch-wizard'; document.body.appendChild(el); }
+  _batchRender();
+}
+function closeBatchWizard(){ var el=document.getElementById('batch-wizard'); if(el)el.innerHTML=''; }
+function _batchActivePerfs(){
+  // 위저드 Step1과 동일한 홍보 노출 opt-in 필터 (기준일 = prefill 또는 오늘)
+  var _refKey=_batchPrefill||getTodayKey();
+  var _anyPromo=PERFS.some(function(p){return p.ps;});
+  return PERFS.filter(function(p){
+    var _pe=p.pe||p.e;
+    if(!_pe||_pe<_refKey)return false;
+    if(!_anyPromo)return true;
+    if(!p.ps)return false;
+    return true;
+  });
+}
+function _batchPlatOptions(sel){
+  var plats=[...new Set((PLATFORMS||[]).map(function(r){return r['플랫폼1'];}).filter(Boolean))];
+  if(!plats.length)plats=['카카오톡','인스타그램','블로그·맘카페','B2B','문자','기타'];
+  return '<option value="">플랫폼</option>'+plats.map(function(p){return '<option value="'+escapeHtml(p)+'"'+(p===sel?' selected':'')+'>'+escapeHtml(p)+'</option>';}).join('');
+}
+function _batchRender(){
+  var el=document.getElementById('batch-wizard'); if(!el)return;
+  var perfs=_batchActivePerfs();
+  var groups=[{k:'c',label:'공연'},{k:'e',label:'전시'},{k:'a',label:'예술교육'},{k:'r',label:'대관'}];
+  var selNames=_batchRows.map(function(r){return r.program;});
+  var pickHtml='';
+  groups.forEach(function(g){
+    var items=perfs.filter(function(p){return p.t===g.k;});
+    if(!items.length)return;
+    pickHtml+='<div style="font-size:11px;color:var(--accent);font-weight:700;margin:10px 0 4px">'+g.label+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    items.forEach(function(p){
+      var on=selNames.indexOf(p.f)>-1;
+      pickHtml+='<label class="nb-chip'+(on?' on':'')+'" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" value="'+p.f.replace(/"/g,'&quot;')+'" onchange="_batchToggleProg(this.value)"'+(on?' checked':'')+' style="margin:0">'+escapeHtml(p.f)+'</label>';
+    });
+    pickHtml+='</div>';
+  });
+  if(!pickHtml)pickHtml='<div style="color:#aaa;font-size:12.5px;padding:10px">지금 홍보 신청 가능한 프로그램이 없어요.</div>';
+  var rowsHtml='';
+  if(_batchRows.length===0){
+    rowsHtml='<div style="text-align:center;color:#aaa;font-size:13px;padding:26px">위에서 홍보할 프로그램을 선택하세요</div>';
+  }else{
+    rowsHtml='<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="color:#888;font-size:11px"><th style="text-align:left;padding:6px">프로그램</th><th style="padding:6px">날짜</th><th style="padding:6px">시간</th><th style="padding:6px">플랫폼</th><th style="text-align:left;padding:6px">콘텐츠 제목</th><th></th></tr></thead><tbody>';
+    _batchRows.forEach(function(r,i){
+      rowsHtml+='<tr style="border-top:1px solid #eee"><td style="padding:6px;max-width:150px;word-break:break-all">'+escapeHtml(r.program)+'</td>'
+        +'<td style="padding:6px"><input type="date" value="'+escapeHtml(r.date)+'" onchange="_batchSet('+i+',&quot;date&quot;,this.value)" style="'+_batchInp+'"></td>'
+        +'<td style="padding:6px"><input type="time" step="1800" value="'+escapeHtml(r.time)+'" onchange="_batchSet('+i+',&quot;time&quot;,this.value)" style="'+_batchInp+'width:88px"></td>'
+        +'<td style="padding:6px"><select onchange="_batchSet('+i+',&quot;plat1&quot;,this.value)" style="'+_batchInp+'">'+_batchPlatOptions(r.plat1)+'</select></td>'
+        +'<td style="padding:6px"><input type="text" value="'+escapeHtml(r.title)+'" placeholder="제목" onchange="_batchSet('+i+',&quot;title&quot;,this.value)" style="'+_batchInp+'min-width:130px"></td>'
+        +'<td style="padding:6px;white-space:nowrap"><button onclick="_batchDupRow('+i+')" title="같은 프로그램 다른 날짜 추가" style="border:0;background:none;cursor:pointer;color:var(--accent);font-size:16px">＋</button><button onclick="_batchDelRow('+i+')" title="삭제" style="border:0;background:none;cursor:pointer;color:#e5484d;font-size:14px">✕</button></td></tr>';
+    });
+    rowsHtml+='</tbody></table>';
+  }
+  var cnt=_batchRows.length;
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeBatchWizard)"><div class="modal" style="width:min(780px,94vw);max-height:88vh;display:flex;flex-direction:column;position:relative"><button class="modal-x" onclick="closeBatchWizard()" style="position:absolute;top:14px;right:14px;z-index:10">✕</button><div style="padding-bottom:12px;border-bottom:1px solid #eee;margin-bottom:12px"><h3 style="margin:0">📋 일정 등록 <span style="font-size:12px;color:#888;font-weight:400">· 여러 건 한 번에</span></h3><div style="font-size:11.5px;color:#888;margin-top:4px">프로그램을 골라 날짜·시간·플랫폼·제목을 정하고 한 번에 등록하세요. 본문·타겟 등 상세는 등록 후 각 건에서 채우면 돼요.</div></div><div style="overflow:auto;flex:1"><div style="margin-bottom:14px">'+pickHtml+'</div>'+rowsHtml+'</div><div style="display:flex;gap:8px;align-items:center;padding-top:12px;border-top:1px solid #eee;margin-top:12px"><span style="font-size:12px;color:#888">'+cnt+'건</span><button class="m-btn cancel" onclick="closeBatchWizard()" style="margin-left:auto">취소</button><button class="m-btn save" onclick="_batchSubmit()"'+(cnt?'':' disabled')+' style="'+(cnt?'':'opacity:.5;')+'">'+cnt+'건 등록</button></div></div></div>';
+}
+function _batchToggleProg(name){
+  var idx=_batchRows.map(function(r){return r.program;}).indexOf(name);
+  if(idx>-1){ _batchRows=_batchRows.filter(function(r){return r.program!==name;}); }
+  else{ var p=_findPerfByName(name); _batchRows.push({program:name, programType:(p&&p.t)||'c', programEnd:(p&&p.e)||'', date:_batchPrefill||getTodayKey(), time:'10:00', plat1:'', plat2:'', title:((p&&p.n)?p.n+' ':'')}); }
+  _batchRender();
+}
+function _batchSet(i,f,v){ if(_batchRows[i])_batchRows[i][f]=v; }
+function _batchDupRow(i){ var r=_batchRows[i]; if(!r)return; _batchRows.splice(i+1,0,Object.assign({},r)); _batchRender(); }
+function _batchDelRow(i){ _batchRows.splice(i,1); _batchRender(); }
+async function _batchSubmit(){
+  if(!_batchRows.length)return;
+  // 1) 사전 검증 (건별) — 하나라도 막히면 등록 안 함
+  var errs=[];
+  _batchRows.forEach(function(r,i){
+    if(!r.date){errs.push((i+1)+'행: 날짜 없음');return;}
+    if(!r.plat1){errs.push((i+1)+'행('+r.program+'): 플랫폼 미선택');return;}
+    if(!(r.title||'').trim()){errs.push((i+1)+'행('+r.program+'): 제목 없음');return;}
+    var v=_validateScheduleChange(null,r.date,r.time,{action:'submit',plat1:r.plat1,program:r.program,applicant:''});
+    if(!v.ok)errs.push((i+1)+'행('+r.program+'): '+v.reason);
+  });
+  if(errs.length){ showToast('등록 불가 — '+errs.length+'건:\n'+errs.slice(0,6).join('\n'),'error'); return; }
+  // 2) 순차 POST (병렬 금지 — 서버가 매 건 nextRow 재계산). No=기준No+i(중복 방지)
+  showOverlayLoad('0/'+_batchRows.length+' 등록 중...');
+  var baseNo=records.length+1, ok=0, fail=[];
+  var status=(userRole==='admin'?'예정':'신청 중');
+  for(var i=0;i<_batchRows.length;i++){
+    var r=_batchRows[i];
+    var pw={program:r.program,programType:r.programType,programEndDate:r.programEnd,title:(r.title||'').trim(),plat1:r.plat1,plat2:r.plat2||'',format:'',date:r.date,time:r.time||'10:00',applicant:'',memo:'',folders:[],kakaoText:'',instaText:'',blogDirection:'',b2bIntraText:'',b2bLink:'',smsBody:'',smsTarget:'',customPlatform:'',freeText:'',intent:'',ageRanges:[],ageAny:false,residence:'',residenceCustom:'',residenceAny:false,genre:'',genreAny:false};
+    try{ var row=_buildRecRow(pw,status,baseNo+i,false); await api('POST','/api/records',{values:row}); ok++; showOverlayLoad(ok+'/'+_batchRows.length+' 등록 중...'); }
+    catch(e){ fail.push((i+1)+'행('+r.program+'): '+e.message); }
+  }
+  await syncReload();
+  hideOverlayLoad();
+  if(fail.length){ showToast(ok+'건 완료 / '+fail.length+'건 실패:\n'+fail.slice(0,6).join('\n'),'error'); _batchRender(); }
+  else{ closeBatchWizard(); showToast(ok+'건 모두 등록됐어요 🎉','success'); }
 }
 // ═══════════════════════════════════════════════════════════
 // ═══ 변경 위저드 (편집 모드) ═══
@@ -14183,6 +14287,13 @@ var _NB_TEMPLATES=[
 var _nbState={length:'보통', voice:'정중하고 따뜻한', emoji:true, tgt:{}, hooks:['',''], facts:{}, extra:'', tplMode:'auto', tplSel:'', tplText:'', output:'', comments:[], ocrText:'', ocrFiles:[], ocrThumb:'', ocrBusy:false, analyzeBusy:false, genBusy:false, _toneDraft:'', escHandler:null};
 
 // 상단 '콘텐츠 제작' 드롭다운 (네이버 블로그 + 향후 채널 확장)
+// 일정 관리 드롭다운 — 일정 등록(배치 위저드, 기본) / 일정 확인(기존 보드)
+function _scheduleMenuBuild(menu){
+  var itemCss='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s';
+  menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">일정</div>'
+    +'<button type="button" onclick="_ddCloseAll();openBatchWizard()" style="'+itemCss+';background:rgba(74,77,231,0.06)" onmouseenter="this.style.background=\'rgba(74,77,231,0.12)\'" onmouseleave="this.style.background=\'rgba(74,77,231,0.06)\'"><span style="font-size:16px">📋</span><span style="flex:1">일정 등록</span><span style="font-size:10px;color:var(--accent);font-weight:700">기본</span></button>'
+    +'<button type="button" onclick="_ddCloseAll();openPromoBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📅</span>일정 확인</button>';
+}
 function _contentMenuBuild(menu){
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">콘텐츠 제작</div>'
     +'<button type="button" onclick="_ddCloseAll();openNaverBlogTool()" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;background:none;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📝</span>네이버 블로그</button>'
