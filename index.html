@@ -8949,63 +8949,53 @@ async function promoNext(){
   }
   await submitPromoRequest();
 }
+// === records 29컬럼 row 빌더 (단건 submit·임시저장·배치 공용 = 컬럼 순서 단일 진실원) ===
+// ⚠️ resolvePwFormat/buildPwContentText가 전역 _pwData를 직접 참조하므로, 임의 pwData로 계산하려면
+//    전역을 임시 스왑해야 한다(finally 복원). 단건=자기자신 스왑(무해), 배치=항목별 pwData 스왑.
+//    positional 배열이라 컬럼 순서가 바뀌면 여기 한 곳만 고치면 됨(브런치Ⅲ류 손상 예방).
+function _buildRecRow(pwData, status, no, draftFlag){
+  const _save=_pwData;
+  _pwData=pwData;
+  try{
+    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
+    const cat=typeMap[pwData.programType]||pwData.programType||'기타';
+    const dateStr=pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    const _p=dateStr.split('-').map(Number),y=_p[0],m=_p[1],d=_p[2];
+    const DAYS=['일','월','화','수','목','금','토'];
+    const dn=DAYS[new Date(y,m-1,d).getDay()];
+    const ts=dateStr+' '+(pwData.time||'10:00')+':00';
+    const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
+    const format=resolvePwFormat();
+    const content=buildPwContentText();
+    let _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
+    const requesterName=_myAppl||'황세웅';
+    return [
+      no, ts, serial, y,m,d, dn+'요일',
+      pwData.plat1||'', pwData.plat2||'-', cat, pwData.program||'',
+      '예술사업팀', pwData.title||'', format, content,
+      pwData.applicant||'', status, pwData.memo||'', requesterName,
+      '',  // T: 결과_링크
+      '',  // U: 결과_첨부URL
+      '',  // V: 결과_비고
+      '',  // W: 직전 상태 (등록 시점은 빈값)
+      nowKstStr(),  // X: 상태 변경 KST
+      '', '', '',
+      _recPerfId(pwData.program||''),  // AB: 공연ID
+      draftFlag?'Y':''  // AC: 임시저장 플래그 ('Y'=임시, ''=정식/이어쓰기 제출)
+    ];
+  }finally{ _pwData=_save; }
+}
 async function submitPromoRequest(){
   // ===== 신청 직전 재검증 (통합 게이트: 접수/홍보시간대/제외/담당자/판매기간/카카오문자) =====
   const _v=_validateScheduleChange(null,_pwData.date,_pwData.time,{action:'submit',plat1:_pwData.plat1,applicant:_pwData.applicant,program:_pwData.program});
   if(!_v.ok){showToast('신청 불가: '+_v.reason,'error');return;}
   showOverlayLoad();
   try{
-    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
-    const cat=typeMap[_pwData.programType]||_pwData.programType||'기타';
-    const[y,m,d]=_pwData.date.split('-').map(Number);
-    const DAYS=['일','월','화','수','목','금','토'];
-    const dn=DAYS[new Date(y,m-1,d).getDay()];
-    const ts=_pwData.date+' '+_pwData.time+':00';
-    const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
-    // 콘텐츠 형식 결정 (플랫폼별)
-    const format=resolvePwFormat();
-    // 콘텐츠 내용 — 구조화 텍스트 (사람이 SharePoint 셀에서 직접 읽기 좋게)
-    const content=buildPwContentText();
-    // 신청자 — user 본인 식별 (localStorage.myApplicant 우선)
-    let _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
-    // 신청자(S) 결정 로직 (통일):
-    // - 일반 user: localStorage.myApplicant (로그인 시 PIN→userName으로 저장)
-    // - 서브 admin: 동일 (admin 진입 시에도 myApplicant 유지됨)
-    // - 슈퍼 admin: myApplicant 없음 → 황세웅으로 fallback (DB 동일 레벨)
-    // → DB 관점에서 모든 등록은 사람 이름 단위 (admin/user 마커 없음)
-    const requesterName = _myAppl || '황세웅';
     // 임시저장 이어쓰기 제출이면 그 행을 PATCH해 전환 (No 보존 · 중복 행 방지)
     const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
     const _subNo=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
-    const row=[
-      _subNo,
-      ts,
-      serial,
-      y,m,d,
-      dn+'요일',
-      _pwData.plat1,
-      _pwData.plat2||'-',
-      cat,
-      _pwData.program,
-      '예술사업팀',
-      _pwData.title,
-      format,
-      content,
-      _pwData.applicant,
-      (userRole==='admin' ? '예정' : '신청 중'),
-      _pwData.memo||'',
-      requesterName,
-      '',  // T: 결과_링크
-      '',  // U: 결과_첨부URL
-      '',  // V: 결과_비고
-      '',  // W: 직전 상태 (등록 시점은 빈값)
-      nowKstStr(),  // X: 상태 변경 KST
-      '',
-      '',
-      '',
-      _recPerfId(_pwData.program),  // AB: 공연ID
-      ''   // AC: 임시저장 — 실제 신청은 빈값 (이어쓰기 제출이면 'Y'→'' 전환되어 _DRAFTS에서 빠지고 records로 편입)
-    ];
+    // 29컬럼 row = 공용 빌더(단건/임시저장/배치 단일 진실원). 진행상태 admin='예정'/user='신청 중'
+    const row=_buildRecRow(_pwData, (userRole==='admin'?'예정':'신청 중'), _subNo, false);
     if(_pwData._draftRow){
       await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
     }else{
@@ -9035,29 +9025,10 @@ async function submitPromoRequest(){
 // _pwData → records row (status='임시'). 신규=POST, 이어쓰기(_draftRow)=PATCH. 검증·알림 없음.
 async function _pwSaveDraft(){
   try{
-    const typeMap={'c':'공연','e':'전시','a':'예술교육','r':'대관'};
-    const cat=typeMap[_pwData.programType]||_pwData.programType||'기타';
-    const dateStr=_pwData.date||(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
-    const[y,m,d]=dateStr.split('-').map(Number);
-    const DAYS=['일','월','화','수','목','금','토'];
-    const dn=DAYS[new Date(y,m-1,d).getDay()];
-    const ts=dateStr+' '+(_pwData.time||'10:00')+':00';
-    const serial=Math.floor(Date.UTC(y,m-1,d)/86400000)+25569;
-    const format=resolvePwFormat();
-    const content=buildPwContentText();
-    let _myAppl='';try{_myAppl=sessionStorage.getItem('myApplicant')||'';}catch(e){}
-    const requesterName=_myAppl||'황세웅';
     const _draftRec=_pwData._draftRow?records.find(function(r){return r._rowIndex===_pwData._draftRow;}):null;
     const _no=_draftRec?(_draftRec['No']||_draftRec['NO']||records.length+1):records.length+1;
-    const row=[
-      _no, ts, serial, y,m,d, dn+'요일',
-      _pwData.plat1||'', _pwData.plat2||'-', cat, _pwData.program||'',
-      '예술사업팀', _pwData.title||'', format, content,
-      _pwData.applicant||'', '임시', _pwData.memo||'', requesterName,
-      '','','','', nowKstStr(), '','','',
-      _recPerfId(_pwData.program||''),
-      'Y'   // AC: 임시저장 플래그 (records 분리 키). 진행 상태='임시'는 사람이 읽기 위한 표시·폴백
-    ];
+    // 29컬럼 row = 공용 빌더. 진행상태='임시', AC='Y'(records↔_DRAFTS 분리 키)
+    const row=_buildRecRow(_pwData, '임시', _no, true);
     showOverlayLoad('임시저장 중...');
     if(_pwData._draftRow){
       await api('PATCH','/api/records/'+_pwData._draftRow,{values:row});
