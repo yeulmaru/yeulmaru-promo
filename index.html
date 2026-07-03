@@ -5644,6 +5644,44 @@ async function openPerfUrl(url, perfName){
 }
 function backToAdminMenu(){openAdminPanel();}
 
+// === 예울이 LOVE 쇼케이스 모달 (콘텐츠 제작 메뉴) ===
+// NOW SHOWING 마퀴 픽셀 애니메이션(image/love_pet.mp4)을 전체화면 모달로 재생.
+// 음소거 자동재생(정책상 항상 재생 보장) + 탭/버튼으로 소리 토글.
+var _loveEsc=null;
+function openLoveShow(){
+  var el=document.getElementById('love-show');
+  if(!el){el=document.createElement('div');el.id='love-show';document.body.appendChild(el);}
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeLoveShow)">'
+    +'<div class="modal" style="width:auto;max-width:94vw;padding:0;position:relative;overflow:hidden;background:#131313;border:1px solid rgba(255,255,255,0.08);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,0.45)">'
+    +'<button class="modal-x" onclick="closeLoveShow()" title="닫기" style="position:absolute;top:10px;right:10px;z-index:10;background:rgba(0,0,0,0.42);color:#fff;border:0">✕</button>'
+    +'<video id="love-video" src="image/love_pet.mp4?v=260703" autoplay loop muted playsinline preload="auto" onclick="_loveToggleSound(event)" style="display:block;width:min(540px,86vw);height:min(540px,86vw);object-fit:contain;background:#131313;cursor:pointer"></video>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px;background:#0f0f0f;border-top:1px solid rgba(255,255,255,0.06)">'
+    +'<span style="color:#e8e0d0;font-size:13px;font-weight:600;letter-spacing:.3px">💛 예울이 LOVE</span>'
+    +'<button id="love-sound" onclick="_loveToggleSound(event)" style="background:rgba(255,255,255,0.1);color:#fff;border:0;border-radius:16px;padding:6px 14px;font-size:12.5px;cursor:pointer;font-family:inherit">🔇 소리 켜기</button>'
+    +'</div></div></div>';
+  var v=document.getElementById('love-video');
+  if(v&&v.play){try{v.play();}catch(_e){}}
+  _loveSyncSoundBtn();
+  _loveEsc=function(e){if(e.key==='Escape')closeLoveShow();};
+  document.addEventListener('keydown',_loveEsc);
+}
+function closeLoveShow(){
+  var el=document.getElementById('love-show');if(el)el.innerHTML='';
+  if(_loveEsc){document.removeEventListener('keydown',_loveEsc);_loveEsc=null;}
+}
+function _loveToggleSound(e){
+  if(e&&e.stopPropagation)e.stopPropagation();
+  var v=document.getElementById('love-video');if(!v)return;
+  v.muted=!v.muted;
+  if(!v.muted){try{v.play();}catch(_e){}}
+  _loveSyncSoundBtn();
+}
+function _loveSyncSoundBtn(){
+  var v=document.getElementById('love-video'),b=document.getElementById('love-sound');
+  if(!v||!b)return;
+  b.textContent=v.muted?'🔇 소리 켜기':'🔊 소리 끄기';
+}
+
 // === Coming Soon 모달 (미구현 메뉴용) ===
 function showComingSoon(label){
   const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeComingSoon)"><div class="modal" style="width:auto;min-width:320px;max-width:90vw;padding:36px 40px;text-align:center"><div style="font-size:56px;margin-bottom:12px;line-height:1">😉</div><h3 style="margin:0 0 6px;font-size:18px">'+escapeHtml(label)+'</h3><div style="color:#888;font-size:13px;margin-bottom:24px">아직 준비 중이에요</div><button onclick="closeComingSoon()" style="padding:10px 32px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">확인</button></div></div>';
@@ -14438,6 +14476,7 @@ function _scheduleMenuBuild(menu){
 function _contentMenuBuild(menu){
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">콘텐츠 제작</div>'
     +'<button type="button" onclick="_ddCloseAll();openNaverBlogTool()" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;background:none;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📝</span>네이버 블로그</button>'
+    +'<button type="button" onclick="_ddCloseAll();openLoveShow()" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;background:none;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">💛</span>예울이 LOVE</button>'
     +'<div style="padding:7px 14px 4px;font-size:10.5px;color:#c4c4c4;line-height:1.5">인스타그램 등 다른 채널은 차차 추가할 예정이에요.</div>';
 }
 
