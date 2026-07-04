@@ -5378,24 +5378,26 @@ function _pmapEnsureStyle(){
    +'.pm-title{font-size:17px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}'
    +'.pm-title-sub{font-size:12px;font-weight:600;color:var(--dim)}'
    +'.pm-clock{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-light);padding:6px 12px;border-radius:var(--r-btn);letter-spacing:.4px;font-variant-numeric:tabular-nums}'
-   +'.pm-body{display:flex;flex:1;min-height:0;gap:14px;padding:0 22px 18px}'
-   +'.pm-side{width:232px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;min-height:0}'
-   +'.pm-cards{display:flex;flex-direction:column;gap:10px}'
-   +'.pm-card{background:var(--glass-surface);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:12px 14px}'
-   +'.pm-card-l{font-size:11px;font-weight:700;color:var(--dim);margin-bottom:4px}'
-   +'.pm-card-n{font-size:26px;font-weight:800;color:var(--accent);line-height:1.1;font-variant-numeric:tabular-nums}'
+   +'.pm-body{display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;padding:0 22px 16px}'
+   +'.pm-bottom{display:flex;gap:12px;flex-shrink:0;align-items:stretch}'
+   +'.pm-cards{display:flex;gap:10px;flex:1.5;min-width:0}'
+   +'.pm-card{flex:1;min-width:0;background:var(--glass-surface);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:10px 14px}'
+   +'.pm-card-l{font-size:11px;font-weight:700;color:var(--dim);margin-bottom:3px;white-space:nowrap}'
+   +'.pm-card-n{font-size:22px;font-weight:800;color:var(--accent);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}'
    +'.pm-card-n small{font-size:12px;font-weight:700;color:var(--dim);margin-left:3px}'
-   +'.pm-card-s{font-size:11px;color:var(--dim);margin-top:4px}'
-   +'.pm-feed-hd{font-size:11px;font-weight:700;color:var(--dim);margin:4px 2px 0}'
-   +'.pm-feed{flex:1;min-height:0;overflow:auto;background:var(--glass-surface);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:6px}'
+   +'.pm-card-s{font-size:10.5px;color:var(--dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+   +'.pm-feedwrap{flex:1;min-width:220px;display:flex;flex-direction:column;gap:4px}'
+   +'.pm-feed-hd{font-size:11px;font-weight:700;color:var(--dim);margin:0 2px}'
+   +'.pm-feed{flex:1;min-height:0;height:86px;overflow:auto;background:var(--glass-surface);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:4px 6px}'
+   +'.pm-thead{font-size:11px;font-weight:800;color:var(--dim);padding:8px 8px 10px;display:flex;align-items:center;gap:6px}'
+   +'.pm-thead span{font-weight:600;color:var(--muted)}'
    +'.pm-feed-item{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:8px;font-size:11.5px}'
    +'.pm-feed-item:hover{background:var(--peach-light)}'
    +'.pm-feed-date{color:var(--dim);font-weight:700;flex-shrink:0;font-variant-numeric:tabular-nums}'
    +'.pm-feed-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}'
    +'.pm-feed-st{font-weight:700;flex-shrink:0;font-size:10.5px}'
    +'.pm-feed-empty{padding:20px 10px;text-align:center;color:var(--muted);font-size:12px}'
-   +'.pm-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;min-height:0}'
-   +'.pm-ctrl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}'
+   +'.pm-ctrl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0}'
    +'.pm-ctrl-sep{width:1px;height:18px;background:var(--border);margin:0 4px}'
    +'.pm-fbtn{padding:6px 12px;border:1.5px solid var(--border);background:var(--surface-solid);color:var(--neutral-text);border-radius:var(--r-btn);cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px}'
    +'.pm-fbtn:hover{border-color:var(--accent);color:var(--accent)}'
@@ -5446,7 +5448,7 @@ function _pmapEnsureStyle(){
    +'.pm-rmeta{margin-left:6px;font-size:10.5px;color:var(--dim);flex-shrink:0}'
    +'.pm-rlabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
    +'.pm-rthumb{width:26px;height:20px;object-fit:cover;border-radius:4px;margin-right:6px;border:1px solid var(--border);flex-shrink:0;background:var(--neutral)}'
-   +'@media(max-width:900px){.pm-body{flex-direction:column;overflow:auto}.pm-side{width:100%}.pm-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pm-feed{max-height:180px;flex:none}.pm-mapdiv{min-height:340px;flex:none;height:60vh}}';
+   +'@media(max-width:900px){.pm-body{overflow:auto}.pm-bottom{flex-direction:column}.pm-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pm-feedwrap{min-width:0}.pm-feed{height:130px;flex:none}.pm-mapdiv{min-height:340px;flex:none;height:55vh}}';
   document.head.appendChild(ss);
 }
 function _pmapRenderDashboard(c){
@@ -5457,8 +5459,9 @@ function _pmapRenderDashboard(c){
   c.innerHTML='<div class="pm-wrap">'
     +'<div class="pm-hdr"><div class="pm-title">📡 홍보 현황 지도 <span class="pm-title-sub">여수 · 순천 · 광양 홍보 매체 운영 현황</span></div><div class="pm-clock" id="pm-clock"></div></div>'
     +'<div class="pm-body">'
-    +'<div class="pm-side"><div class="pm-cards" id="pm-cards"></div><div class="pm-feed-hd">최근 홍보 신청</div><div class="pm-feed" id="pm-feed"></div></div>'
-    +'<div class="pm-main"><div class="pm-ctrl" id="pm-ctrl"></div><div class="pm-mapdiv" id="pm-mapdiv"><div class="pm-map-loading">지도를 불러오는 중…</div></div></div>'
+    +'<div class="pm-ctrl" id="pm-ctrl"></div>'
+    +'<div class="pm-mapdiv" id="pm-mapdiv"><div class="pm-map-loading">지도를 불러오는 중…</div></div>'
+    +'<div class="pm-bottom"><div class="pm-cards" id="pm-cards"></div><div class="pm-feedwrap"><div class="pm-feed-hd">최근 홍보 신청</div><div class="pm-feed" id="pm-feed"></div></div></div>'
     +'</div></div>';
   _pmapRenderCards();
   _pmapRenderCtrl();
@@ -6044,12 +6047,11 @@ function renderPlatformTree(){
   const c = document.getElementById('platform-tree');
   if(!c || !_platformState) return;
   _pmapEnsureStyle();
-  const mode = _platformState.treeMode || 'media';
-  let h = '<div class="pm-tmode">'
-    + '<button class="'+(mode==='region'?'on':'')+'" onclick="_pmapTreeMode(\'region\')">🗺️ 지역</button>'
-    + '<button class="'+(mode==='media'?'on':'')+'" onclick="_pmapTreeMode(\'media\')">🧩 매체 유형</button>'
-    + '</div>';
+  // 260704 사용자 지시: 좌측 메뉴는 장소별(오프라인) 하나만 — 온라인·매체유형 트리는 UI에서 제외(코드 골격 보존, mode를 'media'로 바꾸면 복원)
+  const mode = 'region';
+  let h = '';
   if(mode==='region'){
+    h += '<div class="pm-thead">📡 오프라인 홍보 거점 <span>장소별</span></div>';
     h += _pmapRegionTreeHtml();
     c.innerHTML = h;
     return;
