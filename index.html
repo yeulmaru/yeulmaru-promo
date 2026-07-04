@@ -5966,7 +5966,7 @@ function _pmapRegionTreeHtml(){
     fixed.forEach(function(s){h+=_pmapSpotRows(s,24);});
     if(dids.length){
       const gid='g|'+city+'-did', gOpen=ex.has(gid);
-      h+='<div class="pm-rrow" style="padding-left:24px" onclick="_pmapRToggle(\''+gid+'\')">'+arrow(gid,gOpen,true)+'<span class="pm-rdot" style="background:var(--c5)"></span><span class="pm-rlabel">협력기관 DID</span><span class="pm-rmeta">'+dids.length+'곳</span></div>';
+      h+='<div class="pm-rrow" style="padding-left:24px" onclick="_pmapRToggle(\''+gid+'\')">'+arrow(gid,gOpen,true)+'<span class="pm-rlabel">협력기관 DID</span><span class="pm-rmeta">'+dids.length+'곳</span></div>';
       if(gOpen)dids.forEach(function(s){h+=_pmapSpotRows(s,40);});
     }
   });
@@ -5975,18 +5975,17 @@ function _pmapRegionTreeHtml(){
 function _pmapSpotRows(s,pad){
   const ex=_platformState.rExpand, sel=_platformState.rSel;
   const sid='s|'+s.id, sOpen=ex.has(sid);
-  const tok=(_PMAP_KINDS[s.kind]||_PMAP_KINDS.did).tok;
   const pend=s.status!=='운영중';
   const hasM=s.media&&s.media.length;
   let h='<div class="pm-rrow'+(sel===sid?' on':'')+'" style="padding-left:'+pad+'px'+(pend?';opacity:.65':'')+'" onclick="_pmapRow(\''+sid+'\')">'
     +(hasM?'<span class="pm-rarrow" onclick="event.stopPropagation();_pmapRToggle(\''+sid+'\')">'+(sOpen?'▼':'▶')+'</span>':'<span class="pm-rarrow"></span>')
-    +'<span class="pm-rdot" style="background:var('+tok+')"></span><span class="pm-rlabel">'+escapeHtml(s.name)+'</span>'+(pend?'<span class="pm-rmeta">예정</span>':'')+'</div>';
+    +'<span class="pm-rlabel">'+escapeHtml(s.name)+'</span>'+(pend?'<span class="pm-rmeta">예정</span>':'')+'</div>';
   if(!sOpen||!hasM)return h;
   _pmapMediaList(s).forEach(function(ml){
     const mid='m|'+s.id+'|'+ml.mi, mOpen=ex.has(mid);
     h+='<div class="pm-rrow'+(sel===mid?' on':'')+'" style="padding-left:'+(pad+16)+'px;font-size:12px" onclick="_pmapRow(\''+mid+'\')">'
       +'<span class="pm-rarrow" onclick="event.stopPropagation();_pmapRToggle(\''+mid+'\')">'+(mOpen?'▼':'▶')+'</span>'
-      +'<span class="pm-rdot" style="width:6px;height:6px;background:var('+tok+')"></span><span class="pm-rlabel">'+escapeHtml(ml.name)+'</span>'+(ml.ratio?'<span class="pm-rmeta">📐 '+escapeHtml(ml.ratio)+'</span>':'')+'</div>';
+      +'<span class="pm-rlabel">'+escapeHtml(ml.name)+'</span>'+(ml.ratio?'<span class="pm-rmeta">📐 '+escapeHtml(ml.ratio)+'</span>':'')+'</div>';
     if(!mOpen)return;
     _pmapContents(s,ml.name).forEach(function(it,ci){
       const iid='i|'+s.id+'|'+ml.mi+'|'+ci;
@@ -6335,10 +6334,6 @@ function renderPlatformTree(){
   let h = '';
   if(mode==='region'){
     h += '<div class="pm-thead">📡 오프라인 홍보 거점 <span>장소별</span></div>';
-    let leg='<div class="pm-legend">';
-    for(const k in _PMAP_KINDS){ leg+='<b style="color:var('+_PMAP_KINDS[k].tok+')"><span class="pm-kdot" style="background:var('+_PMAP_KINDS[k].tok+')"></span>'+_PMAP_KINDS[k].label+'</b>'; }
-    leg+='</div>';
-    h += leg;
     h += _pmapRegionTreeHtml();
     c.innerHTML = h;
     return;
