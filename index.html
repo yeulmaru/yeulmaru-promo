@@ -4816,6 +4816,9 @@ function openPlatformBoard(){
   _platformState = {
     expanded: new Set(['offline','online','offline.external','offline.internal','offline.mangma','offline.jangdo']),
     selected: null,
+    treeMode: 'region',
+    rExpand: new Set(['c|여수']),
+    rSel: null,
     nodes: _buildPlatformNodes(),
     escHandler: null
   };
@@ -4843,10 +4846,11 @@ function openPlatformBoard(){
   renderPlatformDetail();
   _platformState.escHandler = function(e){
     if(e.key !== 'Escape') return;
-    // 내부 모달(DID 지도 / 협력기관 상세)이 열려있으면 그쪽이 먼저 닫히게 양보
+    // 내부 모달(DID 지도 / 협력기관 상세 / 홍보물 조회)이 열려있으면 그쪽이 먼저 닫히게 양보
     const inner1 = document.getElementById('did-partners-map');
     const inner2 = document.getElementById('did-partner-detail');
-    if((inner1 && inner1.children.length) || (inner2 && inner2.children.length)) return;
+    const inner3 = document.getElementById('pm-item-view');
+    if((inner1 && inner1.children.length) || (inner2 && inner2.children.length) || (inner3 && inner3.children.length)) return;
     closePlatformBoard();
   };
   document.addEventListener('keydown', _platformState.escHandler);
@@ -4856,6 +4860,7 @@ function closePlatformBoard(){
     document.removeEventListener('keydown', _platformState.escHandler);
   }
   _pmapDestroy();
+  if(typeof _pmapCloseItem==='function')_pmapCloseItem();
   _platformState = null;
   const el = document.getElementById('platform-board');
   if(el) el.innerHTML = '';
@@ -5352,6 +5357,7 @@ function _pmapDestroy(){
   if(!_pmapState)return;
   if(_pmapState.clock)clearInterval(_pmapState.clock);
   if(_pmapState.markers)_pmapState.markers.forEach(function(m){try{m.setMap&&m.setMap(null);}catch(e){}});
+  if(_pmapState.badges)_pmapState.badges.forEach(function(m){try{m.setMap&&m.setMap(null);}catch(e){}});
   if(_pmapState.iw){try{_pmapState.iw.close();}catch(e){}}
   if(_pmapState.map){try{_pmapState.map.destroy&&_pmapState.map.destroy();}catch(e){}}
   _pmapState=null;
@@ -5359,6 +5365,7 @@ function _pmapDestroy(){
 function _pmapHome(){
   if(!_platformState)return;
   _platformState.selected=null;
+  _platformState.treeMode='region';
   renderPlatformTree();
   renderPlatformDetail();
 }
@@ -5418,13 +5425,34 @@ function _pmapEnsureStyle(){
    +'.pm-co-thumbs img{width:44px;height:33px;object-fit:cover;border-radius:6px;border:1px solid var(--border);background:var(--neutral)}'
    +'.pm-co-note{font-size:10.5px;color:var(--dim);margin-top:8px;background:var(--peach-light);border-radius:8px;padding:5px 8px}'
    +'.pm-co-acts{display:flex;gap:6px;margin-top:11px}'
+   +'.pm-co-li.click{cursor:pointer}'
+   +'.pm-co-li.click:hover{color:var(--accent)}'
+   +'.pm-badge{position:absolute;left:0;top:0;transform:translate(-50%,calc(-100% - 13px));background:var(--glass-surface);backdrop-filter:blur(8px);border:1px solid var(--glass-bd);box-shadow:var(--glass-shadow);border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:6px}'
+   +'.pm-badge:hover{border-color:var(--accent);color:var(--accent)}'
+   +'.pm-badge--city{font-size:12.5px;padding:7px 13px;border-radius:12px;box-shadow:var(--elev)}'
+   +'.pm-badge--city b{color:var(--accent);font-weight:800}'
+   +'.pm-badge--city span{font-weight:600;color:var(--dim);font-size:11px}'
+   +'.pm-pop{opacity:0;animation:pmPop .38s cubic-bezier(.2,.9,.3,1.35) forwards}'
+   +'@keyframes pmPop{from{opacity:0;transform:translate(-50%,calc(-100% - 3px)) scale(.55)}to{opacity:1;transform:translate(-50%,calc(-100% - 13px)) scale(1)}}'
+   +'.pm-tmode{display:flex;gap:6px;padding:4px 6px 10px}'
+   +'.pm-tmode button{flex:1;padding:7px 10px;border:1.5px solid var(--border);background:var(--surface-solid);color:var(--neutral-text);border-radius:var(--r-btn);cursor:pointer;font-size:12px;font-weight:700;font-family:inherit}'
+   +'.pm-tmode button.on{background:var(--accent);color:var(--surface-solid);border-color:var(--accent)}'
+   +'.pm-rrow{display:flex;align-items:center;padding:6px 8px;cursor:pointer;border-radius:6px;margin:1px 0;font-size:13px;color:var(--text)}'
+   +'.pm-rrow:hover{background:var(--peach-light)}'
+   +'.pm-rrow.on{background:var(--accent);color:var(--surface-solid)}'
+   +'.pm-rrow.on .pm-rmeta,.pm-rrow.on .pm-rarrow{color:var(--surface-solid)}'
+   +'.pm-rarrow{display:inline-block;width:16px;cursor:pointer;font-size:10px;text-align:center;color:var(--dim);flex-shrink:0}'
+   +'.pm-rdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:6px}'
+   +'.pm-rmeta{margin-left:6px;font-size:10.5px;color:var(--dim);flex-shrink:0}'
+   +'.pm-rlabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+   +'.pm-rthumb{width:26px;height:20px;object-fit:cover;border-radius:4px;margin-right:6px;border:1px solid var(--border);flex-shrink:0;background:var(--neutral)}'
    +'@media(max-width:900px){.pm-body{flex-direction:column;overflow:auto}.pm-side{width:100%}.pm-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pm-feed{max-height:180px;flex:none}.pm-mapdiv{min-height:340px;flex:none;height:60vh}}';
   document.head.appendChild(ss);
 }
 function _pmapRenderDashboard(c){
   _pmapDestroy();
   _pmapEnsureStyle();
-  _pmapState={kind:'all',city:'all',map:null,markers:[],iw:null,clock:null,manifest:null};
+  _pmapState={kind:'all',city:'all',map:null,markers:[],badges:[],badgeKey:'',iw:null,clock:null,manifest:null};
   c.style.padding='0';
   c.innerHTML='<div class="pm-wrap">'
     +'<div class="pm-hdr"><div class="pm-title">📡 홍보 현황 지도 <span class="pm-title-sub">여수 · 순천 · 광양 홍보 매체 운영 현황</span></div><div class="pm-clock" id="pm-clock"></div></div>'
@@ -5441,7 +5469,7 @@ function _pmapRenderDashboard(c){
   _loadNaverMaps(_pmapInitMap);
   fetch('signage/manifest.json?t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){ if(!_pmapState||!d)return; _pmapState.manifest=d; _pmapRenderCards(); })
+    .then(function(d){ if(!_pmapState||!d)return; _pmapState.manifest=d; _pmapRenderCards(); renderPlatformTree(); })
     .catch(function(){});
 }
 function _pmapTickClock(){
@@ -5504,7 +5532,16 @@ function _pmapRenderCtrl(){
   }
   el.innerHTML=h;
 }
-function _pmapSetCity(c){ if(!_pmapState)return; _pmapState.city=c; _pmapRenderCtrl(); _pmapDrawMarkers(); _pmapFit(); }
+function _pmapSetCity(c){
+  if(!_pmapState)return;
+  _pmapState.city=c;
+  if(_platformState){
+    _platformState.rSel=(c==='all')?null:('c|'+c);
+    if(c!=='all')_platformState.rExpand.add('c|'+c);
+  }
+  _pmapRenderCtrl(); _pmapDrawMarkers(); _pmapFit();
+  renderPlatformTree();
+}
 function _pmapSetKind(k){ if(!_pmapState)return; _pmapState.kind=k; _pmapRenderCtrl(); _pmapDrawMarkers(); }
 function _pmapInitMap(){
   if(!_pmapState)return;
@@ -5521,6 +5558,8 @@ function _pmapInitMap(){
   _pmapState.iw=new naver.maps.InfoWindow({borderWidth:0,backgroundColor:'transparent',disableAnchor:true,pixelOffset:new naver.maps.Point(0,-14)});
   _pmapDrawMarkers();
   _pmapFit();
+  // 줌/이동 멈출 때마다 계층 배지 티어 갱신 (도시 배지 ↔ 거점 배지 촤르륵)
+  naver.maps.Event.addListener(map,'idle',function(){_pmapUpdateBadges();});
 }
 function _pmapFit(){
   if(!_pmapState||!_pmapState.map)return;
@@ -5552,27 +5591,30 @@ function _pmapDrawMarkers(){
       const tok=(_PMAP_KINDS[s.kind]||_PMAP_KINDS.did).tok;
       const pend=s.status!=='운영중';
       const size=s.kind==='venue'?20:(s.zone?18:14);
-      const label=(s.kind==='venue'||s.zone)?('<div class="pm-mk-label">'+escapeHtml(s.kind==='venue'?s.name:s.city+' · 현수기')+'</div>'):'';
       const html='<div class="pm-mk'+(s.kind==='venue'?' pm-pulse':'')+'" style="width:'+size+'px;height:'+size+'px">'
         +'<div class="pm-dot'+(pend?' pend':'')+'" style="width:'+size+'px;height:'+size+'px;background:var('+tok+')"></div>'
-        +label+'</div>';
+        +'</div>';
       const mk=new naver.maps.Marker({
         position:new naver.maps.LatLng(off[0],off[1]),
         map:_pmapState.map, title:s.name,
         zIndex:s.kind==='venue'?30:(s.zone?20:10),
         icon:{content:html,anchor:new naver.maps.Point(size/2,size/2)}
       });
-      naver.maps.Event.addListener(mk,'click',function(){_pmapOpenCallout(s,mk);});
+      mk._spotId=s.id;
+      naver.maps.Event.addListener(mk,'click',function(){_pmapOpenCallout(s,mk);_pmapTreeReveal(s.id);});
       _pmapState.markers.push(mk);
     });
   }
+  _pmapUpdateBadges(true);
 }
 function _pmapOpenCallout(s,mk){
   if(!_pmapState||!_pmapState.iw)return;
   const kd=_PMAP_KINDS[s.kind]||_PMAP_KINDS.did;
   const pend=s.status!=='운영중';
   let items='';
-  (s.media||[]).forEach(function(m){items+='<div class="pm-co-li">'+escapeHtml(m)+'</div>';});
+  _pmapMediaList(s).forEach(function(ml){
+    items+='<div class="pm-co-li click" id="pm-co-m-'+ml.mi+'" onclick="_pmapTreeReveal(\''+s.id+'\','+ml.mi+')" title="메뉴에서 이 매체 열기">'+escapeHtml(ml.name)+'</div>';
+  });
   let extra='';
   if(s.kind==='did'){
     const p=DID_PARTNERS.find(function(x){return x.id===s.didRef;});
@@ -5581,16 +5623,17 @@ function _pmapOpenCallout(s,mk){
   }
   if(s.signage){
     const mf=_pmapState.manifest;
+    const sigMi=(s.media||[]).findIndex(function(m){return /사이니지/.test(typeof m==='string'?m:String((m&&m.name)||''));});
     if(mf&&mf.images&&mf.images.length){
-      extra+='<div class="pm-co-sec">지금 송출 중 — '+mf.images.length+'건 · '+((mf.slideDuration||8000)/1000)+'초 간격</div>'
-        +'<div class="pm-co-thumbs">'+mf.images.map(function(n){return '<img src="signage/'+encodeURI(n)+'" alt="" loading="lazy">';}).join('')+'</div>';
+      extra+='<div class="pm-co-sec">지금 송출 중 — '+mf.images.length+'건 · '+((mf.slideDuration||8000)/1000)+'초 간격 <span style="font-weight:600;color:var(--dim)">(클릭=조회)</span></div>'
+        +'<div class="pm-co-thumbs">'+mf.images.map(function(n,ci){return '<img src="signage/'+encodeURI(n)+'" alt="" loading="lazy" style="cursor:pointer" onclick="_pmapViewItem(\''+s.id+'\','+sigMi+','+ci+')">';}).join('')+'</div>';
     }else{
       extra+='<div class="pm-co-note">송출 콘텐츠 불러오는 중…</div>';
     }
   }
   if(s.note)extra+='<div class="pm-co-note">📋 '+escapeHtml(s.note)+'</div>';
   if(s.approx)extra+='<div class="pm-co-note">📍 구역 대표 지점 — 좌표는 확정 후 교정 예정</div>';
-  let acts='';
+  let acts='<button class="btn btn--neutral btn--sm" onclick="_pmapTreeReveal(\''+s.id+'\')">🗂️ 메뉴</button>';
   if(s.kind==='did'&&s.didRef)acts+='<button class="btn btn--primary btn--sm" onclick="openDidPartnerDetail(\''+s.didRef+'\')">상세 보기</button>';
   if(s.venue)acts+='<button class="btn btn--neutral btn--sm" onclick="openVenueMap(\''+s.venue+'\')">🛰️ 조감도</button>';
   const html='<div class="pm-callout">'
@@ -5604,6 +5647,172 @@ function _pmapOpenCallout(s,mk){
   _pmapState.iw.open(_pmapState.map,mk);
 }
 function _pmapCloseIw(){ if(_pmapState&&_pmapState.iw){try{_pmapState.iw.close();}catch(e){}} }
+// === 📡 홍보 지도 v2 — 4단 계층(도시→거점→매체→홍보물) 메뉴 + 지도 동기화 + 배지 팝업 (사용자 정의 260704) ===
+// 좌측 트리 [🗺️ 지역] 모드 = 이 계층. 지도 줌 단계도 계층을 따라감(줌<11 도시 배지 / 이상 거점 배지 촤르륵).
+// 홍보물 '선택' = 조회(_pmapViewItem 라이트박스). 지도 콜아웃 ↔ 메뉴 양방향 동기화(_pmapTreeReveal/_pmapFocusSpot).
+function _pmapMediaList(s){
+  return (s.media||[]).map(function(nm,i){
+    return { mi:i, name:(typeof nm==='string'?nm:String((nm&&nm.name)||'')), spot:s };
+  });
+}
+function _pmapContents(s,mediaName){
+  if(s.signage&&/사이니지/.test(mediaName)){
+    const mf=_pmapState&&_pmapState.manifest;
+    if(mf&&mf.images&&mf.images.length)return mf.images.map(function(n){return {type:'img',name:n,src:'signage/'+encodeURI(n)};});
+    return [{type:'todo',name:'송출 콘텐츠 불러오는 중…'}];
+  }
+  if(s.kind==='did'||/DID|전광판/.test(mediaName))return [{type:'todo',name:'송출 콘텐츠 연동 예정 (Phase A2)'}];
+  if(/현수기|입간판/.test(mediaName))return [{type:'todo',name:'게시 시안 연동 예정 (배치도 제공 후)'}];
+  return [{type:'todo',name:'홍보물 연동 예정'}];
+}
+function _pmapUpdateBadges(force){
+  if(!_pmapState||!_pmapState.map)return;
+  const tier=_pmapState.map.getZoom()<11?'city':'spot';
+  const key=tier+'|'+_pmapState.city+'|'+_pmapState.kind;
+  if(!force&&key===_pmapState.badgeKey)return;
+  _pmapState.badgeKey=key;
+  (_pmapState.badges||[]).forEach(function(m){try{m.setMap(null);}catch(e){}});
+  _pmapState.badges=[];
+  const wrap=function(inner){return '<div style="position:relative;width:0;height:0">'+inner+'</div>';};
+  let i=0;
+  if(tier==='city'){
+    const spots=_pmapVisible();
+    Object.keys(_PMAP_CITY).forEach(function(city){
+      const cs=spots.filter(function(s){return s.city===city;});
+      if(!cs.length)return;
+      const html=wrap('<div class="pm-badge pm-badge--city pm-pop" style="animation-delay:'+(i*130)+'ms" onclick="_pmapRow(\'c|'+city+'\')"><b>'+city+'</b><span>거점 '+cs.length+'</span></div>');
+      _pmapState.badges.push(new naver.maps.Marker({position:new naver.maps.LatLng(_PMAP_CITY[city].lat,_PMAP_CITY[city].lng),map:_pmapState.map,zIndex:40,icon:{content:html,anchor:new naver.maps.Point(0,0)}}));
+      i++;
+    });
+  }else{
+    const groups=_groupByCoord(_pmapVisible());
+    for(const k in groups){
+      const g=groups[k],s=g[0];
+      const label=escapeHtml(s.name)+(g.length>1?' 외 '+(g.length-1):'');
+      const html=wrap('<div class="pm-badge pm-pop" style="animation-delay:'+(i*60)+'ms" onclick="_pmapFocusSpot(\''+s.id+'\')">'+label+'</div>');
+      _pmapState.badges.push(new naver.maps.Marker({position:new naver.maps.LatLng(s.lat,s.lng),map:_pmapState.map,zIndex:40,icon:{content:html,anchor:new naver.maps.Point(0,0)}}));
+      i++;
+    }
+  }
+}
+function _pmapTreeMode(m){ if(!_platformState)return; _platformState.treeMode=m; renderPlatformTree(); }
+function _pmapRToggle(id){
+  if(!_platformState)return;
+  const ex=_platformState.rExpand;
+  if(ex.has(id))ex.delete(id); else ex.add(id);
+  renderPlatformTree();
+}
+function _pmapRow(id){
+  if(!_platformState)return;
+  // 대시보드가 닫힌 상태(기존 상세 화면)에서 지역 트리를 누르면 먼저 지도 화면으로 복귀
+  if(!_pmapState){ _platformState.selected=null; renderPlatformDetail(); }
+  const p=id.split('|');
+  if(p[0]==='c'){ _platformState.rExpand.add(id); _pmapSetCity(p[1]); return; }
+  _platformState.rSel=id;
+  if(p[0]==='s'){ _platformState.rExpand.add(id); renderPlatformTree(); _pmapFocusSpot(p[1]); return; }
+  if(p[0]==='m'){ _platformState.rExpand.add(id); renderPlatformTree(); _pmapFocusSpot(p[1],parseInt(p[2],10)); return; }
+  if(p[0]==='i'){ renderPlatformTree(); _pmapViewItem(p[1],parseInt(p[2],10),parseInt(p[3],10)); return; }
+}
+function _pmapFocusSpot(id,mi){
+  const s=_pmapAllSpots().find(function(x){return x.id===id;});
+  if(!s||!_pmapState)return;
+  if(_pmapState.city!=='all'&&_pmapState.city!==s.city)_pmapSetCity(s.city);
+  if(!_pmapState.map)return;
+  _pmapState.map.morph(new naver.maps.LatLng(s.lat,s.lng),15);
+  const mk=_pmapState.markers.find(function(m){return m._spotId===id;});
+  if(mk)_pmapOpenCallout(s,mk);
+  if(mi!=null)setTimeout(function(){var r=document.getElementById('pm-co-m-'+mi);if(r)r.style.color='var(--accent)';},120);
+}
+function _pmapTreeReveal(spotId,mi){
+  if(!_platformState)return;
+  const s=_pmapAllSpots().find(function(x){return x.id===spotId;});
+  if(!s)return;
+  _platformState.treeMode='region';
+  _platformState.rExpand.add('c|'+s.city);
+  if(s.kind==='did')_platformState.rExpand.add('g|'+s.city+'-did');
+  _platformState.rExpand.add('s|'+spotId);
+  let selId='s|'+spotId;
+  if(mi!=null){_platformState.rExpand.add('m|'+spotId+'|'+mi);selId='m|'+spotId+'|'+mi;}
+  _platformState.rSel=selId;
+  renderPlatformTree();
+  setTimeout(function(){
+    const rows=document.querySelectorAll('#platform-tree .pm-rrow.on');
+    if(rows.length)rows[0].scrollIntoView({block:'center',behavior:'smooth'});
+  },30);
+}
+function _pmapRegionTreeHtml(){
+  const spots=_pmapAllSpots();
+  const ex=_platformState.rExpand, sel=_platformState.rSel;
+  const arrow=function(id,open,has){
+    return has?'<span class="pm-rarrow" onclick="event.stopPropagation();_pmapRToggle(\''+id+'\')">'+(open?'▼':'▶')+'</span>':'<span class="pm-rarrow"></span>';
+  };
+  let h='';
+  ['여수','순천','광양'].forEach(function(city){
+    const cs=spots.filter(function(s){return s.city===city;});
+    const cid='c|'+city, cOpen=ex.has(cid);
+    h+='<div class="pm-rrow'+(sel===cid?' on':'')+'" style="padding-left:8px;font-weight:700" onclick="_pmapRow(\''+cid+'\')">'+arrow(cid,cOpen,true)+'📍 <span class="pm-rlabel">'+city+'</span><span class="pm-rmeta">거점 '+cs.length+'</span></div>';
+    if(!cOpen)return;
+    const fixed=cs.filter(function(s){return s.kind!=='did';});
+    const dids=cs.filter(function(s){return s.kind==='did';});
+    fixed.forEach(function(s){h+=_pmapSpotRows(s,24);});
+    if(dids.length){
+      const gid='g|'+city+'-did', gOpen=ex.has(gid);
+      h+='<div class="pm-rrow" style="padding-left:24px" onclick="_pmapRToggle(\''+gid+'\')">'+arrow(gid,gOpen,true)+'<span class="pm-rdot" style="background:var(--c5)"></span><span class="pm-rlabel">협력기관 DID</span><span class="pm-rmeta">'+dids.length+'곳</span></div>';
+      if(gOpen)dids.forEach(function(s){h+=_pmapSpotRows(s,40);});
+    }
+  });
+  return h;
+}
+function _pmapSpotRows(s,pad){
+  const ex=_platformState.rExpand, sel=_platformState.rSel;
+  const sid='s|'+s.id, sOpen=ex.has(sid);
+  const tok=(_PMAP_KINDS[s.kind]||_PMAP_KINDS.did).tok;
+  const pend=s.status!=='운영중';
+  const hasM=s.media&&s.media.length;
+  let h='<div class="pm-rrow'+(sel===sid?' on':'')+'" style="padding-left:'+pad+'px'+(pend?';opacity:.65':'')+'" onclick="_pmapRow(\''+sid+'\')">'
+    +(hasM?'<span class="pm-rarrow" onclick="event.stopPropagation();_pmapRToggle(\''+sid+'\')">'+(sOpen?'▼':'▶')+'</span>':'<span class="pm-rarrow"></span>')
+    +'<span class="pm-rdot" style="background:var('+tok+')"></span><span class="pm-rlabel">'+escapeHtml(s.name)+'</span>'+(pend?'<span class="pm-rmeta">예정</span>':'')+'</div>';
+  if(!sOpen||!hasM)return h;
+  _pmapMediaList(s).forEach(function(ml){
+    const mid='m|'+s.id+'|'+ml.mi, mOpen=ex.has(mid);
+    h+='<div class="pm-rrow'+(sel===mid?' on':'')+'" style="padding-left:'+(pad+16)+'px;font-size:12px" onclick="_pmapRow(\''+mid+'\')">'
+      +'<span class="pm-rarrow" onclick="event.stopPropagation();_pmapRToggle(\''+mid+'\')">'+(mOpen?'▼':'▶')+'</span>'
+      +'<span class="pm-rlabel">'+escapeHtml(ml.name)+'</span></div>';
+    if(!mOpen)return;
+    _pmapContents(s,ml.name).forEach(function(it,ci){
+      const iid='i|'+s.id+'|'+ml.mi+'|'+ci;
+      h+='<div class="pm-rrow'+(sel===iid?' on':'')+'" style="padding-left:'+(pad+32)+'px;font-size:11.5px'+(it.type!=='img'?';color:var(--dim)':'')+'" onclick="_pmapRow(\''+iid+'\')">'
+        +'<span class="pm-rarrow"></span>'+(it.type==='img'?'<img class="pm-rthumb" src="'+it.src+'" loading="lazy" alt="">':'⏳ ')+'<span class="pm-rlabel">'+escapeHtml(it.name)+'</span></div>';
+    });
+  });
+  return h;
+}
+function _pmapViewItem(spotId,mi,ci){
+  const s=_pmapAllSpots().find(function(x){return x.id===spotId;});
+  if(!s)return;
+  const ml=_pmapMediaList(s)[mi];
+  const its=ml?_pmapContents(s,ml.name):[];
+  const it=its[ci];
+  if(!it)return;
+  if(it.type!=='img'){ showToast(it.name); return; }
+  let el=document.getElementById('pm-item-view');
+  if(!el){ el=document.createElement('div'); el.id='pm-item-view'; document.body.appendChild(el); }
+  const esc=function(e){ if(e.key==='Escape')_pmapCloseItem(); };
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,_pmapCloseItem)">'
+    +'<div class="modal" style="width:auto;max-width:88vw;padding:20px 22px;position:relative">'
+    +'<button class="modal-x" onclick="_pmapCloseItem()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:4px">'+escapeHtml(s.city+' › '+s.name+' › '+ml.name)+'</div>'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:12px;padding-right:30px">'+escapeHtml(it.name)+'</div>'
+    +'<img src="'+it.src+'" alt="" style="max-width:80vw;max-height:68vh;border-radius:12px;display:block;background:var(--neutral)">'
+    +'</div></div>';
+  el._escHandler=esc;
+  document.addEventListener('keydown',esc);
+}
+function _pmapCloseItem(){
+  const el=document.getElementById('pm-item-view');
+  if(el&&el._escHandler){ document.removeEventListener('keydown',el._escHandler); el._escHandler=null; }
+  if(el)el.innerHTML='';
+}
 // === 예울마루 조감도 핀맵 (Phase A2-3) ===
 let _venueMapState = null;
 function openVenueMap(venueFilter){
@@ -5834,7 +6043,17 @@ function _buildPlatformNodes(){
 function renderPlatformTree(){
   const c = document.getElementById('platform-tree');
   if(!c || !_platformState) return;
-  let h = '';
+  _pmapEnsureStyle();
+  const mode = _platformState.treeMode || 'media';
+  let h = '<div class="pm-tmode">'
+    + '<button class="'+(mode==='region'?'on':'')+'" onclick="_pmapTreeMode(\'region\')">🗺️ 지역</button>'
+    + '<button class="'+(mode==='media'?'on':'')+'" onclick="_pmapTreeMode(\'media\')">🧩 매체 유형</button>'
+    + '</div>';
+  if(mode==='region'){
+    h += _pmapRegionTreeHtml();
+    c.innerHTML = h;
+    return;
+  }
   for(const gKey of Object.keys(PLATFORM_TREE)){
     const g = PLATFORM_TREE[gKey];
     const gOpen = _platformState.expanded.has(gKey);
