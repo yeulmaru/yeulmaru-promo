@@ -50,3 +50,4 @@ build/
 .claude/*
 !.claude/settings.json
 !.claude/hooks/
+__pycache__/
