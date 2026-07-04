@@ -6899,7 +6899,8 @@ function _msgSave(msgs){
   try { localStorage.setItem('nomute_messages', JSON.stringify(msgs)); } catch(e){}
 }
 function _msgMyAppl(){
-  try { return sessionStorage.getItem('myApplicant') || ''; } catch(e){ return ''; }
+  // 수신자는 전송 시 trim되므로 읽기(배지·메시지함 필터)도 trim해 정확일치 불일치 방지
+  try { return (sessionStorage.getItem('myApplicant') || '').trim(); } catch(e){ return ''; }
 }
 function pushMessage(opts){
   if(!opts || !opts.recipient) return;
@@ -15511,7 +15512,8 @@ var _NB_TEMPLATES=[
   ['review','후기·현장형','1) 방문 계기 / 기대\n2) 현장 분위기 묘사\n3) 공연 하이라이트\n4) 솔직한 감상\n5) 추천 + 다음 공연 안내'],
   ['info','정보 요약형','1) 핵심 정보 먼저 (일시·장소·가격·예매)\n2) 공연 개요\n3) 관람 포인트\n4) 예매 링크 / 문의']
 ];
-var _nbState={length:'보통', voice:'정중하고 따뜻한', emoji:true, tgt:{}, hooks:['',''], facts:{}, extra:'', tplMode:'auto', tplSel:'', tplText:'', output:'', comments:[], ocrText:'', ocrFiles:[], ocrThumb:'', ocrBusy:false, analyzeBusy:false, genBusy:false, _toneDraft:'', escHandler:null};
+function _nbDefaultState(){return {length:'보통', voice:'정중하고 따뜻한', emoji:true, tgt:{}, hooks:['',''], facts:{}, extra:'', tplMode:'auto', tplSel:'', tplText:'', output:'', comments:[], ocrText:'', ocrFiles:[], ocrThumb:'', ocrBusy:false, analyzeBusy:false, genBusy:false, _toneDraft:'', escHandler:null};}
+var _nbState=_nbDefaultState();
 
 // 상단 '콘텐츠 제작' 드롭다운 (네이버 블로그 + 향후 채널 확장)
 // 일정 관리 드롭다운 — 일정 등록(배치 위저드, 기본) / 일정 확인(기존 보드)
@@ -15530,8 +15532,9 @@ function _contentMenuBuild(menu){
 function openNaverBlogTool(){
   var el=document.getElementById('nblog-board');
   if(!el){el=document.createElement('div');el.id='nblog-board';document.body.appendChild(el);}
-  // 직전 입력 복원 (분량/말투/주제/본문/초안)
-  try{var sv=JSON.parse(localStorage.getItem(_NB_DRAFT_KEY)||'null');if(sv)Object.assign(_nbState,sv);}catch(_e){}
+  // 🔒 매번 새로 시작 — 이전 세션/다른 사용자의 초안을 복원하지 않는다(화면 벗어나면 소멸). 공용 PC에서 다음 사용자에게 초안 노출 차단.
+  _nbState=_nbDefaultState();
+  try{localStorage.removeItem(_NB_DRAFT_KEY);}catch(_e){}   // 구버전이 남긴 초안 잔재 정리
   try{_nbState._toneLib=JSON.parse(localStorage.getItem(_NB_TONELIB_KEY)||'[]')||[];}catch(_e){_nbState._toneLib=[];}
   try{localStorage.removeItem('nb_gh_pat');}catch(_e){}   // 구 브라우저 PAT 잔재 제거 — 이제 Worker가 토큰 보유(브라우저 무토큰)
   _nbTgtNormalize();   // 옛 단일값 tgt → 새 다중선택 구조로 정규화(호환)
@@ -15548,12 +15551,15 @@ function openNaverBlogTool(){
 }
 function closeNaverBlogTool(){
   if(_nbState.escHandler)document.removeEventListener('keydown',_nbState.escHandler);
-  _nbSaveState();
+  // 🔒 화면을 벗어나면 작성 내용 초기화 — 같은 브라우저의 다른 사용자에게 초안이 노출되지 않게
+  _nbState=_nbDefaultState();
+  try{localStorage.removeItem(_NB_DRAFT_KEY);}catch(e){}
   var cm=document.getElementById('nb-cmt-modal');if(cm)cm.innerHTML='';
   var el=document.getElementById('nblog-board');if(el)el.innerHTML='';
 }
 function _nbSaveState(){
-  try{localStorage.setItem(_NB_DRAFT_KEY,JSON.stringify({voice:_nbState.voice,emoji:_nbState.emoji,tgt:_nbState.tgt||{},hooks:_nbState.hooks||['',''],facts:_nbState.facts||{},extra:_nbState.extra||'',tplMode:_nbState.tplMode||'auto',tplSel:_nbState.tplSel||'',tplText:_nbState.tplText||'',output:_nbState.output||'',comments:_nbState.comments||[],ocrText:_nbState.ocrText||'',ocrFiles:_nbState.ocrFiles||[]}));}catch(e){}
+  // 🔒 초안은 저장하지 않는다 — 세션 내 인메모리(_nbState)만 사용. 화면 벗어나거나 새로고침하면 소멸 →
+  //    같은 브라우저의 다른 사용자에게 이전 초안이 노출되지 않음. (호출부 다수라 함수는 유지, 동작만 무저장화)
 }
 function _nbSet(key,val){_nbState[key]=val;_nbSaveState();_nbRender();}
 
@@ -16122,15 +16128,23 @@ async function _qaSubmit(){
   }
   if(!okFlag){if(btn){btn.disabled=false;btn.textContent='접수하기';}showToast('접수에 실패했어요. 잠시 후 다시 시도해 주세요','error');return;}
   // 관리자 메시지함 알림 — 담당자 시트 관리자여부=true 전원(본인 제외)
+  // 🛠️ 안 오던 원인 3중 방어: ① MANAGERS 미로드(특히 일반 사용자) 시 0명 전송 → 로드 보장
+  //    ② _msgApiCall 킬스위치(직전 badge poll 401/404로 60초 봉인)로 알림 POST가 통째로 스킵되던 것 → 리셋
+  //    ③ 이름 trim 비대칭(수신자 trim vs 본인 미trim) → 양쪽 trim 비교
   try{
-    (MANAGERS||[]).filter(function(m){return isFlagOn(m['관리자여부']);}).forEach(function(m){
+    if(!MANAGERS||!MANAGERS.length){ await loadManagers(); }
+    _msgApiAvailable=true;
+    var _me=(payload.user||'').trim();
+    var _admins=(MANAGERS||[]).filter(function(m){return isFlagOn(m['관리자여부']);});
+    _admins.forEach(function(m){
       var _nm=(m['담당자']||'').trim();
-      if(!_nm||_nm===payload.user)return;
+      if(!_nm||_nm===_me)return;
       pushMessage({recipient:_nm,type:'중요',trigger:'불편사항 접수',
         before:payload.user,after:payload.category,
         reason:'🗣️ 불편사항이 접수됐어요',
         refNo:payload.id,refSummary:'['+payload.category+'] '+payload.content.slice(0,50)});
     });
+    if(!_admins.length)console.warn('[qa notify] 관리자 수신자 0명 — 담당자 시트 관리자여부(N열)/MANAGERS 로드 확인 필요');
   }catch(_e){console.warn('[qa notify]',_e);}
   _qaClose();
   showToast('소중한 의견 감사합니다! 접수되었어요 🙏','success');
