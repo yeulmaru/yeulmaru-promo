@@ -9,4 +9,11 @@ if [ -f "$ROOT/tools/check_design.py" ]; then
     exit 1
   }
 fi
+# 라우터·지침 경로 참조 게이트 (마스터 라우터 기틀)
+if [ -f "$ROOT/tools/check_refs.py" ]; then
+  python3 "$ROOT/tools/check_refs.py" || {
+    echo "[pre-commit] check_refs 위반 — CLAUDE.md·docs/앱지침.md의 백틱 경로가 레포에 없음. 경로 수정 또는 파일 생성 후 커밋." >&2
+    exit 1
+  }
+fi
 exit 0
