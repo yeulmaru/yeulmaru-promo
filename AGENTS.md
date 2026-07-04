@@ -1,7 +1,8 @@
 # AGENTS.md — yeulmaru-promo (타 AI 모델·에이전트 공통 계약)
 
 > Claude 외 모델(Codex·Gemini 등)로 이 repo를 작업할 때도 아래 계약을 동일하게 따른다.
-> Claude 세션용 상세 인계는 `CLAUDE.md`, 디자인 SSOT는 `docs/디자인기틀.md`.
+> 마스터 라우터(불변·수정 모드·검증) = `CLAUDE.md`, 도메인 상세 = `docs/앱지침.md`,
+> 작업 이력 = `docs/작업이력.md`, 디자인 SSOT = `docs/디자인기틀.md`.
 
 ## 💬 응답 언어
 - 사용자는 한국어 화자 — **모든 대화·설명·요약은 한국어로.**

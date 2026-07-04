@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>260704 기틀이식 — 마스터 라우터 이식 보고</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;padding:40px 20px;background:#14141f;color:#e8e8f0;
+       font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.65}
+  main{max-width:860px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 6px}
+  h2{font-size:17px;margin:36px 0 10px;color:#a5a8ff;border-bottom:1px solid #2c2c40;padding-bottom:6px}
+  .sub{color:#9a9ab0;font-size:13px;margin-bottom:28px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+  th,td{border:1px solid #2c2c40;padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#1d1d2e;color:#c5c7ff;white-space:nowrap}
+  code{background:#1d1d2e;border:1px solid #2c2c40;border-radius:5px;padding:1px 6px;font-size:12.5px;color:#ffd9a0}
+  .ok{color:#7ede9e}.warn{color:#ffc46b}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:4px 0}
+  .card{background:#1a1a29;border:1px solid #2c2c40;border-radius:10px;padding:14px 18px;margin:12px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>🧭 마스터 라우터 기틀 이식 보고</h1>
+<div class="sub">yeulmaru-promo · 이식 1호 · 원장 = <code>docs/작업이력.md</code></div>
+
+<h2>1. 무엇을 했나 (요지)</h2>
+<div class="card">
+노뮤트 기틀 복제팩의 <b>로직만</b> 이식 — 503줄 인계서형 CLAUDE.md를 <b>얇은 마스터 라우터</b>로 재편하고,
+세션 이력은 원장으로, 도메인 지식은 두뇌 문서로 분리했다. 디자인 절(§🚨 제1 절대명령·§🎨 기틀 요약)은
+규칙 2 인덱스·세션 훅과의 3점 동기 때문에 <b>원문 그대로 라우터 상단에 보존</b>했다.
+</div>
+
+<h2>2. 전 / 후</h2>
+<table>
+<tr><th>축</th><th>전 (인계서형)</th><th>후 (라우터형)</th></tr>
+<tr><td>CLAUDE.md</td><td>503줄 — 디자인 절 + 세션 이력 13블록 + 도메인 지식 8절 + 태도 규칙 혼재</td>
+    <td>180줄 — 절대명령 표·라우팅·일하는 방식·수정 모드·검증·기록 지도 (§🚨·§🎨 원문 보존)</td></tr>
+<tr><td>세션 이력</td><td>CLAUDE.md 안에 누적 (매 세션 자동 로드 = 컨텍스트 낭비)</td>
+    <td><code>docs/작업이력.md</code> 원장 (append-only · 최신 블록만 읽으면 됨 · 우선사항 목록 신설)</td></tr>
+<tr><td>도메인 지식</td><td>CLAUDE.md 하단 8절 (시스템 설계·인증·화면 함정·환경 패턴)</td>
+    <td><code>docs/앱지침.md</code> 두뇌 — 실작업 진입 시 로드 (원문 보존, 태도 소절만 라우터로 승격)</td></tr>
+<tr><td>기계 게이트</td><td>check_design.py (디자인만)</td>
+    <td>+ <code>tools/check_refs.py</code> — 라우터·지침의 백틱 경로 실존 검사, pre-commit 편입</td></tr>
+<tr><td>백업·보고</td><td>규약 없음 (bak 파일 임시)</td>
+    <td><code>_versions/</code> 백업 규약 + <code>docs/reports/</code> HTML 보고서 관행</td></tr>
+<tr><td>수정 모드</td><td>암묵 관행 (fetch·PR·머지 방식 세션마다 상이)</td>
+    <td>git/깃 트리거 → fetch→백업→게이트→PR→검증 후 즉시 main 머지→read-back 절차 고정</td></tr>
+</table>
+
+<h2>3. 장단점 · 리스크</h2>
+<ul>
+<li class="ok">✅ 매 세션 자동 로드 분량이 1/3로 — 이력은 필요한 최신 블록만 읽는다.</li>
+<li class="ok">✅ 결정·이력이 원장으로 일원화 — 컨텍스트 압축·증발에도 레포가 기억한다.</li>
+<li class="ok">✅ 디자인 3점 동기(규칙 1 ↔ 규칙 2 ↔ 훅 주입) 무손상 — §🚨·§🎨 원문 유지 + 게이트 전부 통과.</li>
+<li class="warn">⚠️ 새 세션이 두뇌(앱지침) 로드를 건너뛰면 함정(positional 시트·S≠P 등)을 놓칠 수 있음
+    → 라우팅 규칙 b)에 착수 전 로드 의무 명시로 방어.</li>
+<li class="warn">⚠️ 동시 세션이 구 CLAUDE.md 기준으로 작업 중이면 머지 충돌 가능
+    → 원장은 -X ours 금지·수동 보존 규칙 명문화.</li>
+</ul>
+
+<h2>4. 검증</h2>
+<ul>
+<li><code>tools/check_refs.py</code> rc=0 · <code>tools/check_design.py</code> rc=0 (hex 1758/1758 유지).</li>
+<li>구 CLAUDE.md 전 23개 절 → 신규 3파일로 전량 배치 (유실 0 — 분신술 교차검증).</li>
+<li>분신술 READ-ONLY 5인 교차검증 → 지적 반영 후 머지.</li>
+<li>머지 후 <code>git show origin/main:CLAUDE.md</code> read-back 실측.</li>
+</ul>
+
+<h2>5. 롤백</h2>
+<div class="card">구 CLAUDE.md 원본 = <code>_versions/260704_2355_기틀이식/CLAUDE.md</code> (git 이력로도 복원 가능).</div>
+</main>
+</body>
+</html>
