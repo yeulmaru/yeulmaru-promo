@@ -106,12 +106,12 @@ button{font-family:inherit;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.login-card.lc-lift,#login.login-leave,#login.login-leave #loginShader,.ae-in{transition:none}}
 
 /* ═══ NAV ═══ */
-/* nav = 강조색 글래스(운영자 260705 확정 "블랙 챠콜 제거, 강조색으로 NAV 느낌 + 글래스모피즘") — --accent 삼중값(74,77,231)·흰색 alpha 변주만(§3.5②) */
-.nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;background:rgba(74,77,231,.55);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,.14);position:sticky;top:0;z-index:20}
+/* nav = 코발트 블루 글래스(운영자 260705 확정) — --accent 삼중값(74,77,231)·흰색 alpha 변주만(§3.5②) */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;background:rgba(74,77,231,.85);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,.14);position:sticky;top:0;z-index:20}
 .nav-left{display:flex;align-items:center;gap:10px}
 .nav-logo{font-size:14px;font-weight:800;color:rgba(255,255,255,.95);letter-spacing:2px}
 .nav-sub{font-size:13px;color:rgba(255,255,255,.6)}
-.nav-beta{display:inline-block;background:#1a1a1a;color:#fff;font-style:italic;font-weight:700;font-size:10px;letter-spacing:0.5px;padding:2px 9px;border-radius:10px;margin-left:6px;vertical-align:middle;line-height:1.4;border:1px solid rgba(255,255,255,.28)}
+/* .nav-beta 제거됨(운영자 260705 "베타 이제 없애고") — 마크업·규칙 삭제, hex 2 청산 */
 .role-tag{font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:8px;margin-right:4px;cursor:pointer;transition:opacity .15s}
 .role-tag:hover{opacity:0.85}
 .role-tag.admin{background:var(--accent);color:#fff}
@@ -175,13 +175,13 @@ button{font-family:inherit;cursor:pointer}
 .logs-tbl tbody td{font-size:12px;padding:6px 8px}
 .logs-tbl tbody tr:hover{background:#fafafa}
 .nav-center{display:flex;gap:4px;position:relative;padding:4px}
-/* 활성 pill = 살몬(운영자 260705 "기존 버튼은 반대로 살몬색") — 인디고 nav 위 보색 강조, --c2 계승 */
-.nav-pill{position:absolute;background:var(--c2);border-radius:20px;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:0;pointer-events:none;box-shadow:0 4px 12px rgba(216,132,85,.35);top:0;bottom:0}
-.nav-btn{padding:9px 18px;border:none;border-radius:20px;font-size:13px;font-weight:500;background:transparent;color:rgba(255,255,255,.78);transition:color .2s;position:relative;z-index:1;white-space:nowrap;line-height:1}
-.nav-btn.on{color:#fff}
+/* pill 덩어리 제거(운영자 260705 "살몬 저거 없애셈") — 활성 = 살몬 글자(--c2)로만 표시. movePill 로직은 무해하게 잔존. */
+.nav-pill{display:none;position:absolute;border-radius:20px;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:0;pointer-events:none;top:0;bottom:0}
+.nav-btn{padding:9px 18px;border:none;border-radius:20px;font-size:13px;font-weight:500;background:transparent;color:rgba(255,255,255,.92);transition:color .2s;position:relative;z-index:1;white-space:nowrap;line-height:1}
+/* 활성(현재 진행) = 서브코어 살몬 글자(--c2), 나머지 = 흰색 (운영자 260705) */
+.nav-btn.on{color:var(--c2);font-weight:700}
 .nav-btn:hover{color:#fff}
-.nav-btn.on:hover{color:#fff}
-.nav-center:hover .nav-btn.on:not(:hover){color:rgba(255,255,255,.55)}
+.nav-btn.on:hover{color:var(--c2)}
 .nav-right{display:flex;align-items:center;gap:12px}
 .kst{font-size:12px;color:var(--dim);font-weight:500;font-variant-numeric:tabular-nums}
 .icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.10);backdrop-filter:blur(8px);font-size:16px;color:rgba(255,255,255,.82);display:flex;align-items:center;justify-content:center;transition:all .2s}
@@ -1585,7 +1585,6 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
     </button>
     <div class="nav-left">
       <span class="nav-logo" onclick="location.replace(location.pathname+'?cb='+Date.now())" title="강제 새로고침 (최신 버전 불러오기)" style="cursor:pointer">YEULMARU</span>
-      <span class="nav-beta">Beta</span>
     </div>
     <div class="nav-center" id="nav-menus"></div>
     <div class="nav-right">
@@ -14213,24 +14212,40 @@ function applyPrograms(){
   closeProgFilter();
   render();
 }
+// SNS 필터 그룹(단일 정의 — renderChips·SNS 팝 공유, 색 복제 금지)
+const _SNS_GROUPS=[
+  {label:'카카오',color:'#C8900A',match:['카카오']},
+  {label:'인스타',color:'#C02872',match:['인스타']},
+  {label:'블로그\xB7맘카페',color:'#1B7A34',match:['블로그','맘카페']},
+  {label:'B2B',color:'#2D5F8A',match:['B2B']},
+  {label:'문자',color:'#8B5CF6',match:['문자']},
+];
 function renderChips(){
   const c=document.getElementById('chips');
-  const groups=[
-    {label:'카카오',color:'#C8900A',match:['카카오']},
-    {label:'인스타',color:'#C02872',match:['인스타']},
-    {label:'블로그\xB7맘카페',color:'#1B7A34',match:['블로그','맘카페']},
-    {label:'B2B',color:'#2D5F8A',match:['B2B']},
-    {label:'문자',color:'#8B5CF6',match:['문자']},
-  ];
-  var resetBtn=activeFilters.length>0?'<div class="chip" onclick="clearFilters()" style="cursor:pointer;padding:7px 12px"><span class="chip-label" style="color:#999;font-size:11px">초기화</span></div>':'';
-  // 현재 보고 있는 월(currentYear/currentMonth)에 종속되어 카운트
-  var monthRecs=records.filter(function(r){return Number(r['연도'])===currentYear&&Number(r['월'])===currentMonth;});
-  var chipsHtml=groups.map((g,gi)=>{const cnt=monthRecs.filter(r=>{const p=r['플랫폼 1']||'';return g.match.some(m=>p.includes(m));}).length;const isActive=activeFilters.indexOf(g.label)>-1;return`<div class="chip${isActive?' chip-active':''}" onclick="toggleFilter('${g.label}')" style="cursor:pointer;${isActive?'background:'+g.color+';':''}"><span class="chip-dot" style="background:${isActive?'#fff':g.color}"></span><span class="chip-label" style="${isActive?'color:#fff':''}">${g.label}</span><span class="chip-count" style="${isActive?'color:#fff':''}">${cnt}</span></div>`;}).join('');
+  // SNS 칩 상시 나열 제거(운영자 260705 "별로 중요하지도 않은데 떠서") → SNS 필터 버튼 하나로 접음(팝오버 = openSnsFilter)
+  var snsActive=activeFilters.length>0;
+  var snsBadge=snsActive?'<span class="prog-count-badge">'+activeFilters.length+'</span>':'';
+  var snsBtn='<button class="prog-btn'+(snsActive?' active':'')+'" onclick="openSnsFilter(this)" title="SNS 필터" style="width:auto;padding:0 13px;border-radius:16px;font-size:11px;font-weight:700;font-family:inherit;letter-spacing:.5px">SNS'+snsBadge+'</button>';
   var progActive=activePrograms.length>0;
   var progBadge=progActive?'<span class="prog-count-badge">'+activePrograms.length+'</span>':'';
   var progBtn='<button class="prog-btn'+(progActive?' active':'')+'" onclick="openProgFilter()" title="프로그램별 필터"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>'+progBadge+'</button>';
-  c.innerHTML=resetBtn+chipsHtml+progBtn;
+  c.innerHTML=snsBtn+progBtn;
 }
+// SNS 필터 팝오버 — 기존 칩 마크업·toggleFilter/clearFilters 그대로 재사용, 표시만 팝으로 이동
+function _snsBuild(menu){
+  menu.id='sns-pop-menu';
+  var monthRecs=records.filter(function(r){return Number(r['연도'])===currentYear&&Number(r['월'])===currentMonth;});
+  var rows=_SNS_GROUPS.map(function(g){
+    var cnt=monthRecs.filter(function(r){var p=r['플랫폼 1']||'';return g.match.some(function(m){return p.includes(m);});}).length;
+    var on=activeFilters.indexOf(g.label)>-1;
+    return '<div class="chip'+(on?' chip-active':'')+'" onclick="_snsToggle(\''+g.label+'\')" style="cursor:pointer;justify-content:flex-start;margin:3px 6px;'+(on?'background:'+g.color+';':'')+'"><span class="chip-dot" style="background:'+(on?'#fff':g.color)+'"></span><span class="chip-label" style="flex:1;'+(on?'color:#fff':'')+'">'+g.label+'</span><span class="chip-count" style="'+(on?'color:#fff':'')+'">'+cnt+'</span></div>';
+  }).join('');
+  var reset=activeFilters.length>0?'<button type="button" onclick="_snsClear()" style="display:block;width:calc(100% - 12px);margin:6px;padding:8px;border:0;background:none;color:#999;font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit">필터 초기화</button>':'';
+  menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">SNS 필터</div>'+rows+reset;
+}
+function openSnsFilter(btn){ _ddOpen(btn,_snsBuild,190); }
+function _snsToggle(label){ toggleFilter(label); var m=document.getElementById('sns-pop-menu'); if(m)_snsBuild(m); }
+function _snsClear(){ clearFilters(); var m=document.getElementById('sns-pop-menu'); if(m)_snsBuild(m); }
 
 function renderCal(){
   const cal=document.getElementById('cal'),dates=calDates(currentYear,currentMonth),weeks=[];
