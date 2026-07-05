@@ -31,7 +31,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 1823 → 1824 = PR#96(사용자 등록 이메일 후속, 구 baseline 1827 기준 통과분) rebase 이월 — #aaa +1 (260704)
 # 1824 → 1758 = 유일 레드 확립(운영자 확정 260704: B=--danger 유일 레드·A=--danger-btn 위험 버튼 전용)
 #               — #E24B4A 44→1(-43)·#e5484d 32→9(-23, 토큰정의 2 + 차트 var() 불가 리터럴 8 잔존) 청산
-BASE_HEX_INDEX = 1758
+# 1758 → 1745 = 팔레트 통폐합(운영자 확정 260705): :root 토큰 var() 별칭화로 고유 hex 축소(-13).
+#               danger→var(danger-btn)·kakao→var(c6)·blog→var(green)·etc→var(c5)·past-text→var(muted)
+#               ·surface→var(glass-surface)·glass-border/glass-bd→var(glass)·nm-bg→var(past-bg)·off-bg→var(border2)
+#               ("여기서 색 더 안 만듦" = 팔레트 폐쇄 확정. 대표 토큰만 raw 값 보유)
+BASE_HEX_INDEX = 1745
 BASE_HEX_SIGNAGE = 2          # signage/index.html: #000·#333
 BASE_ROOT_INDEX = 2           # L14(기본 팔레트 32토큰) + L1322(뉴트럴·z·c1~c6 26토큰)
 BASE_ROOT_SIGNAGE = 0

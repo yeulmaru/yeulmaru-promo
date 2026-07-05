@@ -23,17 +23,17 @@
   --accent:#4A4DE7;--accent-light:#E8E8FD;--accent-glow:rgba(74,77,231,0.15);
   --peach:#F0C4B8;--peach-light:#FBF0EC;--peach-bg:#FDF6F3;--peach-text:#D88455;
   --bg:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);
-  --surface:rgba(255,255,255,0.72);--surface-solid:#fff;
-  --glass:rgba(255,255,255,0.55);--glass-border:rgba(255,255,255,0.6);
+  --surface:var(--glass-surface);--surface-solid:#fff;
+  --glass:rgba(255,255,255,0.55);--glass-border:var(--glass);
   --glass-shadow:0 8px 32px rgba(74,77,231,0.08),0 2px 8px rgba(0,0,0,0.04);
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.12);
   --text:#1A1A2E;--dim:#888;--muted:#bbb;
-  --past-bg:rgba(0,0,0,0.02);--past-text:#aaa;
-  --nm-bg:rgba(0,0,0,0.03);--today-bg:rgba(230,240,255,0.8);
-  --off-bg:rgba(0,0,0,0.055);
+  --past-bg:rgba(0,0,0,0.02);--past-text:var(--muted);
+  --nm-bg:var(--past-bg);--today-bg:rgba(230,240,255,0.8);
+  --off-bg:var(--border2);
   --green:#1A6B3C;
-  --danger:#e5484d;--danger-btn:#E24B4A;
-  --kakao:#C8900A;--insta:#C02872;--youtube:#B71C1C;--blog:#1B7A34;--etc:#2D5F8A;
+  --danger:var(--danger-btn);--danger-btn:#E24B4A;
+  --kakao:var(--c6);--insta:#C02872;--youtube:#B71C1C;--blog:var(--green);--etc:var(--c5);
   --radius:16px;--radius-lg:20px;--radius-xl:24px;
 }
 body{background:var(--bg);color:var(--text);min-height:100vh}
@@ -1343,7 +1343,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
   --elev:0 20px 56px rgba(74,77,231,.16), 0 6px 18px rgba(26,26,46,.07);
   --backdrop:rgba(26,26,46,.42);
   --glass-surface:rgba(255,255,255,.78);
-  --glass-bd:rgba(255,255,255,.6);
+  --glass-bd:var(--glass);
   --z-sticky:10; --z-nav:90; --z-dropdown:1000; --z-modal:2000; --z-confirm:2100; --z-toast:3000;
   --c1:#4A4DE7; --c2:#D88455; --c3:#1A6B3C; --c4:#C02872; --c5:#2D8AB3; --c6:#F5B400;
   --kakao:#F5B400;
