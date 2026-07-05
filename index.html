@@ -106,10 +106,10 @@ button{font-family:inherit;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.login-card.lc-lift,#login.login-leave,#login.login-leave #loginShader,.ae-in{transition:none}}
 
 /* ═══ NAV ═══ */
-/* nav = 다크 글래스(운영자 260705 "검정으로 가독성") — 색은 --text/--backdrop 삼중값(26,26,46)·흰색 alpha 변주만(§3.5②) */
-.nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;background:rgba(26,26,46,.72);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:20}
+/* nav = 강조색 글래스(운영자 260705 확정 "블랙 챠콜 제거, 강조색으로 NAV 느낌 + 글래스모피즘") — --accent 삼중값(74,77,231)·흰색 alpha 변주만(§3.5②) */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;background:rgba(74,77,231,.55);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,.14);position:sticky;top:0;z-index:20}
 .nav-left{display:flex;align-items:center;gap:10px}
-.nav-logo{font-size:14px;font-weight:800;color:var(--accent-light);letter-spacing:2px}
+.nav-logo{font-size:14px;font-weight:800;color:rgba(255,255,255,.95);letter-spacing:2px}
 .nav-sub{font-size:13px;color:rgba(255,255,255,.6)}
 .nav-beta{display:inline-block;background:#1a1a1a;color:#fff;font-style:italic;font-weight:700;font-size:10px;letter-spacing:0.5px;padding:2px 9px;border-radius:10px;margin-left:6px;vertical-align:middle;line-height:1.4;border:1px solid rgba(255,255,255,.28)}
 .role-tag{font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:8px;margin-right:4px;cursor:pointer;transition:opacity .15s}
@@ -175,7 +175,8 @@ button{font-family:inherit;cursor:pointer}
 .logs-tbl tbody td{font-size:12px;padding:6px 8px}
 .logs-tbl tbody tr:hover{background:#fafafa}
 .nav-center{display:flex;gap:4px;position:relative;padding:4px}
-.nav-pill{position:absolute;background:var(--accent);border-radius:20px;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:0;pointer-events:none;box-shadow:0 4px 12px rgba(74,77,231,0.25);top:0;bottom:0}
+/* 활성 pill = 살몬(운영자 260705 "기존 버튼은 반대로 살몬색") — 인디고 nav 위 보색 강조, --c2 계승 */
+.nav-pill{position:absolute;background:var(--c2);border-radius:20px;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:0;pointer-events:none;box-shadow:0 4px 12px rgba(216,132,85,.35);top:0;bottom:0}
 .nav-btn{padding:9px 18px;border:none;border-radius:20px;font-size:13px;font-weight:500;background:transparent;color:rgba(255,255,255,.78);transition:color .2s;position:relative;z-index:1;white-space:nowrap;line-height:1}
 .nav-btn.on{color:#fff}
 .nav-btn:hover{color:#fff}
@@ -588,7 +589,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* ═══ CALENDAR ═══ */
 /* 캘린더 진짜 글래스(운영자 260705) — 분신술 4호 정량: 셀 흰색 재도포가 주범 → 유리·셀 alpha 하향 + saturate(타 글래스와 통일). 전부 흰색 alpha 변주(§3.5②). */
-.cal{background:rgba(255,255,255,.17);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);border-radius:0 0 var(--radius-xl) var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid rgba(255,255,255,.7)}
+.cal{background:rgba(255,255,255,.08);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);border-radius:0 0 var(--radius-xl) var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid rgba(255,255,255,.7)}
 /* 캘린더 로딩 = 글래스 스켈레톤 — 셀 자리를 미리 잡고 광택 스윕이 흐름(loadData→_calSkelHtml).
    바 = var(--neutral) · 스윕 = 흰색 alpha 변주(§3.5②) · 격자선 = var(--border). */
 .cal-skel{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:132px;border-radius:0 0 var(--radius-xl) var(--radius-xl)}
