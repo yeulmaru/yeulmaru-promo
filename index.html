@@ -134,7 +134,7 @@ button{font-family:inherit;cursor:pointer}
 .adm-tbl thead th:last-child{border-radius:0 8px 0 0}
 .adm-tbl tbody td{padding:10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:left}
 .adm-tbl tbody tr:hover{background:#fafafa}
-.adm-btn{padding:5px 10px;background:none;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:11px;margin-left:4px;font-family:inherit}
+.adm-btn{padding:5px 10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);border:1px solid var(--glass-bd);border-radius:6px;cursor:pointer;font-size:11px;margin-left:4px;font-family:inherit}
 .adm-btn:hover{background:#f5f5f5}
 .adm-btn-del{color:#c00;border-color:#fcc;background:#fff8f8}
 .adm-btn-del:hover{background:#fee}
@@ -184,7 +184,7 @@ button{font-family:inherit;cursor:pointer}
 .todo-add{background:#f7f8fc;border:1px solid #ececf5;border-radius:12px;padding:9px;margin-bottom:10px}
 .todo-add input,.todo-add select{font-family:inherit;font-size:12.5px;border:1px solid #e1e1ec;border-radius:8px;padding:7px 9px;outline:none;background:#fff;color:#333}
 .todo-add input:focus,.todo-add select:focus{border-color:var(--accent)}
-.todo-impbtn{border:1px solid #e1e1ec;background:#fff;border-radius:8px;padding:6px 0;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#888;flex:1}
+.todo-impbtn{border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);border-radius:8px;padding:6px 0;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text);flex:1}
 .todo-impbtn.on.h{background:#fdecec;border-color:var(--danger);color:var(--danger)}
 .todo-impbtn.on.m{background:#fef3e2;border-color:#e08600;color:#e08600}
 .todo-impbtn.on.l{background:#eef0f5;border-color:#8a90a0;color:#6b7280}
@@ -552,7 +552,7 @@ button{font-family:inherit;cursor:pointer}
 .prog-toggle{display:flex;gap:0;background:#F0F0F5;border-radius:10px;padding:3px;margin:14px 0 4px}
 .prog-tab{flex:1;padding:7px 12px;border:none;background:transparent;color:#888;font-size:12px;font-weight:600;cursor:pointer;border-radius:8px;transition:all .15s}
 .prog-tab:hover{color:var(--text)}
-.prog-tab.active{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.prog-tab.active{background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);box-shadow:var(--glass-shadow)}
 /* === 프로그램 필터 리스트 (재작성, pf-*) === */
 .pf-section{font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 4px;padding-bottom:3px;border-bottom:1px solid #eee}
 .pf-section:first-child{margin-top:0}
@@ -741,7 +741,7 @@ button{font-family:inherit;cursor:pointer}
 .sp-card-del{background:none;border:none;color:#ccc;cursor:pointer;padding:4px 6px;font-size:11px;border-radius:4px;flex-shrink:0;transition:all 0.15s;line-height:1}
 .sp-card-del:hover{color:var(--danger);background:rgba(226,75,74,0.1)}
 /* 특수일정 입력 폼 유형 chip 라디오 */
-.sp-chip{padding:7px 14px;border-radius:14px;border:1.5px solid #ddd;background:#fff;color:#666;font-size:12.5px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit;line-height:1}
+.sp-chip{padding:7px 14px;border-radius:14px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-size:12.5px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit;line-height:1}
 .sp-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
 .sp-chip:focus{outline:2px solid rgba(74,77,231,0.4);outline-offset:2px}
 .sp-chip.selected{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
@@ -749,16 +749,16 @@ button{font-family:inherit;cursor:pointer}
 .sp-chip.selected.red:hover{background:#c93f3e;border-color:#c93f3e}
 .sp-chip-divider{display:inline-block;width:1px;height:18px;background:#ddd;margin:0 4px;vertical-align:middle}
 .sp-other-input{padding:7px 12px;border-radius:14px;border:1.5px solid var(--accent);background:rgba(74,77,231,0.06);color:var(--accent);font-size:12.5px;font-weight:600;outline:none;font-family:inherit;width:130px;box-sizing:border-box;line-height:1}
-.sp-time-unset{padding:5px 10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;flex-shrink:0;line-height:1}
+.sp-time-unset{padding:5px 10px;border-radius:8px;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;flex-shrink:0;line-height:1}
 .sp-time-unset:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
 .sp-time-unset.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;box-shadow:0 0 0 3px rgba(74,77,231,0.2)}
 .sp-time-unset:disabled{opacity:0.3;cursor:not-allowed}
-.sp-time-add{padding:5px 11px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;line-height:1;font-weight:500}
+.sp-time-add{padding:5px 11px;border-radius:8px;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;line-height:1;font-weight:500}
 .sp-time-add:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
 .sp-time-add:disabled{opacity:0.3;cursor:not-allowed}
 .sp-time-add.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;box-shadow:0 0 0 3px rgba(74,77,231,0.2)}
 /* 판매 진척 차트 — 공연 블록(어항 트레이) + 드롭존 + 촤르르 리빌 + 섹션 펼침 */
-.st-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:11px;border:1.5px solid #e0e0e0;background:#fff;font-size:12px;font-weight:600;color:#666;cursor:grab;user-select:none;transition:all .18s;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.st-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:11px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);font-size:12px;font-weight:600;color:var(--text);cursor:grab;user-select:none;transition:all .18s;box-shadow:var(--glass-shadow)}
 .st-chip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 10px rgba(74,77,231,0.12)}
 .st-chip.on{border-color:var(--accent);background:rgba(74,77,231,0.08);color:var(--accent)}
 .st-chip .st-dot{width:9px;height:9px;border-radius:50%;background:#ddd;flex-shrink:0}
@@ -919,7 +919,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .sub-pop{background:var(--surface-solid);border:1px solid var(--glass-border);border-radius:var(--radius-lg);width:430px;max-width:90vw;max-height:72vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(74,77,231,0.16),0 8px 24px rgba(0,0,0,0.10);animation:fadeUp .22s ease}
 .sub-pop-hdr{display:flex;align-items:center;gap:8px;padding:14px 16px 12px 20px;border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0}
 .sub-pop-title{flex:1;font-size:14px;font-weight:700;color:var(--text)}
-.sub-pop-copy{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid rgba(0,0,0,0.10);background:#fff;border-radius:8px;font-size:11px;color:#666;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
+.sub-pop-copy{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);border-radius:8px;font-size:11px;color:var(--text);cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
 .sub-pop-copy:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,77,231,0.04)}
 .sub-pop-close{width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.05);color:#888;font-size:13px;cursor:pointer;flex-shrink:0}
 .sub-pop-close:hover{background:rgba(0,0,0,0.1)}
@@ -979,7 +979,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .cb-typing i:nth-child(3){animation-delay:.3s}
 @keyframes cbDot{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
 .cb-chiprow{display:flex;flex-wrap:wrap;gap:7px;align-self:flex-start;max-width:95%;animation:cbIn .3s .08s cubic-bezier(.26,1.1,.5,1) backwards}
-.cb-chip{padding:7px 14px;border-radius:999px;border:1px solid rgba(74,77,231,0.22);background:rgba(255,255,255,0.9);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;transition:all .16s;font-family:inherit;box-shadow:0 1px 4px rgba(74,77,231,0.07)}
+.cb-chip{padding:7px 14px;border-radius:999px;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;transition:all .16s;font-family:inherit;box-shadow:var(--glass-shadow)}
 .cb-chip:hover{background:rgba(74,77,231,0.09);transform:translateY(-1px);box-shadow:0 3px 10px rgba(74,77,231,0.15)}
 .cb-chip:active{transform:scale(0.96)}
 .cb-chip.ghost{border-color:rgba(0,0,0,0.1);color:#888;box-shadow:none}
@@ -1279,7 +1279,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .modal-acts{display:flex;gap:8px;margin-top:24px;justify-content:flex-end}
 .m-btn{padding:10px 22px;border-radius:12px;font-size:13px;font-weight:600;border:none;transition:all .2s}
 .m-btn:hover{transform:translateY(-1px)}
-.m-btn.cancel{background:#F0F0F0;color:#777}
+.m-btn.cancel{background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);border:1px solid var(--glass-bd);color:var(--text)}
 .m-btn.save{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(74,77,231,0.25)}
 .m-btn.del{background:var(--danger-btn);color:#fff;margin-right:auto;box-shadow:0 4px 12px rgba(226,75,74,0.2)}
 /* === 콘텐츠 제작 — 네이버 블로그 글쓰기 도우미 (nb-*) === */
@@ -1293,7 +1293,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .nb-input:focus,.nb-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow)}
 .nb-textarea{resize:vertical;min-height:120px}
 .nb-chips{display:flex;flex-wrap:wrap;gap:7px}
-.nb-chip{padding:7px 14px;border-radius:18px;border:1px solid #e0e0ea;background:#fff;color:#666;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
+.nb-chip{padding:7px 14px;border-radius:18px;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
 .nb-chip:hover{border-color:var(--accent);color:var(--accent)}
 .nb-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(74,77,231,0.22)}
 .nb-tone-item{display:flex;align-items:flex-start;gap:8px;background:#f7f7fb;border:1px solid #ececf4;border-radius:10px;padding:9px 11px;margin-top:7px;font-size:12px;color:#555;line-height:1.5}
@@ -1327,7 +1327,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .nb-row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .nb-note{font-size:11.5px;color:#a4a4b0;line-height:1.7;margin-top:10px;background:#f7f7fb;border-radius:9px;padding:9px 12px}
 /* 블로그 도우미 — 타겟 칩·아바타·라벨우측 행 */
-.nb-chip{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:999px;border:1px solid #e3e3ec;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;line-height:1;user-select:none;transition:background .12s,border-color .12s,color .12s}
+.nb-chip{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:999px;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;line-height:1;user-select:none;transition:background .12s,border-color .12s,color .12s}
 .nb-chip:hover{border-color:#c5c5d6}
 .nb-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .nb-chiprow{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start}
@@ -1412,10 +1412,10 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-seg button{padding:5px 13px;border:0;background:#fff;color:var(--accent);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;transition:background .15s}
 .ana-seg button+button{border-left:1.5px solid var(--accent)}
 .ana-seg button.on{background:var(--accent);color:#fff}
-.ana-chip{padding:4px 11px;border-radius:7px;border:1.5px solid #e0e0e0;background:#fff;color:#888;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.ana-chip{padding:4px 11px;border-radius:7px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
 .ana-chip:hover{border-color:var(--accent);color:var(--accent)}
 .ana-chip.on{border-color:var(--accent);background:rgba(74,77,231,0.08);color:var(--accent)}
-.ana-sel{padding:5px 9px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:11.5px;color:#555;background:#fff;cursor:pointer}
+.ana-sel{padding:5px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:11.5px;color:var(--text);background:var(--surface-solid);cursor:pointer}
 .ana-tbl{width:100%;border-collapse:collapse;font-size:13px}
 .ana-tbl thead td{padding:9px 11px;color:#888;font-size:11px;font-weight:700;border-bottom:2px solid #eee;text-align:left;white-space:nowrap}
 .ana-tbl tbody tr{border-bottom:1px solid #f0f0f0;transition:background .12s}
@@ -1438,7 +1438,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-line .ic{flex-shrink:0;font-size:13px}
 .ana-next{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:7px 14px;border-radius:10px;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700}
 .ana-tray{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 10px}
-.ana-pchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:11px;border:1.5px solid #e0e0e0;background:#fff;font-size:11.5px;font-weight:600;color:#666;cursor:grab;user-select:none;transition:all .16s}
+.ana-pchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:11px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);font-size:11.5px;font-weight:600;color:var(--text);cursor:grab;user-select:none;transition:all .16s}
 .ana-pchip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
 .ana-pchip.on{border-color:var(--accent);background:rgba(74,77,231,0.08);color:var(--accent)}
 .ana-pchip .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -1447,7 +1447,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-cmp-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
 .ana-cmp-tbl td{padding:6px 9px;border-bottom:1px solid #f2f2f2}
 .ana-xbtn{display:inline-flex;gap:3px}
-.ana-xbtn button{padding:3px 9px;border:1.5px solid #e0e0e0;background:#fff;border-radius:7px;font-family:inherit;font-size:10.5px;font-weight:600;color:#888;cursor:pointer}
+.ana-xbtn button{padding:3px 9px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);border-radius:7px;font-family:inherit;font-size:10.5px;font-weight:600;color:var(--text);cursor:pointer}
 .ana-xbtn button.on{border-color:var(--accent);background:rgba(74,77,231,0.08);color:var(--accent)}
 .ana-svg-wrap{border:1px solid #f0f0f0;border-radius:12px;padding:10px 8px 4px;background:#fff;overflow-x:auto}
 .ana-why td.exp{cursor:pointer;color:var(--accent);font-weight:600;user-select:none}
@@ -1464,7 +1464,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-mtx td.tot{background:#fafaff;font-weight:700}
 .ana-mtx .cn{font-weight:700;color:#222}
 .ana-mtx .co{font-size:11px;color:#888;display:block;margin-top:2px}
-.ana-back{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid #e0e0e0;border-radius:9px;background:#fff;font-family:inherit;font-size:12px;font-weight:600;color:#666;cursor:pointer;margin-bottom:14px}
+.ana-back{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--glass-bd);border-radius:9px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);font-family:inherit;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:14px}
 .ana-back:hover{border-color:var(--accent);color:var(--accent)}
 .ana-dl{padding:6px 13px;border:1.5px solid var(--accent);border-radius:9px;background:rgba(74,77,231,0.06);color:var(--accent);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
 .ana-dl:hover{background:rgba(74,77,231,0.12)}
@@ -1482,11 +1482,11 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .fbar-lbl{font-size:11px;color:var(--neutral-text);font-weight:600;margin-right:2px}
 /* 세그먼트(상호배타) — 상태탭·수익성·회차·진행일. .fbar-seg 안의 button 들이 한 그룹. */
 .fbar-seg{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
-.fbar-seg button{padding:6px 13px;border-radius:8px;border:1.5px solid var(--neutral-d);background:#fff;color:var(--neutral-text);font-family:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.fbar-seg button{padding:6px 13px;border-radius:8px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
 .fbar-seg button:hover{border-color:var(--accent);color:var(--accent)}
 .fbar-seg button.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(74,77,231,.2)}
 /* 단일 칩(다중 토글) — 같은 시각언어, 선택 시 accent 채움. 내장 체크박스 허용. */
-.fbar-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--neutral-d);background:#fff;color:var(--neutral-text);font-family:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s;user-select:none}
+.fbar-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s;user-select:none}
 .fbar-chip:hover{border-color:var(--accent);color:var(--accent)}
 .fbar-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(74,77,231,.2)}
 .fbar-chip input{width:14px;height:14px;margin:0;flex-shrink:0;cursor:pointer;accent-color:var(--accent)}
@@ -5064,7 +5064,7 @@ function _sigShellHtml(){
    + '<iframe id="sig-prev" src="signage/?t='+Date.now()+'" style="width:100%;height:240px;border:1px solid #eee;border-radius:8px;background:#000"></iframe>'
    + '<div style="display:flex;gap:8px;margin-top:16px;align-items:center">'
    +   '<button onclick="_sigSave()" style="flex:1;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">저장 (GitHub 커밋)</button>'
-   +   '<button onclick="closeSignageManager()" style="padding:12px 18px;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:14px;cursor:pointer;font-family:inherit">닫기</button>'
+   +   '<button onclick="closeSignageManager()" style="padding:12px 18px;border:1px solid var(--glass-bd);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);font-size:14px;cursor:pointer;font-family:inherit">닫기</button>'
    + '</div>'
    + '<div style="font-size:11px;color:#aaa;margin-top:12px;line-height:1.6">※ 사이니지 기기 URL을 <b>https://yeulmaru.github.io/yeulmaru-promo/signage/</b> 로 1회 재지정해야 합니다(현장 URL Launcher). 확인되면 기존 yeulmaru-signage 레포·Cloudflare 배포는 삭제 가능.</div>'
    + '</div></div>';
@@ -5078,9 +5078,9 @@ function _sigRenderList(){
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid #eee;border-radius:10px;background:#fff">'
      + '<img src="'+src+'" alt="" style="width:64px;height:48px;object-fit:cover;border-radius:6px;background:#f0f0f0;flex-shrink:0">'
      + '<div style="flex:1;min-width:0;font-size:12px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(it.name)+(it.isNew?' <span style="color:var(--accent);font-weight:700">(새 사진)</span>':'')+'</div>'
-     + '<button onclick="_sigMove('+i+',-1)" '+(i===0?'disabled':'')+' title="위로" style="width:30px;height:30px;border:1px solid #ddd;border-radius:7px;background:#fff;cursor:pointer;font-size:13px'+(i===0?';opacity:.3;cursor:default':'')+'">▲</button>'
-     + '<button onclick="_sigMove('+i+',1)" '+(i===last?'disabled':'')+' title="아래로" style="width:30px;height:30px;border:1px solid #ddd;border-radius:7px;background:#fff;cursor:pointer;font-size:13px'+(i===last?';opacity:.3;cursor:default':'')+'">▼</button>'
-     + '<button onclick="_sigRemove('+i+')" title="삭제" style="width:30px;height:30px;border:1px solid #f0c9c9;border-radius:7px;background:#fff;color:var(--danger-btn);cursor:pointer;font-size:14px">✕</button>'
+     + '<button onclick="_sigMove('+i+',-1)" '+(i===0?'disabled':'')+' title="위로" style="width:30px;height:30px;border:1px solid var(--glass-bd);border-radius:7px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px'+(i===0?';opacity:.3;cursor:default':'')+'">▲</button>'
+     + '<button onclick="_sigMove('+i+',1)" '+(i===last?'disabled':'')+' title="아래로" style="width:30px;height:30px;border:1px solid var(--glass-bd);border-radius:7px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px'+(i===last?';opacity:.3;cursor:default':'')+'">▼</button>'
+     + '<button onclick="_sigRemove('+i+')" title="삭제" style="width:30px;height:30px;border:1px solid #f0c9c9;border-radius:7px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--danger-btn);cursor:pointer;font-size:14px">✕</button>'
      + '</div>';
   }).join('');
 }
@@ -8836,7 +8836,7 @@ function renderPromoBoard(){
     html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
     const mineOn=_promoFilter.viewMode==='mine';
     const cbStyle='display:inline-block;width:14px;height:14px;border-radius:3px;border:1.5px solid '+(mineOn?'var(--accent)':'#bbb')+';background:'+(mineOn?'var(--accent)':'#fff')+';color:#fff;text-align:center;line-height:11px;font-size:10px;font-weight:700;margin-right:6px;vertical-align:middle;transition:all .12s';
-    html+='<button onclick="_promoFilter.viewMode=\''+(mineOn?'all':'mine')+'\';renderPromoBoard()" style="'+ctrlStyle+';border:1.5px solid #ddd;background:#fff;color:#444;font-weight:500" title="'+(mineOn?'클릭하면 다른 사람 신청도 보기':'클릭하면 내 신청만 보기')+'"><span style="'+cbStyle+'">'+(mineOn?'✓':'')+'</span>👥 내 신청만</button>';
+    html+='<button onclick="_promoFilter.viewMode=\''+(mineOn?'all':'mine')+'\';renderPromoBoard()" style="'+ctrlStyle+';border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-weight:500" title="'+(mineOn?'클릭하면 다른 사람 신청도 보기':'클릭하면 내 신청만 보기')+'"><span style="'+cbStyle+'">'+(mineOn?'✓':'')+'</span>👥 내 신청만</button>';
   }
   if(isAdmin){
     html+='<span style="width:1px;height:18px;background:#ddd;margin:0 4px"></span>';
@@ -12051,7 +12051,7 @@ function invalidateApplyCache(){
 }
 
 async function openApplySettings(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:720px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="apply-settings-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:720px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:var(--glass-shadow);transition:background .15s" onmouseover="this.style.background=\'var(--accent-light)\'" onmouseout="this.style.background=\'var(--glass-surface)\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="apply-settings-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -12846,7 +12846,7 @@ function buildScheduleListHtml(rows){
   
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">일정 관리 <span style="font-size:12px;color:#888;font-weight:400">('+rows.length+'개'+(isAdmin?'':' · 열람 모드')+')</span></h3>';
   if(isAdmin)html+='<button onclick="addScheduleFromList()" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">+ 등록</button>';
-  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap">내역받기</button>';
+  html+='<button onclick="exportScheduleCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 12px;border:1px solid var(--glass-bd);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px;white-space:nowrap">내역받기</button>';
   if(isAdmin)html+='';
   html+='</div>';
   
@@ -12918,12 +12918,12 @@ function buildScheduleListHtml(rows){
   // 페이지 컨트롤
   if(totalPages>1){
     html+='<div style="display:flex;justify-content:center;align-items:center;gap:4px;margin-top:16px;flex-wrap:wrap">';
-    html+='<button onclick="setSchedPage('+Math.max(1,_schedPage-1)+')" '+(_schedPage===1?'disabled':'')+' style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:'+(_schedPage===1?'not-allowed':'pointer')+';font-size:12px;color:'+(_schedPage===1?'#ccc':'#555')+'">← 이전</button>';
+    html+='<button onclick="setSchedPage('+Math.max(1,_schedPage-1)+')" '+(_schedPage===1?'disabled':'')+' style="padding:6px 12px;border:1px solid var(--glass-bd);border-radius:8px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:'+(_schedPage===1?'not-allowed':'pointer')+';font-size:12px;color:'+(_schedPage===1?'var(--muted)':'var(--dim)')+'">← 이전</button>';
     for(let p=1;p<=totalPages;p++){
       const active=p===_schedPage;
       html+='<button onclick="setSchedPage('+p+')" style="padding:6px 12px;border:1px solid '+(active?'var(--accent)':'#ddd')+';border-radius:8px;background:'+(active?'var(--accent)':'#fff')+';color:'+(active?'#fff':'#555')+';cursor:pointer;font-size:12px;font-weight:'+(active?'700':'500')+';min-width:36px">'+p+'</button>';
     }
-    html+='<button onclick="setSchedPage('+Math.min(totalPages,_schedPage+1)+')" '+(_schedPage===totalPages?'disabled':'')+' style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:'+(_schedPage===totalPages?'not-allowed':'pointer')+';font-size:12px;color:'+(_schedPage===totalPages?'#ccc':'#555')+'">다음 →</button>';
+    html+='<button onclick="setSchedPage('+Math.min(totalPages,_schedPage+1)+')" '+(_schedPage===totalPages?'disabled':'')+' style="padding:6px 12px;border:1px solid var(--glass-bd);border-radius:8px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:'+(_schedPage===totalPages?'not-allowed':'pointer')+';font-size:12px;color:'+(_schedPage===totalPages?'var(--muted)':'var(--dim)')+'">다음 →</button>';
     html+='<span style="margin-left:8px;font-size:11px;color:#888">페이지 '+_schedPage+'/'+totalPages+' · 오늘 '+todayCount+'개 고정</span>';
     html+='</div>';
   }
@@ -13031,7 +13031,7 @@ let _logsFilter={action:'all',sheet:'all',role:'all',q:''};
 let _logsQTimer=null;
 
 async function openLogsAdmin(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="logs-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:var(--glass-shadow);transition:background .15s" onmouseover="this.style.background=\'var(--accent-light)\'" onmouseout="this.style.background=\'var(--glass-surface)\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="logs-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -13073,7 +13073,7 @@ function buildLogsListHtml(){
   
   let html='<div style="display:flex;align-items:center;margin-bottom:10px;gap:8px;padding-bottom:14px;padding-right:48px;border-bottom:1px solid #eee"><h3 style="margin:0;flex:1;text-align:left">로그 조회</h3>';
   html+='';
-  html+='<button onclick="renderLogsList()" title="새로고침" style="padding:7px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">↻</button>';
+  html+='<button onclick="renderLogsList()" title="새로고침" style="padding:7px 12px;border:1px solid var(--glass-bd);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px">↻</button>';
   html+='<button onclick="exportLogsCsv()" title="현재 필터된 결과를 CSV로 다운로드" style="padding:7px 14px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap">내역받기</button>';
   html+='</div>';
   
@@ -13197,7 +13197,7 @@ function exportLogsCsv(){
 async function openSheetAdmin(slug){
   const cfg=SHEET_CONFIG[slug];
   if(!cfg){showToast('알 수 없는 시트예요: '+slug,'error');return;}
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:var(--glass-shadow);transition:background .15s" onmouseover="this.style.background=\'var(--accent-light)\'" onmouseout="this.style.background=\'var(--glass-surface)\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="sheet-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -13469,7 +13469,7 @@ function openSheetForm(slug,rowIndex){
     }
   });
   }  html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:14px;border-top:1px solid #eee">';
-  html+='<button type="button" onclick="closeSheetForm()" style="padding:9px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">취소</button>';
+  html+='<button type="button" onclick="closeSheetForm()" style="padding:9px 18px;border:1px solid var(--glass-bd);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px">취소</button>';
   html+='<button type="submit" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">저장</button>';
   html+='</div></form></div></div>';
   let el=document.getElementById('sheet-form-modal');
@@ -13561,7 +13561,7 @@ async function deleteSheetRow(slug,rowIndex){
 
 // === 프로그램 관리 ===
 async function openProgramAdmin(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:background .15s" onmouseover="this.style.background=\'#f5f5fa\'" onmouseout="this.style.background=\'#fff\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="prog-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1100px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:var(--glass-shadow);transition:background .15s" onmouseover="this.style.background=\'var(--accent-light)\'" onmouseout="this.style.background=\'var(--glass-surface)\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="prog-admin-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
@@ -13644,7 +13644,7 @@ function openProgramForm(rowIndex){
   html+='<div><label>담당자 <span style="font-size:10px;color:#888;font-weight:400">(콘텐츠구분 따라 필터)</span></label><select name="담당자">'+buildManagerOptions(v.구분,v.담당자)+'</select></div>';
   html+='<div><label>장소</label><input name="장소" type="text" value="'+escapeHtml(v.장소)+'"></div>';
   html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;padding-top:14px;border-top:1px solid #eee">';
-  html+='<button type="button" onclick="closeProgramForm()" style="padding:9px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">취소</button>';
+  html+='<button type="button" onclick="closeProgramForm()" style="padding:9px 18px;border:1px solid var(--glass-bd);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px">취소</button>';
   html+='<button type="submit" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">저장</button>';
   html+='</div></form></div></div>';
   let el=document.getElementById('program-form-modal');
@@ -16270,7 +16270,7 @@ function _qaOpen(){
   h+='<label style="display:block;font-size:11px;color:#888;font-weight:600;margin-bottom:5px">내용<span style="color:var(--peach-text,#D88455);margin-left:2px">*</span></label>';
   h+='<textarea id="qa-text" rows="5" placeholder="예: ○○ 화면에서 △△ 버튼을 누르면 ~~ 하면 좋겠어요" style="width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,0.08);border-radius:10px;font-size:13px;box-sizing:border-box;font-family:inherit;background:#F8F7FC;resize:vertical;line-height:1.55"></textarea>';
   h+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">';
-  h+='<button onclick="_qaClose()" style="padding:9px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:#fff;cursor:pointer;font-size:13px">취소</button>';
+  h+='<button onclick="_qaClose()" style="padding:9px 18px;border:1px solid var(--glass-bd);border-radius:10px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);cursor:pointer;font-size:13px">취소</button>';
   h+='<button id="qa-submit" onclick="_qaSubmit()" style="padding:9px 22px;background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px">접수하기</button>';
   h+='</div></div></div>';
   el.innerHTML=h;
@@ -16333,7 +16333,7 @@ async function _qaSubmit(){
 // === 불편사항 관리 (admin) — 접수 목록 확인 + 상태/처리메모 업데이트 ===
 var _qaData=[], _qaFilterState={status:'all',cat:'all'};
 async function openQaBoard(){
-  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1000px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.08)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="qa-board-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
+  const html='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAdminPanel)"><div class="modal" style="width:96vw;max-width:1000px;max-height:88vh;overflow:auto;padding:24px;position:relative"><button onclick="backToAdminMenu()" title="뒤로" aria-label="뒤로" style="position:absolute;top:14px;right:54px;float:none;margin:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:var(--glass-shadow)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button><button class="modal-x" onclick="closeAdminPanel()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:14px;float:none;margin:0;z-index:10">✕</button><div id="qa-board-body" style="text-align:center;padding:40px;color:#888">로딩 중...</div></div></div>';
   let el=document.getElementById('admin-panel');
   if(!el){el=document.createElement('div');el.id='admin-panel';document.body.appendChild(el);}
   el.innerHTML=html;
