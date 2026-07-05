@@ -3,197 +3,259 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>셰이더 배경 · 로그인 도입 시안 — 예울마루</title>
+<title>StaticRadialGradient 배경 · 로그인 도입 시안 — 예울마루</title>
 <style>
   /* ─────────────────────────────────────────────────────────────
-     ⚠ 이 시안의 모든 색 = index.html :root 토큰 값 그대로(계승).
-     raw 창작 색 없음. 셰이더에 넘기는 hex도 아래 토큰 값과 1:1.
-       --bg 3스톱: #FDF6F3 / #F0EBF5 / #EBF0F8
-       --accent #4A4DE7 · --accent-light #E8E8FD · --accent-glow rgba(74,77,231,.15)
-       --peach #F0C4B8 · --peach-light #FBF0EC · --peach-text(살몬) #D88455
+     셰이더 = paper-design/shaders 의 static-radial-gradient GLSL 원본 그대로 이식
+       (Apache-2.0). 색만 index.html :root 토큰 값으로 교체 — raw 창작 없음.
+       --bg 3스톱 #FDF6F3 / #F0EBF5 / #EBF0F8
+       --accent #4A4DE7 · --accent-light #E8E8FD
+       --peach #F0C4B8 · --peach-text(살몬) #D88455
        --surface rgba(255,255,255,.72) · --glass-border rgba(255,255,255,.6)
        --glass-shadow 0 8px 32px rgba(74,77,231,.08),0 2px 8px rgba(0,0,0,.04)
-       --text #1A1A2E · --dim #888 · --radius-xl 24px
+       --text #1A1A2E · --dim #888 · --radius-xl 24px · --r-btn 10px
      ───────────────────────────────────────────────────────────── */
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Malgun Gothic',sans-serif;color:#1A1A2E;overflow:hidden;background:#EBF0F8}
-
-  /* 셰이더 배경 = 로그인 화면 #fff 를 대체 */
   #shader{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
-
-  /* 로그인 도입 화면 목업 (index.html #login 계승) */
   .stage{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px}
   .login-card{
-    background:rgba(255,255,255,.72);              /* --surface */
+    background:rgba(255,255,255,.72);
     -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-    border:1px solid rgba(255,255,255,.6);         /* --glass-border */
-    border-radius:24px;                            /* --radius-xl */
-    padding:48px 44px;text-align:center;min-width:320px;
-    box-shadow:0 8px 32px rgba(74,77,231,.08),0 2px 8px rgba(0,0,0,.04); /* --glass-shadow */
+    border:1px solid rgba(255,255,255,.6);
+    border-radius:24px;padding:48px 44px;text-align:center;min-width:320px;
+    box-shadow:0 8px 32px rgba(74,77,231,.08),0 2px 8px rgba(0,0,0,.04);
     animation:fadeUp .5s ease;
   }
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  .login-welcome{font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;color:#4A4DE7;letter-spacing:4px;margin-bottom:24px} /* 실앱은 ClassyVogue */
+  .login-welcome{font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:400;color:#4A4DE7;letter-spacing:4px;margin-bottom:24px}
   .login-sub{font-size:13px;color:#888;margin-bottom:32px}
-  .acct{display:flex;gap:8px;justify-content:center;margin-top:8px}
-  .acct button{font-size:13px;padding:11px 18px;border-radius:10px;border:1px solid rgba(0,0,0,.09);background:#fff;color:#1A1A2E;cursor:pointer}
-  .acct button.primary{background:#4A4DE7;border-color:#4A4DE7;color:#fff}
+  .acct button{font-size:13px;padding:11px 18px;border-radius:10px;border:1px solid #4A4DE7;background:#4A4DE7;color:#fff;cursor:pointer}
   .hint{position:fixed;top:14px;left:0;right:0;text-align:center;z-index:2;font-size:12px;color:#6B6B7B;pointer-events:none}
-
-  /* 컨트롤 패널 (시안 전용 — 실제 앱엔 없음) */
-  .panel{position:fixed;left:14px;bottom:14px;z-index:3;background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.6);border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(74,77,231,.08),0 2px 8px rgba(0,0,0,.04);font-size:12px;width:250px}
+  .panel{position:fixed;left:14px;bottom:14px;z-index:3;background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.6);border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(74,77,231,.08),0 2px 8px rgba(0,0,0,.04);font-size:12px;width:260px;max-height:94vh;overflow:auto}
   .panel h4{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#888;margin-bottom:10px}
-  .row{margin-bottom:11px}
-  .row label{display:flex;justify-content:space-between;color:#6B6B7B;margin-bottom:5px;font-size:11px}
+  .row{margin-bottom:10px}
+  .row label{display:flex;justify-content:space-between;color:#6B6B7B;margin-bottom:4px;font-size:11px}
   .row input[type=range]{width:100%;accent-color:#4A4DE7}
-  .segs{display:flex;gap:6px}
-  .segs button{flex:1;font-size:11px;padding:7px 4px;border-radius:10px;border:1px solid rgba(0,0,0,.09);background:#fff;color:#6B6B7B;cursor:pointer}
+  .segs{display:flex;gap:6px;flex-wrap:wrap}
+  .segs button{flex:1;min-width:70px;font-size:11px;padding:7px 4px;border-radius:10px;border:1px solid rgba(0,0,0,.09);background:#fff;color:#6B6B7B;cursor:pointer}
   .segs button.on{background:#4A4DE7;border-color:#4A4DE7;color:#fff}
   .val{color:#4A4DE7;font-variant-numeric:tabular-nums}
+  .sep{border:0;border-top:1px solid rgba(0,0,0,.08);margin:10px 0}
 </style>
 </head>
 <body>
 <canvas id="shader"></canvas>
 
-<div class="hint">셰이더 배경 · 로그인 도입 시안 — 배경 색은 전부 <b>예울마루 브랜드 토큰</b>(인디고·살몬·라이트). 왼쪽 아래에서 조절해봐.</div>
+<div class="hint">paper <b>StaticRadialGradient</b> 원본 GLSL 이식 · 색은 전부 예울마루 브랜드 토큰. 왼쪽 아래에서 실제 props 조절.</div>
 
 <div class="stage">
   <div class="login-card">
     <div class="login-welcome">YEULMARU</div>
     <div class="login-sub">예울마루 홍보 계획표에 오신 걸 환영해요</div>
-    <div class="acct">
-      <button class="primary">Microsoft 계정으로 시작</button>
-    </div>
+    <div class="acct"><button>Microsoft 계정으로 시작</button></div>
   </div>
 </div>
 
 <div class="panel">
-  <h4>배경 셰이더 조절</h4>
+  <h4>StaticRadialGradient</h4>
   <div class="row">
     <label>색 프리셋</label>
     <div class="segs" id="presetSeg">
-      <button data-p="0" class="on">은은(라이트)</button>
-      <button data-p="1">브랜드 강조</button>
+      <button data-p="0" class="on">인디고</button>
+      <button data-p="1">살몬</button>
+      <button data-p="2">인디고+살몬</button>
     </div>
   </div>
-  <div class="row">
-    <label>흐름 세기 <span class="val" id="vDist">0.35</span></label>
-    <input type="range" id="dist" min="0" max="1" step="0.01" value="0.35">
-  </div>
-  <div class="row">
-    <label>속도 <span class="val" id="vSpeed">0.35</span></label>
-    <input type="range" id="speed" min="0" max="1" step="0.01" value="0.35">
-  </div>
-  <div class="row" style="margin-bottom:0">
-    <label>부드러움 <span class="val" id="vSoft">0.55</span></label>
-    <input type="range" id="soft" min="0.2" max="1" step="0.01" value="0.55">
-  </div>
+  <hr class="sep">
+  <div class="row"><label>radius <span class="val" id="v_radius">1.20</span></label><input type="range" id="radius" min="0" max="3" step="0.01" value="1.2"></div>
+  <div class="row"><label>focalDistance <span class="val" id="v_focal">0.90</span></label><input type="range" id="focal" min="0" max="3" step="0.01" value="0.9"></div>
+  <div class="row"><label>focalAngle <span class="val" id="v_angle">0</span></label><input type="range" id="angle" min="0" max="360" step="1" value="0"></div>
+  <div class="row"><label>falloff <span class="val" id="v_falloff">0.24</span></label><input type="range" id="falloff" min="-1" max="1" step="0.01" value="0.24"></div>
+  <div class="row"><label>mixing <span class="val" id="v_mixing">0.60</span></label><input type="range" id="mixing" min="0" max="1" step="0.01" value="0.6"></div>
+  <div class="row"><label>distortion <span class="val" id="v_dist">0.00</span></label><input type="range" id="dist" min="0" max="1" step="0.01" value="0"></div>
+  <div class="row"><label>distortionFreq <span class="val" id="v_dfreq">12</span></label><input type="range" id="dfreq" min="0" max="20" step="1" value="12"></div>
+  <div class="row"><label>grainMixer <span class="val" id="v_gmix">0.00</span></label><input type="range" id="gmix" min="0" max="1" step="0.01" value="0"></div>
+  <div class="row" style="margin-bottom:0"><label>scale <span class="val" id="v_scale">1.00</span></label><input type="range" id="scale" min="0.3" max="2.5" step="0.01" value="1"></div>
 </div>
 
 <script>
-/* ── WebGL mesh-gradient 셰이더 (paper MeshGradient 느낌 자작·의존성 0) ── */
-const cv = document.getElementById('shader');
-const gl = cv.getContext('webgl');
+const cv=document.getElementById('shader');
+const gl=cv.getContext('webgl2');
+if(!gl){document.body.innerHTML='<p style="padding:40px;font:14px sans-serif">이 브라우저는 WebGL2 미지원 — 크롬/사파리 최신에서 열어줘.</p>';}
 
-const VERT = `attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
-const FRAG = `
-precision highp float;
-uniform vec2  u_res;
-uniform float u_time;
-uniform float u_dist;   // 흐름 세기(도메인 워프)
-uniform float u_soft;   // 블롭 부드러움
-uniform vec3  u_c0,u_c1,u_c2,u_c3,u_c4; // 브랜드 토큰 색
+/* helper (paper shader-utils) */
+const declarePI=`#define TWO_PI 6.28318530718
+#define PI 3.14159265358979323846`;
+const rotation2=`vec2 rotate(vec2 uv,float th){return mat2(cos(th),sin(th),-sin(th),cos(th))*uv;}`;
+const hash21=`float hash21(vec2 p){p=fract(p*vec2(0.3183099,0.3678794))+0.1;p+=dot(p,p+19.19);return fract(p.x*p.y);}`;
 
-// value noise + fbm
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-float noise(vec2 p){
-  vec2 i=floor(p),f=fract(p);
-  float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));
-  vec2 u=f*f*(3.-2.*f);
-  return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
-}
-float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p*=2.02;a*=.5;}return v;}
-
-vec3 blend(vec2 uv,float t){
-  float k=mix(2.2,5.5,u_soft);          // 큰 값=또렷, 작은 값=넓게 번짐
-  // 천천히 도는 색 중심 5개
-  vec2 p0=vec2(.5)+.30*vec2(sin(t*.31),cos(t*.27));
-  vec2 p1=vec2(.5)+.34*vec2(cos(t*.23+1.),sin(t*.29+2.));
-  vec2 p2=vec2(.5)+.32*vec2(sin(t*.19+3.),cos(t*.21+1.));
-  vec2 p3=vec2(.5)+.36*vec2(cos(t*.17+4.),sin(t*.25+.5));
-  vec2 p4=vec2(.5)+.28*vec2(sin(t*.13+2.),cos(t*.15+3.));
-  float w0=exp(-dot(uv-p0,uv-p0)*k);
-  float w1=exp(-dot(uv-p1,uv-p1)*k);
-  float w2=exp(-dot(uv-p2,uv-p2)*k);
-  float w3=exp(-dot(uv-p3,uv-p3)*k);
-  float w4=exp(-dot(uv-p4,uv-p4)*k);
-  float ws=w0+w1+w2+w3+w4+1e-4;
-  return (w0*u_c0+w1*u_c1+w2*u_c2+w3*u_c3+w4*u_c4)/ws;
-}
-
+const VERT=`#version 300 es
+in vec2 p;
+out vec2 v_objectUV;
+uniform vec2 u_res;
+uniform float u_scale;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_res;
-  uv.x*=u_res.x/u_res.y;                 // 종횡비 보정
-  float t=u_time;
-  // 도메인 워프 = 유체 같은 흐름
-  vec2 w=vec2(fbm(uv*2.3+t*.10), fbm(uv*2.3-t*.12+7.));
-  uv+=u_dist*0.22*(w-0.5);
-  vec3 col=blend(uv,t*0.6);
-  col+=(fbm(gl_FragCoord.xy*0.9)-0.5)*0.012; // 아주 미세한 그레인
-  gl_FragColor=vec4(col,1.);
+  gl_Position=vec4(p,0.,1.);
+  vec2 uv=p*0.5;              // -0.5..0.5
+  uv.x*=u_res.x/u_res.y;      // 종횡비 보정 → 정원 유지
+  v_objectUV=uv/u_scale;
 }`;
 
-function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
-  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s;}
+/* static-radial-gradient 원본 프래그먼트 (색 uniform만 브랜드 값 주입) */
+const FRAG=`#version 300 es
+precision mediump float;
+uniform vec4 u_colorBack;
+uniform vec4 u_colors[10];
+uniform float u_colorsCount;
+uniform float u_radius;
+uniform float u_focalDistance;
+uniform float u_focalAngle;
+uniform float u_falloff;
+uniform float u_mixing;
+uniform float u_distortion;
+uniform float u_distortionShift;
+uniform float u_distortionFreq;
+uniform float u_grainMixer;
+uniform float u_grainOverlay;
+in vec2 v_objectUV;
+out vec4 fragColor;
+${declarePI}
+${rotation2}
+${hash21}
+float valueNoise(vec2 st){vec2 i=floor(st);vec2 f=fract(st);float a=hash21(i);float b=hash21(i+vec2(1.,0.));float c=hash21(i+vec2(0.,1.));float d=hash21(i+vec2(1.,1.));vec2 u=f*f*(3.-2.*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
+float noise(vec2 n,vec2 s){return valueNoise(n+s);}
+void main(){
+  vec2 uv=2.*v_objectUV;
+  vec2 grainUV=uv*1000.;
+  vec2 center=vec2(0.);
+  float angleRad=-radians(u_focalAngle+90.);
+  vec2 focalPoint=vec2(cos(angleRad),sin(angleRad))*u_focalDistance;
+  float radius=u_radius;
+  vec2 c_to_uv=uv-center;
+  vec2 f_to_uv=uv-focalPoint;
+  vec2 f_to_c=center-focalPoint;
+  float r=length(c_to_uv);
+  float fragAngle=atan(c_to_uv.y,c_to_uv.x);
+  float angleDiff=fract((fragAngle-angleRad+PI)/TWO_PI)*TWO_PI-PI;
+  float halfAngle=acos(clamp(radius/max(u_focalDistance,1e-4),0.0,1.0));
+  float e0=0.6*PI,e1=halfAngle;
+  float lo=min(e0,e1),hi=max(e0,e1);
+  float s=smoothstep(lo,hi,abs(angleDiff));
+  float isInSector=(e1>=e0)?(1.0-s):s;
+  float a=dot(f_to_uv,f_to_uv);
+  float b=-2.0*dot(f_to_uv,f_to_c);
+  float c=dot(f_to_c,f_to_c)-radius*radius;
+  float discriminant=b*b-4.0*a*c;
+  float t=1.0;
+  if(discriminant>=0.0){float sqrtD=sqrt(discriminant);float div=max(1e-4,2.0*a);float t0=(-b-sqrtD)/div;float t1=(-b+sqrtD)/div;t=max(t0,t1);if(t<0.0)t=0.0;}
+  float dist=length(f_to_uv);
+  float normalized=dist/max(1e-4,length(f_to_uv*t));
+  float shape=clamp(normalized,0.0,1.0);
+  float falloffMapped=mix(.2+.8*max(0.,u_falloff+1.),mix(1.,15.,u_falloff*u_falloff),step(.0,u_falloff));
+  float falloffExp=mix(falloffMapped,1.,shape);
+  shape=pow(shape,falloffExp);
+  shape=1.-clamp(shape,0.,1.);
+  float outerMask=.002;
+  float outer=1.0-smoothstep(radius-outerMask,radius+outerMask,r);
+  outer=mix(outer,1.,isInSector);
+  shape=mix(0.,shape,outer);
+  shape*=1.-smoothstep(radius-.01,radius,r);
+  float angle=atan(f_to_uv.y,f_to_uv.x);
+  shape-=pow(u_distortion,2.)*shape*pow(abs(sin(PI*clamp(length(f_to_uv)-0.2+u_distortionShift,0.0,1.0))),4.0)*(sin(u_distortionFreq*angle)+cos(floor(0.65*u_distortionFreq)*angle));
+  float grain=noise(grainUV,vec2(0.));
+  float mixerGrain=.4*u_grainMixer*(grain-.5);
+  float mixer=shape*u_colorsCount+mixerGrain;
+  vec4 gradient=u_colors[0];
+  gradient.rgb*=gradient.a;
+  float outerShape=0.;
+  for(int i=1;i<11;i++){
+    if(i>int(u_colorsCount))break;
+    float mLinear=clamp(mixer-float(i-1),0.0,1.0);
+    float aa=fwidth(mLinear);
+    float width=min(u_mixing,0.5);
+    float tt=clamp((mLinear-(0.5-width-aa))/(2.*width+2.*aa),0.,1.);
+    float p=mix(2.,1.,clamp((u_mixing-0.5)*2.,0.,1.));
+    float m=tt<0.5?0.5*pow(2.*tt,p):1.-0.5*pow(2.*(1.-tt),p);
+    float quadBlend=clamp((u_mixing-0.5)*2.,0.,1.);
+    m=mix(m,m*m,0.5*quadBlend);
+    if(i==1)outerShape=m;
+    vec4 col=u_colors[i-1];
+    col.rgb*=col.a;
+    gradient=mix(gradient,col,m);
+  }
+  vec3 color=gradient.rgb*outerShape;
+  float opacity=gradient.a*outerShape;
+  vec3 bgColor=u_colorBack.rgb*u_colorBack.a;
+  color=color+bgColor*(1.0-opacity);
+  opacity=opacity+u_colorBack.a*(1.0-opacity);
+  float grainOverlay=valueNoise(rotate(grainUV,1.)+vec2(3.));
+  grainOverlay=mix(grainOverlay,valueNoise(rotate(grainUV,2.)+vec2(-1.)),.5);
+  grainOverlay=pow(grainOverlay,1.3);
+  float gV=grainOverlay*2.-1.;
+  vec3 gCol=vec3(step(0.,gV));
+  float gS=u_grainOverlay*abs(gV);
+  gS=pow(gS,.8);
+  color=mix(color,gCol,.35*gS);
+  opacity+=.5*gS;
+  opacity=clamp(opacity,0.,1.);
+  fragColor=vec4(color,opacity);
+}`;
+
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s),src);return s;}
 const prog=gl.createProgram();
 gl.attachShader(prog,sh(gl.VERTEX_SHADER,VERT));
 gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FRAG));
-gl.linkProgram(prog);gl.useProgram(prog);
+gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog,gl.LINK_STATUS))console.error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
 gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
 const loc=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
 
 const U=n=>gl.getUniformLocation(prog,n);
-const uRes=U('u_res'),uTime=U('u_time'),uDist=U('u_dist'),uSoft=U('u_soft');
-const uC=[U('u_c0'),U('u_c1'),U('u_c2'),U('u_c3'),U('u_c4')];
+const u={res:U('u_res'),scale:U('u_scale'),colorBack:U('u_colorBack'),count:U('u_colorsCount'),
+  radius:U('u_radius'),focal:U('u_focalDistance'),angle:U('u_focalAngle'),falloff:U('u_falloff'),
+  mixing:U('u_mixing'),dist:U('u_distortion'),dshift:U('u_distortionShift'),dfreq:U('u_distortionFreq'),
+  gmix:U('u_grainMixer'),gover:U('u_grainOverlay')};
+const uColors=[];for(let i=0;i<10;i++)uColors.push(U('u_colors['+i+']'));
 
-const hex=h=>[parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255];
-// 프리셋 색 = 전부 index.html :root 토큰 값
+const hex4=h=>[parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255,1];
+/* 프리셋 색 = index.html :root 토큰 값. colorBack = --bg 라이트 계열 */
 const PRESETS=[
-  // 0) 은은(라이트) — --bg 3스톱 + peach-light + accent-light. 현 로그인 톤과 한 몸.
-  ['#FDF6F3','#F0EBF5','#EBF0F8','#FBF0EC','#E8E8FD'],
-  // 1) 브랜드 강조 — 라이트 베이스에 --accent(인디고)·--peach(살몬틴트)·--peach-text 포인트
-  ['#EBF0F8','#E8E8FD','#4A4DE7','#F0C4B8','#D88455']
+  {back:'#EBF0F8',colors:['#E8E8FD','#4A4DE7']},              // 인디고: accent-light → accent
+  {back:'#FDF6F3',colors:['#FBF0EC','#D88455']},              // 살몬: peach-light → peach-text
+  {back:'#F0EBF5',colors:['#E8E8FD','#F0C4B8','#4A4DE7']}     // 인디고+살몬
 ];
 
-let preset=0, dist=0.35, speed=0.35, soft=0.55;
-function pushColors(){PRESETS[preset].forEach((h,i)=>gl.uniform3fv(uC[i],hex(h)));}
-pushColors();
-
-function resize(){const d=Math.min(window.devicePixelRatio||1,2);
-  cv.width=innerWidth*d;cv.height=innerHeight*d;gl.viewport(0,0,cv.width,cv.height);}
+const st={preset:0,radius:1.2,focal:0.9,angle:0,falloff:0.24,mixing:0.6,dist:0,dfreq:12,gmix:0,scale:1};
+function applyColors(){
+  const P=PRESETS[st.preset];
+  gl.uniform4fv(u.colorBack,hex4(P.back));
+  gl.uniform1f(u.count,P.colors.length);
+  P.colors.forEach((h,i)=>gl.uniform4fv(uColors[i],hex4(h)));
+}
+function render(){
+  gl.uniform2f(u.res,cv.width,cv.height);
+  gl.uniform1f(u.scale,st.scale);
+  gl.uniform1f(u.radius,st.radius);gl.uniform1f(u.focal,st.focal);gl.uniform1f(u.angle,st.angle);
+  gl.uniform1f(u.falloff,st.falloff);gl.uniform1f(u.mixing,st.mixing);gl.uniform1f(u.dist,st.dist);
+  gl.uniform1f(u.dshift,0);gl.uniform1f(u.dfreq,st.dfreq);gl.uniform1f(u.gmix,st.gmix);gl.uniform1f(u.gover,0);
+  applyColors();
+  gl.drawArrays(gl.TRIANGLES,0,3);
+}
+function resize(){const d=Math.min(window.devicePixelRatio||1,2);cv.width=innerWidth*d;cv.height=innerHeight*d;gl.viewport(0,0,cv.width,cv.height);render();}
 addEventListener('resize',resize);resize();
 
-const t0=performance.now();
-function frame(now){
-  gl.uniform2f(uRes,cv.width,cv.height);
-  gl.uniform1f(uTime,(now-t0)/1000*speed*1.6);
-  gl.uniform1f(uDist,dist);
-  gl.uniform1f(uSoft,soft);
-  gl.drawArrays(gl.TRIANGLES,0,3);
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
-
-// 컨트롤
-const bind=(id,setter,vid)=>{const el=document.getElementById(id);el.oninput=()=>{setter(+el.value);document.getElementById(vid).textContent=(+el.value).toFixed(2);};};
-bind('dist',v=>dist=v,'vDist');
-bind('speed',v=>speed=v,'vSpeed');
-bind('soft',v=>soft=v,'vSoft');
+/* 컨트롤 */
+const bind=(id,key,fmt)=>{const el=document.getElementById(id);const out=document.getElementById('v_'+(id));
+  el.oninput=()=>{st[key]=+el.value;if(out)out.textContent=fmt?fmt(+el.value):(+el.value).toFixed(2);render();};};
+bind('radius','radius');bind('focal','focal');bind('angle','angle',v=>v|0);bind('falloff','falloff');
+bind('mixing','mixing');bind('dist','dist');bind('dfreq','dfreq',v=>v|0);bind('gmix','gmix');bind('scale','scale');
 document.querySelectorAll('#presetSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#presetSeg button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on');preset=+b.dataset.p;pushColors();});
+  b.classList.add('on');st.preset=+b.dataset.p;render();});
 </script>
 </body>
 </html>
