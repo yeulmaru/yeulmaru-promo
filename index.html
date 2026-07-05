@@ -23,17 +23,17 @@
   --accent:#4A4DE7;--accent-light:#E8E8FD;--accent-glow:rgba(74,77,231,0.15);
   --peach:#F0C4B8;--peach-light:#FBF0EC;--peach-bg:#FDF6F3;--peach-text:#D88455;
   --bg:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);
-  --surface:rgba(255,255,255,0.72);--surface-solid:#fff;
-  --glass:rgba(255,255,255,0.55);--glass-border:rgba(255,255,255,0.6);
+  --surface:var(--glass-surface);--surface-solid:#fff;
+  --glass:rgba(255,255,255,0.55);--glass-border:var(--glass);
   --glass-shadow:0 8px 32px rgba(74,77,231,0.08),0 2px 8px rgba(0,0,0,0.04);
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.12);
   --text:#1A1A2E;--dim:#888;--muted:#bbb;
-  --past-bg:rgba(0,0,0,0.02);--past-text:#aaa;
-  --nm-bg:rgba(0,0,0,0.03);--today-bg:rgba(230,240,255,0.8);
-  --off-bg:rgba(0,0,0,0.055);
+  --past-bg:rgba(0,0,0,0.02);--past-text:var(--muted);
+  --nm-bg:var(--past-bg);--today-bg:rgba(230,240,255,0.8);
+  --off-bg:var(--border2);
   --green:#1A6B3C;
-  --danger:#e5484d;--danger-btn:#E24B4A;
-  --kakao:#C8900A;--insta:#C02872;--youtube:#B71C1C;--blog:#1B7A34;--etc:#2D5F8A;
+  --danger:var(--danger-btn);--danger-btn:#E24B4A;
+  --kakao:var(--c6);--insta:#C02872;--youtube:#B71C1C;--blog:var(--green);--etc:var(--c5);
   --radius:16px;--radius-lg:20px;--radius-xl:24px;
 }
 body{background:var(--bg);color:var(--text);min-height:100vh}
@@ -50,12 +50,20 @@ button{font-family:inherit;cursor:pointer}
 /* ═══ LOGIN ═══ */
 #login{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:32px;background:#fff;position:relative;overflow:hidden}
 #loginShader{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}
-.login-card{background:#fff;border-radius:var(--radius-xl);padding:48px 44px;text-align:center;animation:fadeUp .5s ease;position:relative;z-index:1}
-.login-welcome{font-family:'ClassyVogue',serif;font-size:42px;font-weight:400;color:var(--accent);letter-spacing:4px;margin-bottom:24px}
-.login-sub{font-size:13px;color:var(--dim);margin-bottom:32px}
+/* 글래스모피즘 로그인 카드 — 밝은 라이트 유동 배경 위 반투명 유리(blur). 투명도 유지 + fluted 없음.
+   배경 옅은 흰 틴트(흰색 alpha 변주·§3.5②), 테두리 var(--glass-border), 그림자 var(--elev). */
+.login-card{background:rgba(255,255,255,.05);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2);border:1px solid var(--glass-border);border-radius:var(--radius-xl);padding:44px 40px;text-align:center;animation:fadeUp .5s ease;position:relative;z-index:1;box-shadow:var(--elev)}
+/* 로고 = "GS Caltex YEULMARU". 무채색 var(--text) / YEULMARU만 코발트 var(--accent). 카드 위 글자 불투명도 80% 통일. */
+.login-welcome{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:25px;font-weight:800;color:var(--text);opacity:.8;letter-spacing:.5px;margin-bottom:22px;line-height:1.3;white-space:nowrap}
+.login-welcome .lw-thin{font-weight:400}
+.login-welcome .lw-ac{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--dim);opacity:.8;margin-bottom:30px}
 .pin-wrap{display:flex;gap:12px;justify-content:center}
-.pin{-webkit-text-security:disc;width:42px;height:48px;text-align:center;font-size:19px;font-weight:700;background:#F5F4F8;border:none;border-radius:12px;color:var(--text);caret-color:var(--accent);outline:none;transition:all .2s}
-.pin:focus{box-shadow:0 0 0 3px var(--accent-glow);background:#fff}
+/* PIN = 도형(원) 표시. 빈칸=빈 동그라미(○, radial 링) / 채움=코발트 채운 동그라미(●) / 입력순간=코발트 숫자 2초.
+   박스는 다 동일(흰 배경·테두리 강조 없음), 강조는 오로지 점/숫자 색만. */
+.pin{width:42px;height:48px;text-align:center;font-size:19px;font-weight:700;border:none;color:transparent;caret-color:var(--accent);outline:none;opacity:.8;transition:color .15s;background:radial-gradient(circle at center,transparent 5.5px,var(--muted) 5.5px,var(--muted) 7px,transparent 7.5px) no-repeat center}
+.pin.filled{background:radial-gradient(circle at center,var(--accent) 7px,transparent 7.5px) no-repeat center}
+.pin.lit{color:var(--accent);background:none}
 .pin.err{border-color:var(--danger);background:#FFF5F5}
 #login-msg{font-size:13px;height:18px;color:var(--danger);margin-top:4px}
 #login-load{font-size:13px;height:18px;color:var(--accent);margin-top:4px}
@@ -832,7 +840,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .c-btn.yes:hover{background:#3d40d4;box-shadow:0 4px 14px rgba(74,77,231,0.35);transform:translateY(-1px)}
 .c-btn.danger{background:var(--danger-btn);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(226,75,74,0.25)}
 .c-btn.danger:hover{background:#C73F3E;box-shadow:0 4px 14px rgba(226,75,74,0.35);transform:translateY(-1px)}
-.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);padding:14px 28px;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.06);font-size:13px;font-weight:600;color:var(--text);z-index:1000000;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;white-space:nowrap}
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);padding:14px 28px;background:var(--glass-surface);backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--glass-shadow);font-size:13px;font-weight:600;color:var(--text);z-index:1000000;opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success::before{content:"✓ ";color:#0F8B4C;font-weight:700;margin-right:4px}
 .toast.error::before{content:"✕ ";color:var(--danger);font-weight:700;margin-right:4px}
@@ -1335,7 +1343,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
   --elev:0 20px 56px rgba(74,77,231,.16), 0 6px 18px rgba(26,26,46,.07);
   --backdrop:rgba(26,26,46,.42);
   --glass-surface:rgba(255,255,255,.78);
-  --glass-bd:rgba(255,255,255,.6);
+  --glass-bd:var(--glass);
   --z-sticky:10; --z-nav:90; --z-dropdown:1000; --z-modal:2000; --z-confirm:2100; --z-toast:3000;
   --c1:#4A4DE7; --c2:#D88455; --c3:#1A6B3C; --c4:#C02872; --c5:#2D8AB3; --c6:#F5B400;
   --kakao:#F5B400;
@@ -1486,11 +1494,11 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 <div id="login">
   <canvas id="loginShader" aria-hidden="true"></canvas>
   <div class="login-card">
-    <div class="login-welcome">YEULMARU</div>
+    <div class="login-welcome"><b>GS</b> <span class="lw-thin">Caltex</span> <b class="lw-ac">YEULMARU</b></div>
     
     <div id="account-step" style="margin-top:8px"></div>
     <div id="pin-step" style="display:none">
-      <div id="pin-account" style="font-size:12px;color:#888;text-align:center;margin-bottom:14px"></div>
+      <div id="pin-account" style="font-size:12px;color:var(--accent);opacity:.8;text-align:center;margin-bottom:14px"></div>
       <div class="pin-wrap">
         <input class="pin" type="password" maxlength="1" inputmode="numeric" autocomplete="off">
         <input class="pin" type="password" maxlength="1" inputmode="numeric" autocomplete="off">
@@ -1499,7 +1507,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
       </div>
       <div id="login-msg"></div>
       <div id="login-load"></div>
-      <button type="button" onclick="backToAccountStep()" style="margin-top:16px;background:none;border:0;color:#aaa;font-size:12px;cursor:pointer;text-decoration:underline">← 계정 다시 선택</button>
+      <button type="button" onclick="backToAccountStep()" style="margin-top:16px;background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">← 계정 다시 선택</button>
     </div>
   </div>
 </div>
@@ -2073,13 +2081,19 @@ let selected=null,editing=null,panelOpen=false,activeFilters=[],activePrograms=[
 // PIN
 const pins=document.querySelectorAll('.pin');
 pins.forEach((el,i)=>{
-  // PIN 마스킹 — 입력 중(focus)인 칸만 숫자 노출, 칸을 벗어나면 즉시 ●로 가림 (어깨너머 훔쳐보기 방지)
-  el.addEventListener('focus',()=>{el.type='text';el.style.setProperty('-webkit-text-security','none');});
-  el.addEventListener('blur',()=>{el.type='password';el.style.removeProperty('-webkit-text-security');});
-  el.addEventListener('input',()=>{el.classList.remove('err');if(el.value.length===1&&i<3)pins[i+1].focus();if(i===3&&el.value.length===1)tryLogin();});
+  // PIN 마스킹 — 방금 입력한 칸만 숫자 노출 후 2초 뒤 ●로 가림(어깨너머 방지). 입력 칸은 코발트(:focus) 강조.
+  // 채운 동그라미로 전환(입력 2초 뒤): 숫자 숨기고(password) filled 원 표시.
+  var _fill=function(){el.type='password';el.classList.remove('lit');el.classList.add('filled');};
+  el.addEventListener('input',()=>{
+    el.classList.remove('err');
+    if(el.value){ el.type='text'; el.classList.add('lit'); el.classList.remove('filled'); clearTimeout(el._mt); el._mt=setTimeout(_fill,2000); }  // 입력 순간: 코발트 숫자 노출
+    else { el.type='password'; el.classList.remove('lit','filled'); clearTimeout(el._mt); }                                                       // 지우면: 빈 동그라미
+    if(el.value.length===1&&i<3)pins[i+1].focus();
+    if(i===3&&el.value.length===1)tryLogin();
+  });
   el.addEventListener('keyup',()=>{if(el.value.length===1&&i<3)pins[i+1].focus();});
   el.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!el.value&&i>0)pins[i-1].focus();});
-  el.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,4);t.split('').forEach((c,j)=>{if(pins[j])pins[j].value=c;});if(t.length===4)tryLogin();});
+  el.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,4);t.split('').forEach((c,j)=>{if(pins[j]){pins[j].value=c;pins[j].type='password';pins[j].classList.remove('lit');pins[j].classList.add('filled');clearTimeout(pins[j]._mt);}});if(t.length===4)tryLogin();});
 });
 // === 비밀번호 입력/설정 모달 (Promise 기반) ===
 function _togglePwdVisibility(inputId, btn){
@@ -2413,6 +2427,8 @@ function _loginShaderFrame(now){
   var w=(cv.clientWidth*d)|0, h=(cv.clientHeight*d)|0;
   if(w>0&&h>0&&(cv.width!==w||cv.height!==h)){ cv.width=w;cv.height=h;gl.viewport(0,0,w,h);gl.uniform2f(_loginU.res,w,h); }
   gl.uniform1f(_loginU.time,(now-_loginT0)/1000*0.35);   // speed 0.35 (은은)
+  // fluted(카드 세로홈 굴절) 비활성 — 카드 rect를 안 넘겨 u_card=(0,0,0,0) 유지 → 전면 매끈 유동만.
+  //  (fluted 셰이더 로직은 보존, 다시 켜려면 카드 rect를 u_card에 동기.)
   gl.drawArrays(gl.TRIANGLES,0,3);
   _loginRAF=requestAnimationFrame(_loginShaderFrame);
 }
@@ -2424,46 +2440,65 @@ function startLoginShader(){
     if(!_loginGL){
       var gl=cv.getContext('webgl2'); if(!gl) return;   // 미지원 = 흰 배경 폴백
       var VERT='#version 300 es\nin vec2 p;out vec2 v_objectUV;uniform vec2 u_res;void main(){gl_Position=vec4(p,0.,1.);vec2 uv=p*0.5;uv.x*=u_res.x/max(1.,u_res.y);v_objectUV=uv;}';
+      // fluted glass = 배경(meshBG)을 카드 사각영역 안에서만 세로 홈 굴절 좌표로 재샘플(5인 분신술 추천안).
+      // 카드 밖은 매끈, 카드 안만 굴절+홈 명암. 명암은 흰/검 계수(§3.5② 흰 alpha 변주)라 팔레트 리스크 0.
       var FRAG='#version 300 es\n'
         +'precision mediump float;\n'
-        +'uniform float u_time;uniform vec2 u_res;\n'
+        +'uniform float u_time;uniform highp vec2 u_res;\n'   // highp = 버텍스의 u_res와 precision 일치(링크 에러 방지)
         +'uniform vec4 u_colors[10];uniform float u_colorsCount;\n'
-        +'uniform float u_distortion;uniform float u_swirl;uniform float u_grainMixer;uniform float u_grainOverlay;\n'
+        +'uniform float u_distortion;uniform float u_swirl;\n'
+        +'uniform vec4 u_card;uniform float u_grooves;uniform float u_refract;uniform float u_flShadow;uniform float u_flHi;\n'
         +'in vec2 v_objectUV;out vec4 fragColor;\n'
-        +'#define TWO_PI 6.28318530718\n#define PI 3.14159265358979323846\n'
         +'vec2 rotate(vec2 uv,float th){return mat2(cos(th),sin(th),-sin(th),cos(th))*uv;}\n'
-        +'float hash21(vec2 p){p=fract(p*vec2(0.3183099,0.3678794))+0.1;p+=dot(p,p+19.19);return fract(p.x*p.y);}\n'
-        +'float valueNoise(vec2 st){vec2 i=floor(st);vec2 f=fract(st);float a=hash21(i);float b=hash21(i+vec2(1.,0.));float c=hash21(i+vec2(0.,1.));float d=hash21(i+vec2(1.,1.));vec2 u=f*f*(3.-2.*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}\n'
-        +'float noise(vec2 n,vec2 s){return valueNoise(n+s);}\n'
-        +'vec2 getPosition(int i,float t){float a=float(i)*.37;float b=.6+fract(float(i)/3.)*.9;float c=.8+fract(float(i+1)/4.);float x=sin(t*b+a);float y=cos(t*c+a*1.5);return .5+.5*vec2(x,y);}\n'
+        +'vec2 getPosition(int i,float t){float a=float(i)*.37;float b=.6+fract(float(i)/3.)*.9;float c=.8+fract(float(i+1)/4.);return .5+.5*vec2(sin(t*b+a),cos(t*c+a*1.5));}\n'
+        +'vec3 meshBG(vec2 uv0){\n'
+        +'  vec2 uv=uv0+.5;float t=.5*(u_time+41.5);\n'
+        +'  float radius=smoothstep(0.,1.,length(uv-.5));float center=1.-radius;\n'
+        +'  for(float i=1.;i<=2.;i++){uv.x+=u_distortion*center/i*sin(t+i*.4*smoothstep(.0,1.,uv.y))*cos(.2*t+i*2.4*smoothstep(.0,1.,uv.y));uv.y+=u_distortion*center/i*cos(t+i*2.*smoothstep(.0,1.,uv.x));}\n'
+        +'  vec2 uvR=uv-.5;uvR=rotate(uvR,-3.*u_swirl*radius);uvR+=.5;\n'
+        +'  vec3 color=vec3(0.);float tw=0.;\n'
+        +'  for(int i=0;i<10;i++){if(i>=int(u_colorsCount))break;vec2 pos=getPosition(i,t);vec3 cf=u_colors[i].rgb*u_colors[i].a;float dist=pow(length(uvR-pos),3.5);float w=1./(dist+1e-3);color+=cf*w;tw+=w;}\n'
+        +'  return color/max(1e-4,tw);\n'
+        +'}\n'
         +'void main(){\n'
-        +'vec2 uv=v_objectUV;uv+=.5;vec2 grainUV=uv*1000.;\n'
-        +'float grain=noise(grainUV,vec2(0.));float mixerGrain=.4*u_grainMixer*(grain-.5);\n'
-        +'float t=.5*(u_time+41.5);\n'
-        +'float radius=smoothstep(0.,1.,length(uv-.5));float center=1.-radius;\n'
-        +'for(float i=1.;i<=2.;i++){uv.x+=u_distortion*center/i*sin(t+i*.4*smoothstep(.0,1.,uv.y))*cos(.2*t+i*2.4*smoothstep(.0,1.,uv.y));uv.y+=u_distortion*center/i*cos(t+i*2.*smoothstep(.0,1.,uv.x));}\n'
-        +'vec2 uvRotated=uv;uvRotated-=vec2(.5);float angle=3.*u_swirl*radius;uvRotated=rotate(uvRotated,-angle);uvRotated+=vec2(.5);\n'
-        +'vec3 color=vec3(0.);float opacity=0.;float totalWeight=0.;\n'
-        +'for(int i=0;i<10;i++){if(i>=int(u_colorsCount))break;vec2 pos=getPosition(i,t)+mixerGrain;vec3 cf=u_colors[i].rgb*u_colors[i].a;float of=u_colors[i].a;float dist=length(uvRotated-pos);dist=pow(dist,3.5);float weight=1./(dist+1e-3);color+=cf*weight;opacity+=of*weight;totalWeight+=weight;}\n'
-        +'color/=max(1e-4,totalWeight);opacity/=max(1e-4,totalWeight);\n'
-        +'float go=valueNoise(rotate(grainUV,1.)+vec2(3.));go=mix(go,valueNoise(rotate(grainUV,2.)+vec2(-1.)),.5);go=pow(go,1.3);float gv=go*2.-1.;vec3 gcol=vec3(step(0.,gv));float gs=u_grainOverlay*abs(gv);gs=pow(gs,.8);color=mix(color,gcol,.35*gs);opacity+=.5*gs;opacity=clamp(opacity,0.,1.);\n'
-        +'fragColor=vec4(color,opacity);\n}';
+        +'  vec2 suv=gl_FragCoord.xy/u_res;\n'
+        +'  float hasCard=step(0.0001,u_card.z-u_card.x);\n'
+        +'  float inCard=hasCard*step(u_card.x,suv.x)*step(suv.x,u_card.z)*step(u_card.y,suv.y)*step(suv.y,u_card.w);\n'
+        +'  float cw=max(1e-4,u_card.z-u_card.x);\n'
+        +'  float lx=(suv.x-u_card.x)/cw;\n'
+        +'  float gpos=lx*u_grooves;float gf=fract(gpos)-0.5;\n'
+        +'  float asp=u_res.x/max(1.,u_res.y);\n'
+        +'  float grooveWobj=(cw*asp)/max(1.,u_grooves);\n'
+        +'  float refr=gf*u_refract*grooveWobj;\n'
+        +'  vec2 uvS=v_objectUV;uvS.x+=refr*inCard;\n'
+        +'  vec3 color=meshBG(uvS);\n'
+        +'  float edge=abs(gf)*2.;\n'
+        +'  float shadow=pow(edge,1.7);\n'
+        +'  float hi=smoothstep(0.85,1.0,edge);\n'
+        +'  color=mix(color,color*0.58,shadow*inCard*u_flShadow);\n'
+        +'  color+=hi*inCard*u_flHi*0.5;\n'
+        +'  fragColor=vec4(color,1.0);\n'
+        +'}';
       function _mk(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.warn('[loginShader]',gl.getShaderInfoLog(s));}return s;}
       var prog=gl.createProgram();gl.attachShader(prog,_mk(gl.VERTEX_SHADER,VERT));gl.attachShader(prog,_mk(gl.FRAGMENT_SHADER,FRAG));gl.linkProgram(prog);
       if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.warn('[loginShader]',gl.getProgramInfoLog(prog));return;}
       gl.useProgram(prog);
       var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
       var lp=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(lp);gl.vertexAttribPointer(lp,2,gl.FLOAT,false,0,0);
-      _loginU={res:gl.getUniformLocation(prog,'u_res'),time:gl.getUniformLocation(prog,'u_time')};
-      // 색 = :root 브랜드 토큰(라이트 톤 3 + 인디고·살몬 포인트 2). 값은 계승, 창작 없음.
+      _loginU={res:gl.getUniformLocation(prog,'u_res'),time:gl.getUniformLocation(prog,'u_time'),card:gl.getUniformLocation(prog,'u_card')};
+      // 색 = :root 브랜드 토큰(처음 밝은 라이트 유동: peach·accent-light 계열). 값 계승, 창작 없음.
       var cs=getComputedStyle(document.documentElement);
       var toks=['--accent-light','--peach-light','--peach','--accent','--peach-text'];
       for(var i=0;i<toks.length;i++){ gl.uniform4fv(gl.getUniformLocation(prog,'u_colors['+i+']'),_hexToVec4(cs.getPropertyValue(toks[i]))); }
       gl.uniform1f(gl.getUniformLocation(prog,'u_colorsCount'),toks.length);
       gl.uniform1f(gl.getUniformLocation(prog,'u_distortion'),0.8);
       gl.uniform1f(gl.getUniformLocation(prog,'u_swirl'),0.5);
-      gl.uniform1f(gl.getUniformLocation(prog,'u_grainMixer'),0.0);
-      gl.uniform1f(gl.getUniformLocation(prog,'u_grainOverlay'),0.0);
+      // fluted glass 파라미터: 세로 홈 개수·굴절 세기·홈 그림자·경계 하이라이트
+      gl.uniform1f(gl.getUniformLocation(prog,'u_grooves'),24.0);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_refract'),1.15);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_flShadow'),0.78);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_flHi'),0.6);
+      gl.uniform4f(_loginU.card,0.,0.,0.,0.);
       _loginGL=gl;
     }
     _loginT0=performance.now();
@@ -2504,12 +2539,12 @@ async function initLoginScreen(){
       }
     }
     step.innerHTML='<div style="font-size:15px;color:var(--accent);font-weight:700;margin-bottom:3px;word-break:break-all">'+escapeHtml(email)+'</div>'
-      +'<div style="font-size:11px;color:#aaa;margin-bottom:18px">이 Microsoft 계정으로 로그인됩니다</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:18px">이 Microsoft 계정으로 로그인됩니다</div>'
       +'<button type="button" onclick="goToPinStep()" style="width:100%;padding:12px;background:var(--accent);color:#fff;border:0;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">계속</button>'
-      +'<button type="button" onclick="switchMsAccount()" style="width:100%;margin-top:10px;padding:8px;background:none;border:0;color:#999;font-size:12px;cursor:pointer;text-decoration:underline">다른 Microsoft 계정으로 전환</button>';
+      +'<button type="button" onclick="switchMsAccount()" style="width:100%;margin-top:10px;padding:8px;background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">다른 Microsoft 계정으로 전환</button>';
   }else{
     _loginEmail='';
-    step.innerHTML='<div style="font-size:12px;color:#888;margin-bottom:18px;line-height:1.6">로그인하려면 먼저<br>Microsoft 계정 인증이 필요해요</div>'
+    step.innerHTML='<div style="font-size:12px;color:var(--dim);margin-bottom:18px;line-height:1.6">로그인하려면 먼저<br>Microsoft 계정 인증이 필요해요</div>'
       +'<button type="button" onclick="msLogin()" style="width:100%;padding:12px;background:#fff;border:1.5px solid rgba(74,77,231,0.3);color:#444;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="18" height="18" viewBox="0 0 23 23"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>Microsoft 계정으로 로그인</button>';
   }
 }
