@@ -2488,10 +2488,10 @@ function startLoginShader(){
       gl.uniform1f(gl.getUniformLocation(prog,'u_distortion'),0.8);
       gl.uniform1f(gl.getUniformLocation(prog,'u_swirl'),0.5);
       // fluted glass 파라미터: 세로 홈 개수·굴절 세기·홈 그림자·경계 하이라이트
-      gl.uniform1f(gl.getUniformLocation(prog,'u_grooves'),18.0);
-      gl.uniform1f(gl.getUniformLocation(prog,'u_refract'),0.55);
-      gl.uniform1f(gl.getUniformLocation(prog,'u_flShadow'),0.55);
-      gl.uniform1f(gl.getUniformLocation(prog,'u_flHi'),0.4);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_grooves'),24.0);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_refract'),1.15);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_flShadow'),0.78);
+      gl.uniform1f(gl.getUniformLocation(prog,'u_flHi'),0.6);
       gl.uniform4f(_loginU.card,0.,0.,0.,0.);
       _loginGL=gl;
     }
