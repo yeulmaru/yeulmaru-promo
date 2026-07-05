@@ -86,6 +86,15 @@ button{font-family:inherit;cursor:pointer}
 @keyframes pinDigitIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
 #login-msg{font-size:13px;height:18px;color:var(--danger);margin-top:4px}
 #login-load{font-size:13px;height:18px;color:var(--accent);margin-top:4px}
+/* 진입 전환 = 카드 리프트 디졸브 — PIN 카드가 떠오르며 사라지고 셰이더가 body 그라데이션(var(--bg))으로 디졸브,
+   앱 셸(nav→hdr→cal)이 순차 등장(_appEnterStagger). 색 = 흰색 alpha 변주(§3.5②)+기존 토큰만.
+   opacity !important = _enterPinInputStep이 카드에 inline opacity:1을 박는 것 우선 제압. */
+.login-card.lc-lift{transition:transform .48s cubic-bezier(.4,.05,.2,1),opacity .48s ease;transform:translateY(-26px) scale(.97);opacity:0 !important;pointer-events:none}
+#login.login-leave{background:rgba(255,255,255,0);transition:background .6s ease;pointer-events:none}
+#login.login-leave #loginShader{opacity:0;transition:opacity .6s ease}
+.ae-pre{opacity:0;transform:translateY(10px)}
+.ae-in{transition:opacity .42s ease,transform .42s ease;opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.login-card.lc-lift,#login.login-leave,#login.login-leave #loginShader,.ae-in{transition:none}}
 
 /* ═══ NAV ═══ */
 .nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border);position:sticky;top:0;z-index:20}
@@ -568,6 +577,17 @@ button{font-family:inherit;cursor:pointer}
 
 /* ═══ CALENDAR ═══ */
 .cal{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:0 0 var(--radius-xl) var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid var(--glass-border)}
+/* 캘린더 로딩 = 글래스 스켈레톤 — 셀 자리를 미리 잡고 광택 스윕이 흐름(loadData→_calSkelHtml).
+   바 = var(--neutral) · 스윕 = 흰색 alpha 변주(§3.5②) · 격자선 = var(--border). */
+.cal-skel{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:132px;border-radius:0 0 var(--radius-xl) var(--radius-xl)}
+.cal-skel .sk-c{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:12px}
+.cal-skel .sk-c:nth-child(6n){border-right:none}
+.cal-skel .sk-c:nth-child(n+13){border-bottom:none}
+.cal-skel .sk-b{height:10px;border-radius:8px;background:var(--neutral);margin-bottom:8px}
+.cal-skel .sk-sweep{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.cal-skel .sk-sweep::after{content:'';position:absolute;top:0;bottom:0;width:34%;left:-40%;background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,.5) 50%,transparent 100%);animation:skSweep 1.5s ease-in-out infinite}
+@keyframes skSweep{to{left:120%}}
+@media (prefers-reduced-motion:reduce){.cal-skel .sk-sweep::after{animation:none}}
 .cal-head-wrap{position:sticky;top:112px;z-index:5;background:rgba(255,255,255,0.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:0;border:1px solid var(--glass-border);border-bottom:1px solid var(--border);margin-bottom:-1px;overflow:hidden}
 .cal-head{display:grid;grid-template-columns:repeat(6,1fr)}
 .dh{padding:14px 8px;text-align:center;font-size:14px;font-weight:700;background:rgba(255,255,255,0.5);color:#666}
@@ -2323,12 +2343,34 @@ async function tryLogin(){
   } finally { _loggingIn = false; }
 }
 
+// 앱 셸 순차 등장(nav→헤더→캘린더) — 진입 전환(카드 리프트 디졸브)의 마지막 박자. display 처리까지 맡음.
+function _appEnterStagger(appEl){
+  try{
+    var els=[document.querySelector('.nav'),document.querySelector('.hdr'),document.querySelector('.cal-head-wrap'),document.getElementById('cal')].filter(Boolean);
+    els.forEach(function(el){el.classList.add('ae-pre');});
+    appEl.style.display='';
+    void appEl.offsetHeight;
+    els.forEach(function(el,i){var d=Math.min(i,2);setTimeout(function(){el.classList.add('ae-in');el.classList.remove('ae-pre');},50+d*95);});
+    setTimeout(function(){els.forEach(function(el){el.classList.remove('ae-in','ae-pre');});},1200);  // 연출 후 클래스 청산(sticky transform 잔류 방지)
+  }catch(e){ try{appEl.style.display='';document.querySelectorAll('.ae-pre').forEach(function(el){el.classList.remove('ae-pre');});}catch(_e){} }
+}
 function _enterApp(){
   console.log('[_enterApp] CALLED from:',new Error().stack.split('\n').slice(1,3).join(' | '),'| pw=',sessionStorage.getItem('pw'),'| role=',sessionStorage.getItem('role'),'| myAppl=',sessionStorage.getItem('myApplicant'),'| password=',password,'| _loginEmail=',_loginEmail);
   window._pinActive=false;
   try{ if(typeof window._hideCapsWarn==='function') window._hideCapsWarn(); }catch(e){}  // CapsLock 경고 떠다님 차단
-  document.getElementById('login').style.display='none';
-  document.getElementById('app').style.display='';
+  // 진입 전환 = 카드 리프트 디졸브 — 로그인 화면이 보이는 상태에서만 연출(복원·예외 경로는 즉시 전환). 데이터 로딩(initApp)은 연출과 병렬 출발.
+  var _lg=document.getElementById('login'), _appEl=document.getElementById('app'), _card=document.querySelector('.login-card');
+  var _anim=false;
+  try{ _anim=_lg && _lg.style.display!=='none' && !!_card && !(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
+  if(_anim){
+    _card.classList.add('lc-lift'); _lg.classList.add('login-leave');
+    setTimeout(function(){
+      _lg.style.display='none'; _lg.classList.remove('login-leave'); _card.classList.remove('lc-lift');
+      _appEnterStagger(_appEl);
+    },640);
+  }else{
+    _lg.style.display='none'; _appEl.style.display='';
+  }
   try{ if(typeof _loginEmail!=='undefined' && _loginEmail) localStorage.setItem('lastLoginEmail', _loginEmail); }catch(e){}
   _locked=false; initApp(); if(typeof _bindIdleEvents==='function'){ _bindIdleEvents(); resetIdleTimer(); }
 }
@@ -13834,9 +13876,17 @@ function _petEnter(){
   var p=document.querySelector('.pet');if(!p)return;
   requestAnimationFrame(function(){p.classList.add('in');});
 }
+// 캘린더 로딩 스켈레톤(글래스 셀 18칸 + 광택 스윕) — 바 폭은 자리표시용 고정 패턴(난수 금지)
+function _calSkelHtml(){
+  var w=['62%','38%','74%','46%','58%','30%'],h='<div class="cal-skel" aria-label="캘린더 불러오는 중">';
+  for(var i=0;i<18;i++){
+    h+='<div class="sk-c"><div class="sk-b" style="width:22%"></div><div class="sk-b" style="width:'+w[i%6]+'"></div>'+(i%3===0?'<div class="sk-b" style="width:'+w[(i+2)%6]+'"></div>':'')+'</div>';
+  }
+  return h+'<div class="sk-sweep"></div></div>';
+}
 async function loadData(){
   var cal=document.getElementById('cal');
-  if(cal){cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--dim);font-size:14px"><span id="lt"></span></div>';_typeLoop('lt','데이터를 불러오는 중이에요... \uD83D\uDE09',65);}
+  if(cal){cal.innerHTML=_calSkelHtml();}
   // [로딩 성능] records와 특별일정을 병렬 fetch (서로 독립) — 순차 대기 제거
   var _spP=loadPromoSpecial().catch(function(e){console.warn('[loadData] promoSpecial',e);});
   try{const d=await api('GET','/api/records');var _all=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});_DRAFTS=_all.filter(_isDraftRec);records=_all.filter(function(r){return !_isDraftRec(r);});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--danger);font-size:14px">데이터 로드 실패</div>';return;}
