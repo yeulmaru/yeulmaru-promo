@@ -7060,7 +7060,9 @@ function _msgGet(){
 // === 메시지함 API hybrid (Worker 있으면 SharePoint sync, 없으면 localStorage fallback) ===
 const _MSG_API_BASE = 'https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
 let _msgLastFetch = 0;
-let _msgApiAvailable = true;  // 초기 true — 실패(404/401) 시 false로 60초 throttle. (init false면 5968 가드가 fetch를 막아 서버 메시지 동기화가 영구 중단되던 데드락 수정)
+var _msgApiAvailable = true;  // 초기 true — 실패(404/401) 시 false로 60초 throttle. (init false면 5968 가드가 fetch를 막아 서버 메시지 동기화가 영구 중단되던 데드락 수정)
+// ⚠️ var 필수(let 금지) — 부트 IIFE가 파싱 중 _enterAppFromSession→initApp을 동기 호출해 이 변수에 접근한다.
+//    let이면 TDZ ReferenceError로 initApp이 중단돼 F5 세션복원 시 모든 데이터 로더가 스킵됨(분신술 2호 MED-HIGH 실측).
 
 async function _msgApiCall(method, path, body){
   if(!_msgApiAvailable) return null;  // API 안 됨 알려진 상태면 skip
