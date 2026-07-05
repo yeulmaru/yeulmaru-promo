@@ -39,7 +39,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #               (var(--glass-surface)+blur(8px)+var(--glass-bd)+var(--glass-shadow)+var(--text))으로 통일.
 #               명명 16종 + ana-xbtn·adm-btn·m-btn.cancel + 인라인(닫기원형·모달푸터·페이지네이션·뷰모드·사이니지) 치환으로
 #               raw hex -84(#fff·#ddd·#e0e0e0·#666·#888 등 → 토큰). select류(ana-sel 등)는 non-glass로 통일 유지.
-BASE_HEX_INDEX = 1661
+# 1661 → 1658 = 완결성 재검증 반영: 일정 페이지네이션 숫자 버튼(inactive)도 형제 이전/다음과 동일 글래스 톤으로 통일(-3)
+BASE_HEX_INDEX = 1658
 BASE_HEX_SIGNAGE = 2          # signage/index.html: #000·#333
 BASE_ROOT_INDEX = 2           # L14(기본 팔레트 32토큰) + L1322(뉴트럴·z·c1~c6 26토큰)
 BASE_ROOT_SIGNAGE = 0
