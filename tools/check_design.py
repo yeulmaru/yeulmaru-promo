@@ -49,9 +49,11 @@ BASE_ROOT_INDEX = 2           # L14(기본 팔레트 32토큰) + L1322(뉴트럴
 BASE_ROOT_SIGNAGE = 0
 # 고아 토큰(정의만 있고 var() 사용 0회) — 청산은 운영자 판단 대기(지시서 260703 §6-4)
 # 260704: --muted 청산(홍보 지도 대시보드 피드 빈상태에서 사용 시작) 13→12
+# 260705: --off-bg 고아化 — 캘린더 일요일 회색 톤 제거(운영자 확정 조합)로 유일 사용처 소멸, 재활성 대비 동결 보존 +1
 BASE_ORPHANS = {
     '--blog', '--border2', '--c1', '--etc', '--insta', '--kakao',
     '--surface', '--youtube', '--z-confirm', '--z-nav', '--z-sticky', '--z-toast',
+    '--off-bg',
 }
 # 이중 정의 — :root L27 #C8900A vs L1331 #F5B400(CSS는 후자 승). 청산 대기(지시서 §6-1)
 BASE_DUP = {'--kakao'}
