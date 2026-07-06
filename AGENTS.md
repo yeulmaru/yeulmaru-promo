@@ -18,6 +18,8 @@
    `index.html`·`signage/*.html`을 편집했으면 커밋 전에 반드시 직접 실행해 exit 0 확인.
 5. 운영자 승인분은 즉시 기틀 편입: 토큰 추가 → `docs/디자인기틀.md` 등재 →
    `tools/check_design.py` baseline 갱신 + 사유 주석.
+6. **디자인 제안·시안·튜닝 = 만지는 플레이그라운드식 HTML**(정적 이미지·텍스트 나열로 갈음 금지) —
+   운영 규칙 = `CLAUDE.md` §🎛, 골격·검증·안티패턴 = `docs/플레이그라운드_포터블.md`, 산출 = `docs/reports/`.
 
 ## ⚠️ 동시 편집 주의 (이 repo는 여러 세션이 동시 작업)
 - 커밋/푸시/머지 **직전에 반드시 `git fetch origin main`** — 옛 main 기반 브랜치를 그대로 머지하면
