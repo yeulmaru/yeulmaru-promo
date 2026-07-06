@@ -33,21 +33,6 @@
 
 ---
 
-## 🎛 디자인 제안 = 플레이그라운드식 HTML (항상)
-
-디자인·UI 제안/시안/튜닝 = **플레이그라운드식 HTML이 디폴트**(정적 이미지·텍스트 나열로 갈음 금지). 산출 = `docs/reports/`의 {yymmdd}_{라벨}.html 자기완결 1파일(자산 base64 임베드 · 외부 요청 0 · 인라인 CSS/JS).
-구성 5요소(전부 필수):
-- ① 실물 재현 미리보기 — 실제 화면 프레임(주 사용 = 데스크톱 브라우저 창, 캘린더 전례 폭 min(960px,96vw) 계승 · 모바일 전용 화면이면 그 화면비) 안에 `index.html` `:root` 2블록 토큰 사본 + 정본 컴포넌트(`docs/디자인기틀.md` §2)·모션 계승으로 재현. **현행 상태 = 비교 기준으로 함께 재현(고정)** · 튜닝 변수 기본값 = 현행 실측값.
-- ② 프리셋 3~4개 — 현행 포함 · 추천 ★ 1개.
-- ③ 미세조정 슬라이더 — 축별 그룹 라벨 · 값 표시 = tabular-nums.
-- ④ 선택값 출력 + 복사 버튼 — 값마다 현행 병기 · 기존 토큰 동값 = `계승` / 아니면 `갱신 후보` 자동 표기 · 기틀 축 = ⚠ 딱지(갱신 = §🚨 승인 경로).
-- ⑤ 재현 한계 각주 — 폴백·근사·실물과 다른 점 명시.
-검증 = 헤드리스 브라우저 렌더 실측(상태 전환 실클릭 + 프리셋별 스크린샷 + JS 에러 0) 후에만 전달. 전달 = 레포 커밋(정본) + **채팅 파일 직접 첨부**(원탭) · Artifact 링크 = 같은 시안 반복 수정 루프·외부 공유 시 보조.
-후속 = 운영자가 [선택값 복사] 결과를 붙이면 그 값을 `index.html` `:root`·CSS에 배선(+`python3 tools/check_design.py` 통과)까지 — 갱신 축은 §🚨 편입 3점 세트로.
-골격 코드·검증 절차·안티패턴 상세(정본) = `docs/플레이그라운드_포터블.md` · 이 레포 확립 전례 = `docs/reports/260705_캘린더_플레이그라운드.html` · `docs/reports/260705_상단메뉴구분_플레이그라운드.html`.
-
----
-
 ## 0. 이 문서 읽는 법 + 문서 표기 규약
 
 ### 1) 절 공통 틀
@@ -189,7 +174,7 @@
 - `index.html` — 앱 전체(단일파일 Vanilla JS, GitHub Pages 배포 원본). 컬럼 순서·함수 시그니처는 여기 직접 검색.
 - `src/index.js` — Cloudflare Worker(프록시·인증·cron) 단일 원본 + `wrangler.toml`. git과 배포 분리(앱지침 §시스템 설계).
 - `docs/앱지침.md` — 도메인 두뇌 · `docs/작업이력.md` — 원장 · `docs/reports/` — HTML 보고서 · `docs/CLAUDE_full_backup_260601.md` — 과거 전체 이력.
-- `docs/디자인기틀.md` · `docs/절대명령2_정본인덱스.md` · `docs/브랜드컬러_확립본.html` — 디자인 정본 3종 · `docs/플레이그라운드_포터블.md` — 디자인 제안 방식 정본(§🎛).
+- `docs/디자인기틀.md` · `docs/절대명령2_정본인덱스.md` · `docs/브랜드컬러_확립본.html` — 디자인 정본 3종.
 - `tools/check_design.py` · `tools/check_refs.py` — 기계 게이트 · `.claude/hooks/` — 세션 훅(design_digest·design_gate) · `.githooks/pre-commit` — 커밋 게이트.
 - `_versions/` — 기틀 백업 · `signage/` — 장도 사이니지 페이지 · `image/` — 에셋(PWA 아이콘·폴백 지도) · `reference/` — 원문 자료(규정 PDF 등) · `drafts/` · `tools/scratch/` — 작업장.
 - `manifest.webmanifest` — PWA 매니페스트 · `AGENTS.md` — 타 모델용 공통 계약 요약.
