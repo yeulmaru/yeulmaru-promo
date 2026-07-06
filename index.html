@@ -54,7 +54,7 @@
 body{background:var(--bg);color:var(--text);min-height:100vh}
 /* 앱 배경 메시 — 로그인 유동 배경과 같은 5개 토큰의 정적 근사를 상시 배치, 전면 유리(nav·캘린더)의 글래스가 실제로 비치게(운영자 260705).
    색 = 토큰 var() + 같은 토큰 리터럴의 alpha 변주(§3.5②, 전례 아래 L64 rgba(240,196,184,.5))만. 고정 1레이어·애니 없음 = 연산 0. 로그인 화면은 자체 배경이 위를 덮음. */
-body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;filter:saturate(1.35);background:
  radial-gradient(50% 64% at 14% 18%, rgba(74,77,231,.20) 0%, transparent 70%),
  radial-gradient(44% 56% at 86% 16%, rgba(240,196,184,.72) 0%, transparent 72%),
  radial-gradient(46% 58% at 76% 86%, rgba(216,132,85,.28) 0%, transparent 70%),
@@ -588,8 +588,8 @@ button{font-family:inherit;cursor:pointer}
 .pf-date{vertical-align:middle;font-size:11px;color:#999;font-weight:500;margin-left:8px}
 
 /* ═══ CALENDAR ═══ */
-/* 캘린더 진짜 글래스(운영자 260705) — 분신술 4호 정량: 셀 흰색 재도포가 주범 → 유리·셀 alpha 하향 + saturate(타 글래스와 통일). 전부 흰색 alpha 변주(§3.5②). */
-.cal{background:rgba(255,255,255,.08);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);border-radius:0 0 var(--radius-xl) var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid rgba(255,255,255,.7)}
+/* 캘린더 글래스 = 운영자 확정 조합(260705 플레이그라운드): 유리 43%·blur 11px·채도 1.0 · 셀 0% · 격자 7% */
+.cal{background:rgba(255,255,255,.43);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);border-radius:0 0 var(--radius-xl) var(--radius-xl);box-shadow:var(--glass-shadow);border:1px solid rgba(255,255,255,.7)}
 /* 캘린더 로딩 = 글래스 스켈레톤 — 셀 자리를 미리 잡고 광택 스윕이 흐름(loadData→_calSkelHtml).
    바 = var(--neutral) · 스윕 = 흰색 alpha 변주(§3.5②) · 격자선 = var(--border). */
 .cal-skel{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:132px;border-radius:0 0 var(--radius-xl) var(--radius-xl)}
@@ -603,12 +603,12 @@ button{font-family:inherit;cursor:pointer}
 @keyframes skSweep{to{transform:translateX(400%)}}
 @media (max-width:768px){.cal-skel{grid-auto-rows:64px}.cal-skel .sk-b{height:7px;margin-bottom:6px}}
 @media (prefers-reduced-motion:reduce){.cal-skel .sk-sweep::after{animation:none}}
-.cal-head-wrap{position:sticky;top:112px;z-index:5;background:rgba(255,255,255,.55);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);border-radius:0;border:1px solid var(--glass-border);border-bottom:1px solid var(--border);margin-bottom:-1px;overflow:hidden}
+.cal-head-wrap{position:sticky;top:112px;z-index:5;background:rgba(255,255,255,.43);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);border-radius:0;border:1px solid var(--glass-border);border-bottom:1px solid rgba(0,0,0,.07);margin-bottom:-1px;overflow:hidden}
 .cal-head{display:grid;grid-template-columns:repeat(6,1fr)}
 .dh{padding:14px 8px;text-align:center;font-size:14px;font-weight:700;background:transparent;color:#666}
 .dh.sat{color:#3B7DD8}
 .dh.sun{color:#D64545}
-.week{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border);position:relative}
+.week{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid rgba(0,0,0,.07);position:relative}
 .week:last-child{border-bottom:none}
 .week.tw{position:relative}
 .c-inner{overflow-x:hidden;overflow-y:auto;height:calc(100% - 55px);margin-top:18px;margin-bottom:0;scrollbar-width:none;-ms-overflow-style:none;scrollbar-color:rgba(0,0,0,0.15) transparent}
@@ -624,7 +624,9 @@ button{font-family:inherit;cursor:pointer}
 .c.today .c-inner{scrollbar-color:rgba(80,100,140,0.22) transparent}
 .c.today .c-inner::-webkit-scrollbar-thumb{background:rgba(80,100,140,0.22);border-radius:2px}
 .c.today .c-inner::-webkit-scrollbar-track{background:transparent;margin-top:24px;margin-bottom:8px}
-.c{height:110px;padding:7px 8px 8px 8px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,.14)}
+.c{height:123px;padding:7px 8px 8px 8px;border-right:1px solid rgba(0,0,0,.07);position:relative;overflow:hidden;transition:all .15s;background:rgba(255,255,255,0)}
+/* 과거 = 더 흐리게(운영자 확정: 글자 33%) */
+.c.past .c-inner{opacity:.33}
 .c:last-child{border-right:none}
 .c.nm{background:var(--nm-bg)}
 .c.past{background:var(--past-bg)}
@@ -652,7 +654,7 @@ button{font-family:inherit;cursor:pointer}
 .today-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(74,77,231,0.25)}
 .c-inner > .dn{position:sticky;top:0;z-index:2;background:inherit}
 .c.today .c-inner > .dn{padding:0 0 3px 0}
-.ev{display:flex;align-items:center;gap:4px;padding:2px 0;font-size:10.5px;line-height:1.4;min-width:0}
+.ev{display:flex;align-items:center;gap:4px;padding:1.5px 0;font-size:10px;line-height:1.4;min-width:0}
 .ev:hover{background:rgba(74,77,231,0.06);border-radius:4px}
 .ev.done > *{text-decoration:line-through;text-decoration-color:#555;text-decoration-thickness:1.5px;text-decoration-skip-ink:none}
 .ev-dragging{opacity:0.4 !important}
@@ -14255,7 +14257,7 @@ function renderCal(){
   const isThisMonth=currentYear===new Date().getFullYear()&&currentMonth===new Date().getMonth()+1;
   var _isThisM=currentYear===new Date().getFullYear()&&currentMonth===new Date().getMonth()+1;
   var _todayDi=_isThisM?(new Date().getDay()-2+7)%7:-1;
-  document.getElementById('cal-head-wrap').innerHTML='<div class="cal-head">'+DAYS.map((d,i)=>{var cls='dh';if(i===4)cls+=' sat';if(i===5)cls+=' sun';var st=i<5?'border-right:1px solid var(--border);':'';if(i===_todayDi&&_todayDi<6)st+='background:var(--accent);color:#fff;';return'<div class="'+cls+'" style="'+st+'">'+d+'</div>';}).join('')+'</div>';let h='';
+  document.getElementById('cal-head-wrap').innerHTML='<div class="cal-head">'+DAYS.map((d,i)=>{var cls='dh';if(i===4)cls+=' sat';if(i===5)cls+=' sun';var st=i<5?'border-right:1px solid rgba(0,0,0,.07);':'';if(i===_todayDi&&_todayDi<6)st+='background:var(--accent);color:#fff;';return'<div class="'+cls+'" style="'+st+'">'+d+'</div>';}).join('')+'</div>';let h='';
   // 자동 접힘(운영자 260705): 이번 주의 남은 표시일이 일요일뿐이면(오늘=일요일, 또는 오늘=월요일→직전 주) 그 주를 접는다.
   //  단 그 일요일에 프로그램 행사(getPerfs)나 홍보 일정(getRecsForDate)이 있으면 접지 않음(운영자 조건).
   //  사용자가 클릭해 펼치면(_weekState='expanded') 재접힘 없음. 월 변경 시 _weekState 리셋으로 자연 소멸.
@@ -14297,11 +14299,11 @@ function renderCal(){
       const key=dk(d),nm=d.getMonth()+1!==currentMonth,td=isToday(d),past=isThisMonth&&isPast(d)&&!td,isSat=di===4,isSun=di===5,isSel=selected===key,recs=nm?[]:getRecsForDate(d);
       // 비-홍보일(자동_일요일 ON 시 일·월) — readonly 느낌으로 옅은 회색
       var _offDay=!nm&&APPLY_SETTINGS&&APPLY_SETTINGS['자동_일요일']&&(d.getDay()===0||d.getDay()===1);
-      let bg='rgba(255,255,255,0.3)';
-      if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';else if(_offDay)bg='var(--off-bg)';
+      let bg='rgba(255,255,255,0)';   // 셀 0%(운영자 확정 조합 260705) — 유리 패널이 톤 담당
+      if(nm)bg='var(--nm-bg)';else if(td)bg='var(--today-bg)';else if(past)bg='var(--past-bg)';   // 일요일 회색(off-bg) 제거 = 일반 셀과 동일(운영자 확정)
       let dnCls='dn';if(nm)dnCls+=' nm';else if(past)dnCls+=' past';else if(isSat)dnCls+=' sat';else if(isSun)dnCls+=' sun';
       var holName=(!nm)?(_holidays[key]||''):'';if(holName)dnCls+=' hol';
-      h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}${_justCopiedDateKey===key?' just-copied-cell':''}" data-cell data-key="${key}" onclick="if(event.target.closest('.perf-badge'))return;clickDate('${key}')" oncontextmenu="if(event.target.closest('.perf-badge'))return;onCellContextMenu(event,'${key}')"${nm?'':` ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid var(--border)':''}${nm?'cursor:default':'cursor:pointer'}">`;
+      h+=`<div class="c cell${nm?' nm':''}${past?' past':''}${td?' today':''}${isSel?' sel':''}${_justCopiedDateKey===key?' just-copied-cell':''}" data-cell data-key="${key}" onclick="if(event.target.closest('.perf-badge'))return;clickDate('${key}')" oncontextmenu="if(event.target.closest('.perf-badge'))return;onCellContextMenu(event,'${key}')"${nm?'':` ondragover="onCellDragOver(event)" ondragleave="onCellDragLeave(event)" ondrop="onCellDrop(event,'${key}')"`} style="background:${bg};${di<5?'border-right:1px solid rgba(0,0,0,.07)':''}${nm?'cursor:default':'cursor:pointer'}">`;
       var perfs=nm?[]:getPerfs(d);var filteredRecs=recs;if(activeFilters.length>0){var allGroups=[{label:'카카오',match:['카카오']},{label:'인스타',match:['인스타']},{label:'블로그·맘카페',match:['블로그','맘카페']},{label:'B2B',match:['B2B']},{label:'문자',match:['문자']}];var activeMatches=[];activeFilters.forEach(function(af){allGroups.forEach(function(g){if(g.label===af)activeMatches=activeMatches.concat(g.match);});});filteredRecs=filteredRecs.filter(function(r){var p=r['플랫폼 1']||'';return activeMatches.some(function(m){return p.indexOf(m)>-1;});});}if(activePrograms.length>0){filteredRecs=filteredRecs.filter(function(r){var prog=r['프로그램']||'';return activePrograms.indexOf(prog)>-1;});}
       // 시간순 정렬 (입력시간 HH:MM 기준)
       filteredRecs=filteredRecs.slice().sort(function(a,b){
