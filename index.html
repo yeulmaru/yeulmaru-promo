@@ -2913,11 +2913,11 @@ const SHEET_CONFIG={
   manager:{
     title:'사용자 관리',
     inlineEdit:true,
-    // ⚠️ 이 배열 순서 = 실제 '담당자' 시트 물리적 컬럼 순서(A~P)와 1:1 매칭.
+    // ⚠️ 이 배열 순서 = 실제 '담당자' 시트 물리적 컬럼 순서(A~Q)와 1:1 매칭.
     // saveSheetRow/saveInlineRow가 positional(A열부터 순서대로)로 저장하므로 절대 순서를 바꾸지 말 것.
-    // A담당부서 B담당자 C직위 D휴직 E홍보 F기관 G공연 H전시 I예술교육 J대관 K PIN L비밀번호 M계정 N관리자 O이메일 P전화번호
+    // A담당부서 B담당자 C직위 D휴직 E홍보 F기관 G공연 H전시 I예술교육 J대관 K PIN L비밀번호 M계정 N관리자 O이메일 P전화번호 Q내선번호
     // (260704: 세로막대형 열 제거로 관리자/이메일이 한 칸 당겨짐 + 기관여부 열 반영 + 이메일 신규)
-    // (260707: P열 전화번호 맨 끝 append — 티켓 등록 신청 담당자 자동 채움용. ⚠️ 시트 P1 헤더 셀에 '전화번호' 기입해야 읽힘)
+    // (260707: P전화번호·Q내선번호 맨 끝 append — 티켓 등록 신청 담당자 자동 채움용. 운영자가 시트에 헤더·값 직접 기입 완료)
     columns:[
       {key:'담당부서',label:'담당부서',type:'text'},
       {key:'담당자',label:'이름',type:'text',required:true},
@@ -2934,7 +2934,8 @@ const SHEET_CONFIG={
       {key:'계정여부',label:'활성',type:'checkbox'},
       {key:'관리자여부',label:'관리자',type:'checkbox'},
       {key:'이메일',label:'이메일',type:'text'},
-      {key:'전화번호',label:'전화번호',type:'text'}
+      {key:'전화번호',label:'전화번호',type:'text'},
+      {key:'내선번호',label:'내선번호',type:'text'}
     ]
   }
 };
@@ -15873,7 +15874,7 @@ var _tktState=null;
 function _tktDefaultState(){
   return {src:'',busy:false,auto:{},paste:'',ocrBusy:false,teamOnly:true,sel:{'공연':'','세금계산서':'','티켓링크':''},
     f:{'제목':'','부제목':'','기간':'','시간':'','장소':'','관람연령':'','러닝타임':'','인터미션':'','장르':'','부가장르':'해당없음','검색키워드':'','할인정보':'','출연':'','후원':'','공연내용':'','오픈일시':'','공지노출':'','마감일시':'','선오픈':'해당 없음','가격요약':'',
-       '담당자명':'','담당자휴대폰':'','담당자이메일':'','세금담당자명':'','세금휴대폰':'','세금이메일':'','티켓링크ID':'','티켓링크이름':'','티켓링크연락처':''},
+       '담당자명':'','담당자휴대폰':'','담당자내선':'','담당자이메일':'','세금담당자명':'','세금휴대폰':'','세금내선':'','세금이메일':'','티켓링크ID':'','티켓링크이름':'','티켓링크연락처':''},
     seats:[{},{},{},{},{},{}].map(function(){return {'등급':'','권종':'','정가':'','석수':'','비고':''};})};
 }
 
@@ -16003,9 +16004,11 @@ function _tktRender(){
   h+='<div style="'+grid2+'">'
     +cInp('담당자명','공연 담당자명','비우면 양식 기본값 유지')
     +cInp('담당자휴대폰','공연 담당자 휴대폰','예: 010-0000-0000')
+    +cInp('담당자내선','공연 담당자 내선(사무실)','예: 061-808-7003')
     +cInp('담당자이메일','공연 담당자 E-mail','')
     +cInp('세금담당자명','세금계산서 담당자명','비우면 양식 기본값 유지')
     +cInp('세금휴대폰','세금계산서 담당자 휴대폰','')
+    +cInp('세금내선','세금계산서 담당자 내선(사무실)','예: 061-808-7007')
     +cInp('세금이메일','세금계산서 담당자 E-mail','')
     +cInp('티켓링크ID','티켓링크 가입 ID','')
     +cInp('티켓링크이름','티켓링크 가입자 이름(기획사명)','예: 홍길동(GS칼텍스 예울마루)')
@@ -16037,9 +16040,9 @@ function _tktPickPerson(which,name){
   if(name){
     var m=((typeof MANAGERS!=='undefined'&&MANAGERS)||[]).filter(function(x){return x&&x['담당자']===name;})[0];
     if(m){
-      var mail=String(m['이메일']||'').trim(),tel=String(m['전화번호']||'').trim();
-      if(which==='공연'){st.f['담당자명']=name;st.f['담당자휴대폰']=tel;st.f['담당자이메일']=mail;}
-      else if(which==='세금계산서'){st.f['세금담당자명']=name;st.f['세금휴대폰']=tel;st.f['세금이메일']=mail;}
+      var mail=String(m['이메일']||'').trim(),tel=String(m['전화번호']||'').trim(),ext=String(m['내선번호']||'').trim();
+      if(which==='공연'){st.f['담당자명']=name;st.f['담당자휴대폰']=tel;st.f['담당자내선']=ext;st.f['담당자이메일']=mail;}
+      else if(which==='세금계산서'){st.f['세금담당자명']=name;st.f['세금휴대폰']=tel;st.f['세금내선']=ext;st.f['세금이메일']=mail;}
       else{st.f['티켓링크ID']=mail;st.f['티켓링크이름']=name+'(GS칼텍스 예울마루)';st.f['티켓링크연락처']=tel;}
       if(!mail&&!tel)showToast(name+' — 직원 이력에 이메일·전화번호가 비어 있어요 (사용자 관리에서 기입)','error');
     }
@@ -16440,12 +16443,13 @@ function _tktBuild(){
         s1=_tktCellRepl(s1,'E36','   ▣ 후원 : '+f['후원'].trim());
         s1=_tktCellRepl(s1,'AA14',_tktFmtKor(f['오픈일시']));
         s1=_tktCellRepl(s1,'AA15',_tktFmtKor(f['마감일시']));
-        // 담당자 연락처(공개 저장소 미보관 — 모달 입력분만 기입, 공란이면 엑셀에서 수기)
+        // 담당자 연락처(공개 저장소 미보관 — 모달 입력분만 기입, 둘 다 공란이면 양식 기본값 유지)
+        var _ct=function(ext,tel){return '사무실: '+ext+'\n휴대폰: '+tel;};
         if(f['담당자명'].trim())s1=_tktCellRepl(s1,'E39',f['담당자명'].trim());
-        s1=_tktCellRepl(s1,'O39','사무실: 061-808-7003\n휴대폰: '+f['담당자휴대폰'].trim());
+        if(f['담당자내선'].trim()||f['담당자휴대폰'].trim())s1=_tktCellRepl(s1,'O39',_ct(f['담당자내선'].trim(),f['담당자휴대폰'].trim()));
         s1=_tktCellRepl(s1,'AA39',f['담당자이메일'].trim());
         if(f['세금담당자명'].trim())s1=_tktCellRepl(s1,'E40',f['세금담당자명'].trim());
-        s1=_tktCellRepl(s1,'O40','사무실: 061-808-7007\n휴대폰: '+f['세금휴대폰'].trim());
+        if(f['세금내선'].trim()||f['세금휴대폰'].trim())s1=_tktCellRepl(s1,'O40',_ct(f['세금내선'].trim(),f['세금휴대폰'].trim()));
         s1=_tktCellRepl(s1,'AA40',f['세금이메일'].trim());
         s1=_tktCellRepl(s1,'E54',f['티켓링크ID'].trim());
         s1=_tktCellRepl(s1,'Q54',f['티켓링크이름'].trim());
