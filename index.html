@@ -86,7 +86,10 @@ button{font-family:inherit;cursor:pointer}
 /* PIN = .pin-slot 안 원(::before, :has로 상태) + 투명 input(숫자 레이어) → 원/숫자 물리 분리로 겹침 소멸.
    nomute .pin-slot 모션 이식(색은 우리 토큰 계승): 빈원 var(--muted) / 채운원·숫자 var(--accent) / 에러 var(--danger). */
 .pin-slot{position:relative;width:42px;height:48px;display:grid;place-items:center}
-.pin-slot::before{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;box-sizing:border-box;border-radius:50%;border:1.5px solid var(--muted);background:transparent;opacity:.8;transform:translate(-50%,-50%);transition:background .18s ease,border-color .18s ease,opacity .18s ease,transform .18s ease}
+.pin-slot::before{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;box-sizing:border-box;border-radius:50%;border:1.5px solid var(--dim);background:transparent;opacity:1;transform:translate(-50%,-50%);transition:background .18s ease,border-color .18s ease,opacity .18s ease,transform .18s ease}
+/* MS 인증 리로드 복귀(_resumePin) 첫 프레임 — 카드 등장 애니 재생 + 빈 카드→'인증 확인 중' 교체 번쩍임 억제 (운영자 260707) */
+.rp .login-card{animation:none}
+.rp #account-step:empty::before{content:'Microsoft 인증 확인 중...';display:block;color:var(--dim);font-size:13px;padding:24px 0;text-align:center}
 .pin-slot:has(.pin.filled)::before{background:var(--accent);border-color:var(--accent)}
 .pin-slot:has(.pin.lit)::before{opacity:0;transform:translate(-50%,-50%) scale(.4)}
 .pin-slot:has(.pin.err)::before{border-color:var(--danger)}
@@ -1546,6 +1549,8 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .fbar-chip.on input{accent-color:#fff}
 .fbar-chip.lock{cursor:not-allowed;opacity:.85}
 </style>
+  <!-- MS 인증 복귀 리로드(_resumePin) 표식 — 첫 페인트 전에 클래스만 심어 로그인 카드 번쩍임 억제(위 .rp CSS와 쌍) -->
+  <script>try{if(localStorage.getItem('_resumePin'))document.documentElement.classList.add('rp');}catch(e){}</script>
   <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) — 공식 docs 권장 이중 fallback -->
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
   <script>
@@ -2155,6 +2160,7 @@ pins.forEach((el,i)=>{
   var _fill=function(){el.type='password';el.classList.remove('lit');el.classList.add('filled');};
   el.addEventListener('input',()=>{
     el.classList.remove('err');
+    if(el.value)el.value=el.value.replace(/\D/g,''); // 숫자만 — inputmode는 모바일 키패드용이라 데스크톱 물리 키보드는 여기서 걸러냄
     if(el.value){ el.type='text'; el.classList.add('lit'); el.classList.remove('filled'); clearTimeout(el._at); el._at=setTimeout(_fill,2000); }  // 입력 순간: 코발트 숫자 노출
     else { el.type='password'; el.classList.remove('lit','filled'); clearTimeout(el._at); }                                                       // 지우면: 빈 동그라미
     if(el.value.length===1&&i<3)pins[i+1].focus();
