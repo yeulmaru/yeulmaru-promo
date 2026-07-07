@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>260707 티켓 등록 신청 — PPT→판매대행의뢰서 자동 생성</title>
+<style>
+:root{--accent:#4A4DE7;--accent-light:#E8E8FD;--peach-text:#D88455;--green:#1A6B3C;--danger:#e5484d;--text:#1A1A2E;--dim:#888;--border:rgba(0,0,0,0.09);--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--text);background:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);min-height:100vh;padding:40px 20px;line-height:1.65;font-size:14px}
+.wrap{max-width:960px;margin:0 auto}
+.card{background:rgba(255,255,255,.82);border:1px solid var(--border);border-radius:var(--radius);padding:26px 30px;margin-bottom:18px;box-shadow:0 8px 32px rgba(74,77,231,.08)}
+h1{font-size:21px;margin-bottom:6px}
+h2{font-size:16px;color:var(--accent);margin:0 0 12px}
+h3{font-size:14px;margin:16px 0 6px}
+.meta{color:var(--dim);font-size:12px;margin-bottom:22px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
+th{text-align:left;padding:8px 10px;background:var(--accent-light);font-weight:700;font-size:12px}
+td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code{background:rgba(74,77,231,.08);padding:1px 6px;border-radius:5px;font-size:12px;font-family:Consolas,monospace}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;margin-right:4px}
+.tag.auto{background:rgba(26,107,60,.1);color:var(--green)}
+.tag.input{background:rgba(216,132,85,.14);color:var(--peach-text)}
+.tag.fix{background:var(--accent-light);color:var(--accent)}
+.ok{color:var(--green);font-weight:700}
+.warn{color:var(--peach-text);font-weight:700}
+.danger{color:var(--danger);font-weight:700}
+ul{padding-left:20px}
+li{margin:4px 0}
+.flow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;font-weight:600;margin:12px 0}
+.flow .step{background:#fff;border:1.5px solid var(--accent);color:var(--accent);border-radius:10px;padding:8px 14px}
+.flow .arr{color:var(--dim)}
+.note{background:rgba(216,132,85,.08);border-left:3px solid var(--peach-text);padding:10px 14px;border-radius:0 10px 10px 0;font-size:12.5px;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎫 티켓 등록 신청 — 운영계획 PPT → 티켓링크 판매대행의뢰서 자동 생성</h1>
+<div class="meta">260707 · 일정 관리 ▸ 티켓 등록 신청 · index.html + reference/ticketlink_template.xlsx · PR #136</div>
+
+<div class="card">
+<h2>1. 뭘 만들었나 (한 줄)</h2>
+<p><b>공연 운영계획(안) PPT를 모달에 끌어다 놓으면</b> 공연 개요·가격 정책·할인 정책을 자동으로 읽어 폼을 채우고, 부족한 항목(오픈 일시 등)만 직접 입력하면 <b>NHN티켓링크 판매대행 의뢰서(xlsx)가 원본 서식 그대로 채워져 다운로드</b>된다.</p>
+<div class="flow">
+<span class="step">일정 관리 ▸ 🎫 티켓 등록 신청</span><span class="arr">→</span>
+<span class="step">PPT 업로드 (자동 채움 12항목)</span><span class="arr">→</span>
+<span class="step">부족분 입력 (오픈일시 등)</span><span class="arr">→</span>
+<span class="step">의뢰서 엑셀 다운로드</span>
+</div>
+<p style="font-size:12.5px;color:var(--dim)">데이터는 어디에도 저장 안 함(시트·서버 무관) — 브라우저 안에서만 변환. 같은 PPT 양식(운영계획안)이면 어떤 공연이든 동작.</p>
+</div>
+
+<div class="card">
+<h2>2. 필드 매핑 — 뭐가 자동이고 뭐가 입력인가</h2>
+<h3><span class="tag auto">PPT 자동</span> 12항목</h3>
+<table>
+<tr><th>엑셀 위치</th><th>필드</th><th>PPT 소스</th></tr>
+<tr><td>시트1 G4</td><td>제목</td><td>「공연명 :」 줄</td></tr>
+<tr><td>시트1 G6·G7</td><td>공연 기간·시간</td><td>「일시 :」 줄 (기간/회차 분리 파싱)</td></tr>
+<tr><td>시트1 G8</td><td>공연 장소</td><td>「장소 :」 (극장명만 오면 예울마루 접두)</td></tr>
+<tr><td>시트1 AA6·AB7·AA8</td><td>관람연령·러닝타임·인터미션</td><td>「관람 연령/관람 시간」 줄</td></tr>
+<tr><td>시트1 장르 드롭다운 + 시트2 장르 체크박스</td><td>장르</td><td>제목·표지 키워드 추정 (뮤지컬/클래식…)</td></tr>
+<tr><td>시트1 E23~AA28 (6행)</td><td>좌석 등급·정가·판매좌석 수</td><td>「좌석 등급 및 회당 총 매출액」 표 + 각주의 유보석·장애인석·미오픈 수</td></tr>
+<tr><td>시트1 E30</td><td>할인 정보</td><td>「할인정책」 표 → [1]플랫폼/[2]특별 서식으로 조립</td></tr>
+<tr><td>시트2 D11</td><td>티켓 가격 요약</td><td>「티켓 가격 :」 줄 (만원 단위 축약)</td></tr>
+<tr><td>시트2 D18</td><td>공연 내용</td><td>「1) 공연내용」 도형의 불릿</td></tr>
+<tr><td>시트5 D3·D4·D5</td><td>공연명·기간·장르</td><td>위 값 복제</td></tr>
+</table>
+<h3><span class="tag input">직접 입력</span> (PPT에 없는 항목 — 모달 입력창)</h3>
+<p>판매 오픈 일시(필수) · 공지 노출 일시 · 판매 마감 일시 · 티켓링크 선오픈 · 출연 · 후원/협찬 · 검색키워드 · 부제목 · <b>기획사 담당자 연락처 8칸(선택)</b>. 자동 채움된 값도 전부 입력창에 노출돼 생성 전 수정 가능.</p>
+<h3><span class="tag fix">양식 고정</span> (입력 불필요 — 템플릿에 이미)</h3>
+<p>기획사 정보(기획사명·대표자·사업자번호·담당자명·정산 문구·주소)·관리자 페이지 URL·주최/주관/문의·수수료율·체크박스 상태(회사 표준)·작성일(오늘 자동). 단 <b>개인 연락처(휴대폰·이메일·티켓링크 ID)는 공개 저장소 위생 때문에 템플릿에서 뺐다</b> — 모달의 「기획사 담당자 연락처」에 입력하면 기입되고, 비우면 다운로드 후 엑셀 38~40·54행에 직접 채우면 된다.</p>
+</div>
+
+<div class="card">
+<h2>3. 왜 이렇게 만들었나 (설계 결정)</h2>
+<ul>
+<li><b>zip 레벨 셀 패치</b> — 의뢰서엔 체크박스 폼 컨트롤 81개·메모 10개·병합 300여 개·수식이 있다. SheetJS/ExcelJS로 재생성하면 이게 다 날아가서, 템플릿 xlsx(zip)의 XML에서 대상 셀 값만 문자열 치환한다. 원본 120개 엔트리 무손실.</li>
+<li><b>시트2는 수식 캐시 갱신</b> — 공지문(시트2)의 제목·기간·시간·장소·협찬·기타정보는 시트1 참조 수식. 수식은 보존하고 캐시 값만 갈아끼우며, <code>fullCalcOnLoad</code>를 켜서 엑셀이 열 때 재계산하게 했다(미리보기 앱 대비 이중 안전).</li>
+<li><b>장르 = 드롭다운 sel + 체크박스 checked 패치</b> — 시트1 장르는 폼 콤보(선택 인덱스), 시트2 장르는 체크박스 8개. 둘 다 VML과 ctrlProp 양쪽을 동기 패치.</li>
+<li><b>템플릿은 공연별 셀만 공란화</b> — 업로드해준 조재혁 완성본에서 공연 정보만 비우고 회사 보일러플레이트·체크 상태는 보존. <code>reference/ticketlink_template.xlsx</code>로 커밋(gitignore 좁은 예외).</li>
+<li><b>JSZip은 지연 로드</b> — 차트(plotly)와 같은 패턴. 티켓 기능을 안 쓰면 로드 안 됨(기존 화면 성능 영향 0).</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>4. 검증</h2>
+<table>
+<tr><th>검증</th><th>방법</th><th>결과</th></tr>
+<tr><td>패치 알고리즘</td><td>Python으로 동일 로직 선구현 → openpyxl read-back</td><td class="ok">PASS</td></tr>
+<tr><td>E2E (실제 PPT)</td><td>Playwright 헤드리스: 러커스 PPT 업로드 → 12필드 프리필 검증 → 생성 → openpyxl·zip 재검증 (셀 20종·드롭다운 sel·체크박스·수식 캐시·fullCalcOnLoad·120엔트리 무손실)</td><td class="ok">PASS</td></tr>
+<tr><td>디자인 게이트</td><td>tools/check_design.py — 새 raw hex 0</td><td class="ok">1642/1642</td></tr>
+<tr><td>문법</td><td>node --check 3 스크립트 블록</td><td class="ok">PASS</td></tr>
+<tr><td>분신술 5인</td><td>파서 견고성 · xlsx 무결성 · UI 기틀 · 회귀 · 보안/엣지 (READ-ONLY 병렬)</td><td class="ok">4 APPROVE + 1 REJECT → 전건 수정 → 재검증 2인 APPROVE</td></tr>
+</table>
+<h3>분신술이 잡아낸 것 → 전부 반영</h3>
+<table>
+<tr><th>심각도</th><th>지적</th><th>조치</th></tr>
+<tr><td class="danger">HIGH</td><td>템플릿에 티켓링크 계정 ID(개인 이메일)·소유자 휴대폰·담당자 휴대폰 2건·이메일 2건이 남고, 셀을 비워도 공유문자열·mailto 링크·저장경로 메타에 잔존 — 공개 레포 커밋 부적합</td><td>zip 내부 5개 파일(시트·sharedStrings·rels·workbook·docProps) 심층 스크럽 + 커밋 amend(미push라 히스토리 무오염) + 모달 「담당자 연락처」 선택 입력 신설</td></tr>
+<tr><td class="warn">MED</td><td>관람연령 파서가 "전체관람가"→"전체가"로 훼손 · "만 7세"에서 만 잔존</td><td>특례·꼬리 제거 방식으로 재작성 + 단위 테스트 7케이스</td></tr>
+<tr><td class="warn">MED</td><td>공지 노출 체크박스(즉시/일시선택)가 입력값과 불일치 가능</td><td>공지 노출 일시 입력 여부에 따라 양쪽(VML+ctrlProp) 동기화</td></tr>
+<tr><td class="warn">MED</td><td>초대형 pptx 무가드(탭 프리즈) · JSZip CDN 실패 시 생성 버튼 busy 고착</td><td>50MB 가드 + 로더 실패를 콜백에 전파해 버튼 복구</td></tr>
+<tr><td>LOW</td><td>할인표를 매출표로 오인 가능 · 파일명 제어/BiDi 문자 · 생성 중 모달 닫힘 · XML 제어문자 · 가격열 '금액' 변형</td><td>헤더 판정 강화 · 정화 정규식 · 세대 가드 · 제어문자 스트립 · 금액 폴백 — 전부 반영</td></tr>
+</table>
+<p style="font-size:12px;color:var(--dim)">E2E에서도 실버그 1건 검출·수정(공지 노출 일시 포맷 "15 (수)"→"15(수)"). 유지 판단: 시트2 공지분류(단독판매/해당없음) 체크는 선오픈과 별개 개념이라 회사 표준(해당없음)으로 고정 — 단독판매 공지가 생기면 엑셀에서 직접 토글.</p>
+</div>
+
+<div class="card">
+<h2>5. 한계·운영 노트</h2>
+<ul>
+<li><b>PPT 양식 전제</b> — 「공연명/일시/장소/티켓 가격/관람 시간/관람 연령 :」 키-값 줄과 좌석·할인 표가 있는 운영계획(안) 포맷. 벗어나면 해당 항목만 빈칸으로 남고 직접 입력하면 된다(모달이 죽지 않음).</li>
+<li><b>좌석 등급 6행 고정</b> — 양식 자체가 6행. 넘치면 엑셀 4번 시트(등급 및 권종)에 수기.</li>
+<li><b>시트1 체크박스 51개는 회사 표준 고정</b> — 조재혁 실제 제출본의 상태를 계승(잔여석 노출·클린예매·문화비 소득공제 등). 공연마다 바뀌는 값이 생기면 엑셀에서 직접 토글.</li>
+<li><b>시트5(현장 지원)</b> — 공연명·기간·장르만 자동, 나머지는 티켓링크와 협의 후 수기(원본도 공란 제출).</li>
+<li><b>개인정보 위생(해결)</b> — 템플릿에서 개인 휴대폰 3건·이메일 2건·티켓링크 ID·저장경로 메타를 전수 제거(공유문자열·하이퍼링크 잔재 포함). 유지 = 이름(공문 수준)·사무실 국번·사업자번호(공부 정보)·주소. 매 생성 시 담당자 연락처가 필요하면 모달에 입력하거나 엑셀에서 채우는 구조 — <b>완성본과 100% 동일하게 나오게 하려면 이 값들을 어딘가 박아야 하는데, 공개 레포엔 부적합해서 이렇게 갔다. 다른 방식 원하면 말해줘.</b></li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

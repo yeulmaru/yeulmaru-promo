@@ -11,6 +11,8 @@ wrangler.toml
 *.doc
 *.pptx
 *.ppt
+# 예외: 티켓 등록 신청 기능의 의뢰서 템플릿 (앱 런타임 에셋 — 데이터 마스터 아님, PIN/비번 없음)
+!reference/ticketlink_template.xlsx
 
 # Backup / old files
 *.old-*

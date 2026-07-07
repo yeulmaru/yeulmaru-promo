@@ -501,7 +501,7 @@ button{font-family:inherit;cursor:pointer}
   .yc-ex-end{flex-direction:column !important}
   .yc-ex-end-v{display:none !important}
   /* (Phase B) 현황 보드 모달 — 풀스크린 */
-  #sales-board .modal,#business-board .modal,#platform-board .modal,#nblog-board .modal,#analytics-board .modal{width:100vw !important;max-width:100vw !important;height:100vh !important;max-height:100vh !important;border-radius:0 !important}
+  #sales-board .modal,#business-board .modal,#platform-board .modal,#nblog-board .modal,#analytics-board .modal,#tkt-board .modal{width:100vw !important;max-width:100vw !important;height:100vh !important;max-height:100vh !important;border-radius:0 !important}
   /* (Phase B) 가독성 — 작은 글씨 바닥 올리기 */
   .modal label{font-size:12px}
   .mv-row{font-size:14px}
@@ -15845,13 +15845,524 @@ function _scheduleMenuBuild(menu){
   var itemCss='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s';
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">일정</div>'
     +'<button type="button" onclick="_ddCloseAll();openBatchWizard()" style="'+itemCss+';background:rgba(74,77,231,0.06)" onmouseenter="this.style.background=\'rgba(74,77,231,0.12)\'" onmouseleave="this.style.background=\'rgba(74,77,231,0.06)\'"><span style="font-size:16px">📋</span><span style="flex:1">일정 등록</span><span style="font-size:10px;color:var(--accent);font-weight:700">기본</span></button>'
-    +'<button type="button" onclick="_ddCloseAll();openPromoBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📅</span>일정 확인</button>';
+    +'<button type="button" onclick="_ddCloseAll();openPromoBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📅</span>일정 확인</button>'
+    +'<button type="button" onclick="_ddCloseAll();openTicketReg()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">🎫</span><span style="flex:1">티켓 등록 신청</span><span style="font-size:10px;color:var(--dim);font-weight:600">PPT→엑셀</span></button>';
 }
 function _contentMenuBuild(menu){
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">콘텐츠 제작</div>'
     +'<button type="button" onclick="_ddCloseAll();openNaverBlogTool()" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;background:none;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📝</span>네이버 블로그</button>'
     +'<div style="padding:7px 14px 4px;font-size:10.5px;color:#c4c4c4;line-height:1.5">인스타그램 등 다른 채널은 차차 추가할 예정이에요.</div>';
 }
+
+// === [260707] 티켓 등록 신청 — 운영계획(안) PPT → 티켓링크 판매대행의뢰서 xlsx 자동 생성 ===
+// 흐름: 일정 관리 ▸ 티켓 등록 신청 → 모달에서 PPT 업로드(자동 채움) + 부족분 직접 입력 → 템플릿 xlsx(zip)를
+//       셀 단위로 패치해 다운로드. 시트 서식·체크박스(폼 컨트롤)·수식을 보존하려고 라이브러리 재생성 대신
+//       zip 레벨 텍스트 패치를 쓴다(시트2 제목·기간·시간·장소·협찬·기타정보는 시트1 참조 수식 → 캐시만 갱신).
+// 데이터는 어디에도 저장 안 함(시트·서버 무관) — 순수 클라이언트 변환. 템플릿 = reference/ticketlink_template.xlsx
+var _TKT_TEMPLATE_URL='reference/ticketlink_template.xlsx';
+var _TKT_GENRES=['뮤지컬','콘서트','연극','클래식/무용','가족&아동','전시/축제','레저/체험','e스포츠/게임'];
+var _TKT_GENRE_SEL={'뮤지컬':2,'콘서트':3,'연극':4,'클래식/무용':5,'가족&아동':6,'전시/축제':7,'레저/체험':8,'e스포츠/게임':9}; // 시트1 장르 드롭다운($AK$2:$AK$10) 1-base 인덱스
+var _TKT_SUB_SEL={'해당없음':1,'대학로':2,'가족&아동':3}; // 부가장르($AL$2:$AL$4)
+// 시트2 장르 체크박스: VML 라벨 ↔ ctrlProp 파일 (템플릿 고정 자산 실측 매핑 — shapeId 2049.. → ctrlProp54..)
+var _TKT_S2_CTRL={'뮤지컬':'ctrlProp54','연극':'ctrlProp55','클래식/무용':'ctrlProp56','콘서트':'ctrlProp57','레저/체험':'ctrlProp58','전시/축제':'ctrlProp59','e스포츠/게임':'ctrlProp62','가족&아동':'ctrlProp63'};
+var _TKT_SEAT_ROWS=[23,24,25,26,27,28]; // 시트1 좌석등급 행 (템플릿 6행 고정 — 넘치면 4번 시트에 수기)
+var _tktState=null;
+
+function _tktDefaultState(){
+  return {src:'',busy:false,auto:{},
+    f:{'제목':'','부제목':'','기간':'','시간':'','장소':'','관람연령':'','러닝타임':'','인터미션':'','장르':'','부가장르':'해당없음','검색키워드':'','할인정보':'','출연':'','후원':'','공연내용':'','오픈일시':'','공지노출':'','마감일시':'','선오픈':'해당 없음','가격요약':'',
+       '담당자명':'','담당자휴대폰':'','담당자이메일':'','세금담당자명':'','세금휴대폰':'','세금이메일':'','티켓링크ID':'','티켓링크이름':'','티켓링크연락처':''},
+    seats:[{},{},{},{},{},{}].map(function(){return {'등급':'','권종':'','정가':'','석수':'','비고':''};})};
+}
+
+// ── JSZip 지연 로드 (plotly 패턴 계승) — 실패 시 대기 콜백에 에러 전파(호출부 busy 복구 보장) ──
+function _tktEnsureJSZip(cb){
+  if(window.JSZip){cb();return;}
+  if(window._jszipQ){window._jszipQ.push(cb);return;}
+  window._jszipQ=[cb];
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+  s.onload=function(){var q=window._jszipQ||[];window._jszipQ=null;q.forEach(function(f){try{f();}catch(e){console.error('[tkt]',e);}});};
+  s.onerror=function(){var q=window._jszipQ||[];window._jszipQ=null;var st=document.getElementById('tkt-src-status');if(st)st.textContent='라이브러리 로드 실패 — 네트워크 확인 후 재시도';q.forEach(function(f){try{f(new Error('jszip load fail'));}catch(e){console.error('[tkt]',e);}});};
+  document.head.appendChild(s);
+}
+
+// ── 모달 열기/닫기 ──
+function openTicketReg(){
+  var el=document.getElementById('tkt-board');
+  if(!el){el=document.createElement('div');el.id='tkt-board';document.body.appendChild(el);}
+  _tktState=_tktDefaultState(); // 매번 새로 — 공용 PC에서 이전 입력 노출 방지(콘텐츠 제작과 동일 원칙)
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeTicketReg)">'
+    +'<div class="modal" style="width:96vw;max-width:900px;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden">'
+    +'<button class="modal-x" onclick="closeTicketReg()" title="닫기" style="position:absolute;top:14px;right:14px;z-index:10;float:none;margin:0">✕</button>'
+    +'<div style="padding:18px 24px;border-bottom:1px solid var(--border);font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">🎫 <span>티켓 등록 신청</span><span style="font-size:11px;font-weight:600;color:var(--dim)">운영계획 PPT → 티켓링크 판매대행 의뢰서(엑셀)</span></div>'
+    +'<div id="tkt-body" style="flex:1;overflow:auto;padding:20px 24px;min-height:0"></div>'
+    +'</div></div>';
+  _tktRender();
+}
+function closeTicketReg(){
+  _tktState=null; // 입력 내용 파기
+  var el=document.getElementById('tkt-board');if(el)el.innerHTML='';
+}
+
+// ── 렌더 ──
+function _tktLabel(key,txt,req){
+  var badge=_tktState.auto[key]?' <span style="color:var(--green);font-weight:700;text-transform:none;letter-spacing:0">· PPT 자동</span>':'';
+  return '<label>'+txt+(req?'<span class="req">*</span>':'')+badge+'</label>';
+}
+function _tktRender(){
+  var b=document.getElementById('tkt-body');if(!b||!_tktState)return;
+  var st=_tktState,f=st.f;
+  var h='';
+  // 0) PPT 업로드 존
+  h+='<div id="tkt-drop" ondragover="event.preventDefault();this.style.background=\'rgba(74,77,231,0.06)\'" ondragleave="this.style.background=\'none\'" ondrop="_tktOnDrop(event)" style="border:1.5px dashed var(--accent);border-radius:var(--r-pop);padding:16px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background .15s" onclick="if(event.target.id!==\'tkt-file\')document.getElementById(\'tkt-file\').click()">'
+    +'<span style="font-size:26px">📑</span>'
+    +'<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--accent)">운영계획(안) PPT를 끌어다 놓거나 클릭해서 선택</div>'
+    +'<div id="tkt-src-status" style="font-size:12px;color:var(--dim);margin-top:3px">'+(st.src?('📌 '+escapeHtml(st.src)+' — 자동 채움 완료 (아래 값 확인·수정)'):'공연 개요·가격 정책·할인 정책을 읽어 자동으로 칸을 채워요. PPT 없이 직접 입력해도 돼요.')+'</div></div>'
+    +'<input type="file" id="tkt-file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="display:none;width:auto" onchange="_tktOnFile(this)">'
+    +'</div>';
+  var sec='font-size:12px;font-weight:800;color:var(--accent);margin:20px 0 2px;display:flex;align-items:center;gap:6px';
+  var grid2='display:grid;grid-template-columns:1fr 1fr;gap:0 14px';
+  var grid4='display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0 14px';
+  var inp=function(key,req,ph,type){return _tktLabel(key,key,req)+'<input type="'+(type||'text')+'" value="'+escapeHtml(f[key])+'" placeholder="'+escapeHtml(ph||'')+'" oninput="_tktIn(\''+key+'\',this.value)">';};
+  // 1) 공연 정보
+  h+='<div style="'+sec+'">공연 정보</div><div style="'+grid2+'">'
+    +'<div>'+inp('제목',1,'예: 뮤지컬 <러커스 더 스쿨>')+'</div>'
+    +'<div>'+inp('부제목',0,'없으면 비워두기')+'</div>'
+    +'<div>'+_tktLabel('장르','장르',1)+'<select onchange="_tktIn(\'장르\',this.value)"><option value="">선택</option>'+_TKT_GENRES.map(function(g){return '<option'+(f['장르']===g?' selected':'')+'>'+g+'</option>';}).join('')+'</select></div>'
+    +'<div>'+_tktLabel('부가장르','부가장르',0)+'<select onchange="_tktIn(\'부가장르\',this.value)">'+Object.keys(_TKT_SUB_SEL).map(function(g){return '<option'+(f['부가장르']===g?' selected':'')+'>'+g+'</option>';}).join('')+'</select></div>'
+    +'<div>'+inp('기간',1,'예: 2026년 11월 26일(목) ~ 2026년 11월 28일(토)')+'</div>'
+    +'<div>'+inp('시간',1,'예: 목 11:00, 14:30 / 토 14:00 (총 6회)')+'</div>'
+    +'<div>'+inp('장소',1,'예: GS칼텍스 예울마루 대극장')+'</div>'
+    +'<div style="'+grid4.replace('1fr 1fr 1fr 1fr','1fr 1fr 1fr')+'">'
+      +'<div>'+inp('관람연령',0,'예: 초등학생')+'</div>'
+      +'<div>'+inp('러닝타임',0,'예: 약 75')+'</div>'
+      +'<div>'+inp('인터미션',0,'예: 20 / 없음')+'</div>'
+    +'</div></div>';
+  // 2) 티켓 오픈 일정
+  h+='<div style="'+sec+'">티켓 오픈 일정 <span style="font-weight:600;color:var(--dim)">— PPT에 없는 항목이라 직접 입력이 필요해요</span></div><div style="'+grid4+'">'
+    +'<div>'+_tktLabel('오픈일시','판매 오픈 일시',1)+'<input type="datetime-local" value="'+escapeHtml(f['오픈일시'])+'" oninput="_tktIn(\'오픈일시\',this.value)"></div>'
+    +'<div>'+_tktLabel('공지노출','공지 노출 일시',0)+'<input type="datetime-local" value="'+escapeHtml(f['공지노출'])+'" oninput="_tktIn(\'공지노출\',this.value)"></div>'
+    +'<div>'+_tktLabel('마감일시','판매 마감 일시',0)+'<input type="datetime-local" value="'+escapeHtml(f['마감일시'])+'" oninput="_tktIn(\'마감일시\',this.value)"></div>'
+    +'<div>'+_tktLabel('선오픈','티켓링크 선오픈',0)+'<input type="text" value="'+escapeHtml(f['선오픈'])+'" oninput="_tktIn(\'선오픈\',this.value)"></div>'
+    +'</div>';
+  // 3) 좌석 등급·가격
+  h+='<div style="'+sec+'">좌석 등급 · 가격 <span style="font-weight:600;color:var(--dim)">— 최대 6행(양식 고정), 넘치면 엑셀 4번 시트에 수기</span></div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px">'
+    +'<tr>'+['등급','권종','정가(원)','판매좌석 수','비고'].map(function(c){return '<th style="text-align:left;font-size:11px;color:var(--dim);font-weight:700;padding:6px 4px;border-bottom:1px solid var(--border2)">'+c+'</th>';}).join('')+'</tr>'
+    +st.seats.map(function(s,i){
+      var cell=function(k,w,ph){return '<td style="padding:3px 2px"><input type="text" value="'+escapeHtml(s[k])+'" placeholder="'+(ph||'')+'" oninput="_tktSeatIn('+i+',\''+k+'\',this.value)" style="width:'+w+';padding:7px 9px;font-size:12.5px"></td>';};
+      return '<tr>'+cell('등급','72px',i===0?'전석':'')+cell('권종','96px',i===0?'일반석':'')+cell('정가','96px',i===0?'50000':'')+cell('석수','88px','')+cell('비고','100%','')+'</tr>';
+    }).join('')+'</table></div>';
+  // 4) 할인·가격 요약
+  h+='<div style="'+sec+'">할인 정보</div>'
+    +_tktLabel('가격요약','티켓 가격 요약 (오픈 공지문용)',0)+'<input type="text" value="'+escapeHtml(f['가격요약'])+'" placeholder="예: R석 6만원, S석 4만원" oninput="_tktIn(\'가격요약\',this.value)">'
+    +_tktLabel('할인정보','할인 정보 (의뢰서·공지문 공용)',0)+'<textarea rows="6" oninput="_tktIn(\'할인정보\',this.value)" placeholder="PPT 할인정책 표에서 자동으로 만들어져요">'+escapeHtml(f['할인정보'])+'</textarea>';
+  // 5) 기타
+  h+='<div style="'+sec+'">기타 정보</div><div style="'+grid2+'">'
+    +'<div>'+inp('출연',0,'예: 피아니스트 조재혁')+'</div>'
+    +'<div>'+inp('후원',0,'없으면 비워두기 (공지문 협찬 칸과 공용)')+'</div>'
+    +'</div>'
+    +inp('검색키워드',0,'예: 러커스, 청소년 뮤지컬 (쉼표로 구분)')
+    +_tktLabel('공연내용','공연 내용 (오픈 공지문)',0)+'<textarea rows="5" oninput="_tktIn(\'공연내용\',this.value)" placeholder="PPT 공연소개에서 자동으로 채워져요">'+escapeHtml(f['공연내용'])+'</textarea>';
+  // 5.5) 담당자 연락처 — 공개 저장소에 안 담아둔 개인 항목(비우면 다운로드 후 엑셀에서 수기)
+  var cInp=function(key,label,ph){return '<div>'+_tktLabel(key,label,0)+'<input type="text" value="'+escapeHtml(f[key])+'" placeholder="'+escapeHtml(ph||'')+'" oninput="_tktIn(\''+key+'\',this.value)"></div>';};
+  h+='<div style="'+sec+'">기획사 담당자 연락처 <span style="font-weight:600;color:var(--dim)">— 개인정보라 양식에 안 담아둔 항목 · 비우면 다운로드 후 엑셀 38~40·54행에 직접</span></div><div style="'+grid2+'">'
+    +cInp('담당자명','공연 담당자명','비우면 양식 기본값 유지')
+    +cInp('담당자휴대폰','공연 담당자 휴대폰','예: 010-0000-0000')
+    +cInp('담당자이메일','공연 담당자 E-mail','')
+    +cInp('세금담당자명','세금계산서 담당자명','비우면 양식 기본값 유지')
+    +cInp('세금휴대폰','세금계산서 담당자 휴대폰','')
+    +cInp('세금이메일','세금계산서 담당자 E-mail','')
+    +cInp('티켓링크ID','티켓링크 가입 ID','')
+    +cInp('티켓링크이름','티켓링크 가입자 이름(기획사명)','예: 홍길동(GS칼텍스 예울마루)')
+    +cInp('티켓링크연락처','티켓링크 가입자 연락처','')
+    +'</div>';
+  // 6) 푸터
+  h+='<div style="margin-top:18px;padding:12px 14px;background:var(--accent-light);border-radius:var(--r-btn);font-size:11.5px;color:var(--text);line-height:1.6">ℹ️ 기획사 정보·정산·수수료·관리자 페이지 등 회사 고정 항목과 체크박스 상태는 양식에 이미 채워져 있어요. 생성 후 엑셀에서 최종 확인만 하면 돼요. <b>작성일은 오늘 날짜로 자동 기입.</b></div>'
+    +'<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">'
+    +'<button class="btn btn--md btn--neutral" onclick="closeTicketReg()">닫기</button>'
+    +'<button id="tkt-gen" class="btn btn--md btn--primary" onclick="_tktBuild()">'+(st.busy?'생성 중…':'의뢰서 엑셀 생성 ⬇')+'</button>'
+    +'</div>';
+  b.innerHTML=h;
+}
+function _tktIn(k,v){if(_tktState)_tktState.f[k]=v;}
+function _tktSeatIn(i,k,v){if(_tktState)_tktState.seats[i][k]=v;}
+
+// ── PPT 업로드 → 파싱 ──
+function _tktOnDrop(e){
+  e.preventDefault();e.stopPropagation();
+  var dz=document.getElementById('tkt-drop');if(dz)dz.style.background='none';
+  var file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(file)_tktParseFile(file);
+}
+function _tktOnFile(input){
+  var file=input&&input.files&&input.files[0];if(!file)return;input.value='';
+  _tktParseFile(file);
+}
+function _tktParseFile(file){
+  if(!/\.pptx$/i.test(file.name)){showToast('pptx 파일만 읽을 수 있어요 (ppt는 pptx로 저장 후 업로드)','error');return;}
+  if(file.size>50*1024*1024){showToast('파일이 너무 커요(50MB 제한) — 이미지를 줄여 다시 저장해 주세요','error');return;}
+  var stEl=document.getElementById('tkt-src-status');if(stEl)stEl.textContent='읽는 중…';
+  var _st=_tktState; // 세대 가드 — 모달 닫힘/재열림 후 늦게 도착한 결과 폐기
+  _tktEnsureJSZip(function(err){
+    if(err)return; // 로더가 상태문구 표시 완료
+    JSZip.loadAsync(file).then(function(zip){
+      var names=Object.keys(zip.files).filter(function(n){return /^ppt\/slides\/slide\d+\.xml$/.test(n);})
+        .sort(function(a,b){return parseInt(a.match(/\d+/)[0],10)-parseInt(b.match(/\d+/)[0],10);});
+      return Promise.all(names.map(function(n){return zip.file(n).async('string');}));
+    }).then(function(xmls){
+      if(_st!==_tktState)return;
+      var slides=xmls.map(_tktSlideParse);
+      var got=_tktExtract(slides);
+      Object.keys(got.f).forEach(function(k){if(got.f[k]!==''){_tktState.f[k]=got.f[k];_tktState.auto[k]=true;}});
+      if(got.seats.length){_tktState.seats=_tktDefaultState().seats;got.seats.slice(0,6).forEach(function(s,i){_tktState.seats[i]=s;});_tktState.auto['좌석']=true;}
+      _tktState.src=file.name;
+      _tktRender();
+      var need=['오픈일시'].concat(_tktState.f['제목']?[]:['제목']).concat(_tktState.f['장르']?[]:['장르']);
+      showToast('PPT에서 '+Object.keys(_tktState.auto).length+'개 항목 자동 채움 — '+need.join('·')+' 입력 후 생성하세요','success');
+    }).catch(function(e){
+      console.error('[tkt parse]',e);
+      if(_st!==_tktState)return;
+      var el=document.getElementById('tkt-src-status');if(el)el.textContent='읽기 실패 — 파일이 pptx가 맞는지 확인 (직접 입력은 가능)';
+      showToast('PPT를 읽지 못했어요 — 직접 입력으로 진행 가능','error');
+    });
+  });
+}
+// 슬라이드 XML → {lines:[문단], bodies:[[문단]], tables:[[[셀]]]} (표 안 텍스트는 lines에서 제외)
+function _tktSlideParse(xml){
+  var A='http://schemas.openxmlformats.org/drawingml/2006/main';
+  var P='http://schemas.openxmlformats.org/presentationml/2006/main';
+  var doc=new DOMParser().parseFromString(xml,'application/xml');
+  var paraText=function(p){
+    var out='';
+    var walk=function(n){
+      for(var c=n.firstChild;c;c=c.nextSibling){
+        if(c.nodeType!==1)continue;
+        if(c.localName==='t')out+=c.textContent;
+        else if(c.localName==='br')out+=' ';
+        else walk(c);
+      }
+    };
+    walk(p);return out;
+  };
+  var bodies=[],lines=[];
+  var tb=doc.getElementsByTagNameNS(P,'txBody'); // 도형 텍스트만 — 표 셀은 a:txBody라 자동 제외
+  for(var i=0;i<tb.length;i++){
+    var ps=tb[i].getElementsByTagNameNS(A,'p'),arr=[];
+    for(var j=0;j<ps.length;j++){var t=paraText(ps[j]);if(t.trim()!=='')arr.push(t);}
+    if(arr.length){bodies.push(arr);lines=lines.concat(arr);}
+  }
+  var tables=[];
+  var tbls=doc.getElementsByTagNameNS(A,'tbl');
+  for(var x=0;x<tbls.length;x++){
+    var rows=[],trs=tbls[x].getElementsByTagNameNS(A,'tr');
+    for(var r=0;r<trs.length;r++){
+      var cells=[],tcs=trs[r].getElementsByTagNameNS(A,'tc');
+      for(var c2=0;c2<tcs.length;c2++)cells.push(paraText(tcs[c2]).replace(/\s+/g,' ').trim());
+      rows.push(cells);
+    }
+    tables.push(rows);
+  }
+  return {lines:lines,bodies:bodies,tables:tables};
+}
+// 고정 포맷 운영계획(안)에서 필드 추출
+function _tktExtract(slides){
+  var f={'제목':'','기간':'','시간':'','장소':'','관람연령':'','러닝타임':'','인터미션':'','장르':'','할인정보':'','공연내용':'','가격요약':''};
+  var seats=[];
+  var allLines=[],allTables=[];
+  slides.forEach(function(s){allLines=allLines.concat(s.lines);allTables=allTables.concat(s.tables);});
+  // 1) key:value 줄 — 키의 공백 제거 후 매칭 ("공  연  명" 대응)
+  var kv={};
+  allLines.forEach(function(ln){
+    var m=/^\s*([^:：]{1,14})[:：](.+)$/.exec(ln);
+    if(!m)return;
+    var k=m[1].replace(/\s+/g,''),v=m[2].trim();
+    if(!kv[k])kv[k]=v;
+  });
+  if(kv['공연명'])f['제목']=kv['공연명'];
+  else{ // 폴백: 표지 제목에서 "운영계획(안)" 꼬리 제거
+    var t0=(slides[0]&&slides[0].lines[slides[0].lines.length-1])||'';
+    slides[0]&&slides[0].lines.forEach(function(l){if(/운영\s*계획/.test(l))t0=l;});
+    f['제목']=t0.replace(/운영\s*계획\s*\(?안?\)?\s*$/,'').replace(/^\s*\d{4}\s*/,'').trim();
+  }
+  // 2) 일시 → 기간 + 회차 시간
+  var dt=kv['일시']||kv['공연일시']||kv['일정']||'';
+  if(dt){
+    var dm=/(\d{4})\s*[.년]\s*(\d{1,2})\s*[.월]\s*(\d{1,2})\s*일?\s*\(([^)]*)\)\s*(?:[~∼〜-]\s*(?:(\d{4})\s*[.년]\s*)?(?:(\d{1,2})\s*[.월]\s*)?(\d{1,2})\s*일?\s*\(([^)]*)\))?/.exec(dt);
+    if(dm){
+      var y1=+dm[1],mo1=+dm[2],d1=+dm[3],w1=dm[4].replace(/요일/,'');
+      var y2=dm[5]?+dm[5]:y1,mo2=dm[6]?+dm[6]:mo1,d2=dm[7]?+dm[7]:d1,w2=dm[8]?dm[8].replace(/요일/,''):w1;
+      f['기간']=y1+'년 '+mo1+'월 '+d1+'일('+w1+') ~ '+y2+'년 '+mo2+'월 '+d2+'일('+w2+')';
+      var rest=dt.slice(dm.index+dm[0].length).replace(/\*.*$/,'').trim(); // 뒤 각주(*) 제거
+      if(/\d{1,2}:\d{2}/.test(rest))f['시간']=rest.replace(/\s+/g,' ');
+    }
+    if(!f['시간']){var tm=dt.match(/\d{1,2}:\d{2}(?:.*\d{1,2}:\d{2})*/);if(tm)f['시간']=tm[0];}
+  }
+  // 3) 장소 — 극장명만 오면 예울마루 접두
+  var pl=kv['장소']||kv['공연장소']||'';
+  if(pl){f['장소']=/예울마루/.test(pl)?pl:('GS칼텍스 예울마루 '+pl);}
+  // 4) 관람시간 → 러닝타임·인터미션
+  var rt=kv['관람시간']||kv['공연시간']||kv['러닝타임']||'';
+  if(rt){
+    var rm=/약?\s*(\d+)\s*분/.exec(rt);if(rm)f['러닝타임']='약 '+rm[1];
+    var im=/인터미션\s*[:：]?\s*(없음|(\d+)\s*분?)/.exec(rt);
+    if(im)f['인터미션']=im[2]?im[2]:'없음';
+  }
+  // 5) 관람연령 — 의뢰서 AA6 옆 '세·이상' 고정 라벨에 맞춰 값만 추출.
+  //    "전체관람가"→"전체" 특례 · "만 7세 이상"→"7" · 꼬리(이상/관람/가능)만 제거해 중간 글자 훼손 방지
+  var ag=kv['관람연령']||kv['관람등급']||'';
+  if(ag){
+    if(/전체\s*(관람|이용)?\s*가/.test(ag))f['관람연령']='전체';
+    else f['관람연령']=ag.replace(/이상[\s\S]*$/,'').replace(/(\s*(관람|가능))+\s*$/,'').replace(/만\s*(\d+)\s*세?/,'$1').replace(/(\d+)\s*세/,'$1').trim();
+  }
+  // 6) 티켓 가격 요약 (만원 단위로 축약)
+  var pr=kv['티켓가격']||kv['가격']||kv['입장료']||'';
+  if(pr)f['가격요약']=pr.replace(/(\d{1,3}(?:,\d{3})+|\d{5,})\s*원/g,function(_,n){var num=parseInt(n.replace(/,/g,''),10);return (num%10000===0)?(num/10000+'만원'):(n+'원');});
+  // 7) 장르 추정 (제목+표지)
+  var gsrc=f['제목']+' '+allLines.slice(0,6).join(' ');
+  f['장르']=/뮤지컬/.test(gsrc)?'뮤지컬':(/(클래식|리사이틀|오케스트라|교향|필하모닉|피아노|바이올린|첼로|무용|발레|합창|오페라)/.test(gsrc)?'클래식/무용':(/콘서트|밴드|재즈/.test(gsrc)?'콘서트':(/연극/.test(gsrc)?'연극':(/(아동|어린이|가족)/.test(gsrc)?'가족&아동':(/(전시|축제)/.test(gsrc)?'전시/축제':'')))));
+  // 8) 좌석 표 — 헤더에 좌석수+티켓가격 있는 표
+  allTables.forEach(function(tb){
+    if(seats.length)return;
+    if(!tb.length)return;
+    var hd=tb[0].join(' ');
+    if(!(/좌석수/.test(hd)&&/(티켓가격|가격|금액)/.test(hd)))return;
+    var iName=0,iCnt=tb[0].findIndex(function(c){return /좌석수/.test(c);}),iPrice=tb[0].findIndex(function(c){return /티켓가격|가격/.test(c);});
+    if(iPrice<0)iPrice=tb[0].findIndex(function(c){return /금액/.test(c);}); // 가격열이 '금액'뿐인 변형 대응
+    if(iCnt<0||iPrice<0)return;
+    tb.slice(1).forEach(function(row){
+      var cnt=parseInt(String(row[iCnt]||'').replace(/[^\d]/g,''),10),price=parseInt(String(row[iPrice]||'').replace(/[^\d]/g,''),10);
+      if(!cnt||!price)return;
+      var nm=(row[iName]||'').trim()||'전석';
+      seats.push({'등급':nm,'권종':'일반석','정가':String(price),'석수':String(cnt),'비고':'좌석배치도에 따름(1층)'});
+    });
+  });
+  // 9) 각주에서 홀딩석 — 유보석(10)·장애인석(12)·미오픈(40)
+  var foot=allLines.join(' ');
+  var hm=/(?:장애인석|휠체어석?)\s*\(?(\d+)/.exec(foot);
+  if(hm)seats.push({'등급':'휠체어','권종':'휠체어','정가':'','석수':hm[1],'비고':'가격 정책에 따름'});
+  var um=/유보석\s*\(?(\d+)/.exec(foot);
+  if(um)seats.push({'등급':'','권종':'유보석','정가':'','석수':um[1],'비고':'홀딩'});
+  var om=/미오픈\s*\(?(\d+)/.exec(foot);
+  if(om)seats.push({'등급':'','권종':'OP','정가':'','석수':om[1],'비고':'미오픈'});
+  // 10) 할인 표 → 의뢰서 텍스트 ([1] 플랫폼 전용 / [2] 특별)
+  allTables.forEach(function(tb){
+    if(f['할인정보'])return;
+    if(!tb.length)return;
+    // 매출분석 표 오인 방지 — '할인명' 헤더 또는 (할인율+대상) 조합일 때만 할인표로 인정
+    var hd2=tb[0].join(' ');
+    if(!(/할\s*인\s*명/.test(hd2)||(/할인율/.test(hd2)&&/대\s*상/.test(hd2))))return;
+    var iN=0,iT=1,iR=tb[0].findIndex(function(c){return /할인율/.test(c);});
+    if(iR<0)return;
+    var plat=[],spec=[],lastName='';
+    tb.slice(1).forEach(function(row){
+      var name=(row[iN]||'').trim()||lastName;lastName=name;
+      var tgt=(row[iT]||'').trim(),rate=(row[iR]||'').trim();
+      if(!rate&&!tgt)return;
+      var line=' '+name+' / '+(rate||'-')+' / '+tgt;
+      if(/회원/.test(name)&&/(홈페이지|회원)/.test(tgt))plat.push(line);else spec.push(line);
+    });
+    var out=[],n=1;
+    if(plat.length){out.push('['+n+'] 플랫폼 전용 할인');plat.forEach(function(l,i){out.push(' '+n+'-'+(i+1)+')'+l);});n++;}
+    if(spec.length){out.push((plat.length?'\n':'')+'['+n+'] 특별 할인');spec.forEach(function(l,i){out.push(' '+n+'-'+(i+1)+')'+l);});}
+    f['할인정보']=out.join('\n');
+  });
+  // 11) 공연내용 — "1) 공연내용" 도형의 다음 줄들 (다음 번호 절 전까지)
+  slides.forEach(function(s){
+    if(f['공연내용'])return;
+    s.bodies.forEach(function(body){
+      if(f['공연내용'])return;
+      var idx=body.findIndex(function(l){return /^\s*\d?\s*\)?\s*공연\s*내용/.test(l);});
+      if(idx<0)return;
+      var out=[];
+      for(var i=idx+1;i<body.length;i++){
+        if(/^\s*\d\s*\)/.test(body[i]))break;
+        out.push(body[i].replace(/^\s*[-·]\s*/,'').trim());
+      }
+      if(out.length)f['공연내용']=out.join('\n');
+    });
+  });
+  return {f:f,seats:seats};
+}
+
+// ── 날짜 포맷 (datetime-local 문자열을 직접 파싱 — TZ 무관) ──
+function _tktDL(v){var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v||'');if(!m)return null;return {y:+m[1],mo:+m[2],d:+m[3],h:+m[4],mi:+m[5]};}
+function _tktWd(y,mo,d){return ['일','월','화','수','목','금','토'][new Date(Date.UTC(y,mo-1,d)).getUTCDay()];}
+function _tktFmtKor(v){var t=_tktDL(v);if(!t)return '';return t.y+'년 '+t.mo+'월 '+t.d+'일 '+_tktWd(t.y,t.mo,t.d)+'요일 '+t.h+'시'+(t.mi?' '+t.mi+'분':'');}
+function _tktFmtDot(v,noDot){var t=_tktDL(v);if(!t)return '';var mm=String(t.mi).padStart(2,'0');return t.y+'. '+t.mo+'. '+t.d+(noDot?'':'. ')+'('+_tktWd(t.y,t.mo,t.d)+') '+t.h+':'+mm;}
+
+// ── xlsx 패치 프리미티브 (템플릿 zip의 XML 텍스트 치환 — 서식·컨트롤 보존) ──
+function _tktXml(s){return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _tktReEsc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+function _tktCellRepl(xml,ref,val,numeric){
+  var re=new RegExp('<c r="'+ref+'"( [^>]*?)?(?:/>|>[\\s\\S]*?</c>)');
+  var m=re.exec(xml);
+  if(!m)throw new Error('셀 없음: '+ref);
+  var sm=/s="\d+"/.exec(m[1]||''),sAttr=sm?(' '+sm[0]):'',rep;
+  if(val===''||val===null||val===undefined)rep='<c r="'+ref+'"'+sAttr+'/>';
+  else if(numeric)rep='<c r="'+ref+'"'+sAttr+'><v>'+val+'</v></c>';
+  else rep='<c r="'+ref+'"'+sAttr+' t="inlineStr"><is><t xml:space="preserve">'+_tktXml(val)+'</t></is></c>';
+  return xml.slice(0,m.index)+rep+xml.slice(m.index+m[0].length);
+}
+function _tktFCache(xml,ref,val){ // 수식 셀 캐시 <v>만 교체 (<f> 보존 — 열면 fullCalcOnLoad로 재계산)
+  var re=new RegExp('(<c r="'+ref+'"[^>]*>)(<f>[\\s\\S]*?</f>)(?:<v[^>]*>[\\s\\S]*?</v>)?(</c>)');
+  var m=re.exec(xml);
+  if(!m)throw new Error('수식 셀 없음: '+ref);
+  var rep=m[1]+m[2]+'<v xml:space="preserve">'+_tktXml(val)+'</v>'+m[3];
+  return xml.slice(0,m.index)+rep+xml.slice(m.index+m[0].length);
+}
+function _tktDropSel(vml,range,sel){
+  var re=new RegExp('(<x:ClientData ObjectType="Drop">(?:(?!</x:ClientData>)[\\s\\S])*?<x:FmlaRange>'+_tktReEsc(range)+'</x:FmlaRange>(?:(?!</x:ClientData>)[\\s\\S])*?<x:Sel>)\\d+(</x:Sel>)');
+  var m=re.exec(vml);
+  if(!m)throw new Error('드롭다운 없음: '+range);
+  return vml.slice(0,m.index)+m[1]+sel+m[2]+vml.slice(m.index+m[0].length);
+}
+function _tktCtrlSel(cp,sel){
+  if(!/sel="\d+"/.test(cp))throw new Error('ctrlProp sel 없음');
+  return cp.replace(/sel="\d+"/,'sel="'+sel+'"');
+}
+function _tktVmlCheck(vml,label,on){
+  var re=/<v:shape id="[^"]+"[\s\S]*?<\/v:shape>/g,m,hit=null,cnt=0;
+  while((m=re.exec(vml))){
+    var runs=m[0].match(/<font[^>]*>[^<]*<\/font>/g)||[];
+    var txt=runs.map(function(r){return r.replace(/<[^>]*>/g,'');}).join('').replace(/\s+/g,'').replace(/&amp;/g,'&');
+    if(txt===label){hit={i:m.index,s:m[0]};cnt++;}
+  }
+  if(cnt!==1)throw new Error('체크박스 매칭 '+cnt+'개: '+label);
+  var body=hit.s,has=body.indexOf('<x:Checked>1</x:Checked>')>=0,b2=body;
+  if(on&&!has)b2=body.replace('<x:ClientData ObjectType="Checkbox">','<x:ClientData ObjectType="Checkbox"><x:Checked>1</x:Checked>');
+  else if(!on&&has)b2=body.replace('<x:Checked>1</x:Checked>','');
+  return vml.slice(0,hit.i)+b2+vml.slice(hit.i+body.length);
+}
+function _tktCtrlCheck(cp,on){
+  var has=cp.indexOf('checked="Checked"')>=0;
+  if(on&&!has)return cp.replace('<formControlPr ','<formControlPr checked="Checked" ');
+  if(!on&&has)return cp.replace(' checked="Checked"','');
+  return cp;
+}
+
+// ── 생성 본체 ──
+function _tktBuild(){
+  var st=_tktState;if(!st||st.busy)return;
+  var f=st.f;
+  var miss=['제목','기간','시간','장소','장르','오픈일시'].filter(function(k){return !String(f[k]||'').trim();});
+  if(miss.length){showToast('필수 항목 입력: '+miss.join(' · '),'error');return;}
+  st.busy=true;var gbtn=document.getElementById('tkt-gen');if(gbtn){gbtn.textContent='생성 중…';gbtn.disabled=true;}
+  var done=function(ok,msg){st.busy=false;if(gbtn){gbtn.textContent='의뢰서 엑셀 생성 ⬇';gbtn.disabled=false;}showToast(msg,ok?'success':'error');};
+  _tktEnsureJSZip(function(err){
+    if(err){done(false,'압축 라이브러리 로드 실패 — 네트워크 확인 후 다시 시도');return;}
+    fetch(_TKT_TEMPLATE_URL+'?cb='+Date.now()).then(function(r){
+      if(!r.ok)throw new Error('template http '+r.status);
+      return r.arrayBuffer();
+    }).then(function(buf){return JSZip.loadAsync(buf);}).then(function(zip){
+      var need=['xl/worksheets/sheet1.xml','xl/worksheets/sheet2.xml','xl/worksheets/sheet5.xml','xl/workbook.xml','xl/drawings/vmlDrawing1.vml','xl/drawings/vmlDrawing2.vml','xl/ctrlProps/ctrlProp9.xml','xl/ctrlProps/ctrlProp10.xml','xl/ctrlProps/ctrlProp64.xml','xl/ctrlProps/ctrlProp65.xml'];
+      Object.keys(_TKT_S2_CTRL).forEach(function(k){need.push('xl/ctrlProps/'+_TKT_S2_CTRL[k]+'.xml');});
+      return Promise.all(need.map(function(n){var zf=zip.file(n);if(!zf)throw new Error('템플릿 손상: '+n+' 없음');return zf.async('string');})).then(function(texts){
+        var fs={};need.forEach(function(n,i){fs[n]=texts[i];});
+        // KST 오늘 (러너/브라우저 TZ 무관)
+        var now=new Date(Date.now()+9*3600e3);
+        var today=now.getUTCFullYear()+'.'+String(now.getUTCMonth()+1).padStart(2,'0')+'.'+String(now.getUTCDate()).padStart(2,'0');
+        // ─ 시트1
+        var s1=fs['xl/worksheets/sheet1.xml'];
+        s1=_tktCellRepl(s1,'W3','작성일 : '+today);
+        s1=_tktCellRepl(s1,'G4',f['제목'].trim());
+        s1=_tktCellRepl(s1,'G5',f['부제목'].trim());
+        s1=_tktCellRepl(s1,'G6',f['기간'].trim());
+        s1=_tktCellRepl(s1,'G7',f['시간'].trim());
+        s1=_tktCellRepl(s1,'G8',f['장소'].trim());
+        var age=f['관람연령'].trim().replace(/\s*이상\s*$/,''); // 옆 칸 '세·이상' 고정 라벨과 중복 방지
+        s1=_tktCellRepl(s1,'AA6',age);
+        s1=_tktCellRepl(s1,'AB7',f['러닝타임'].trim());
+        s1=_tktCellRepl(s1,'AA8',f['인터미션'].trim());
+        s1=_tktCellRepl(s1,'G21',f['검색키워드'].trim());
+        s1=_tktCellRepl(s1,'E30',f['할인정보']);
+        s1=_tktCellRepl(s1,'E33','   ▣ 출연 : '+f['출연'].trim());
+        s1=_tktCellRepl(s1,'E36','   ▣ 후원 : '+f['후원'].trim());
+        s1=_tktCellRepl(s1,'AA14',_tktFmtKor(f['오픈일시']));
+        s1=_tktCellRepl(s1,'AA15',_tktFmtKor(f['마감일시']));
+        // 담당자 연락처(공개 저장소 미보관 — 모달 입력분만 기입, 공란이면 엑셀에서 수기)
+        if(f['담당자명'].trim())s1=_tktCellRepl(s1,'E39',f['담당자명'].trim());
+        s1=_tktCellRepl(s1,'O39','사무실: 061-808-7003\n휴대폰: '+f['담당자휴대폰'].trim());
+        s1=_tktCellRepl(s1,'AA39',f['담당자이메일'].trim());
+        if(f['세금담당자명'].trim())s1=_tktCellRepl(s1,'E40',f['세금담당자명'].trim());
+        s1=_tktCellRepl(s1,'O40','사무실: 061-808-7007\n휴대폰: '+f['세금휴대폰'].trim());
+        s1=_tktCellRepl(s1,'AA40',f['세금이메일'].trim());
+        s1=_tktCellRepl(s1,'E54',f['티켓링크ID'].trim());
+        s1=_tktCellRepl(s1,'Q54',f['티켓링크이름'].trim());
+        s1=_tktCellRepl(s1,'AA54',f['티켓링크연락처'].trim());
+        st.seats.forEach(function(s,i){
+          var r=_TKT_SEAT_ROWS[i];
+          var num=function(x){return /^\d+$/.test(String(x||'').replace(/[,\s]/g,''))?String(x).replace(/[,\s]/g,''):'';};
+          s1=_tktCellRepl(s1,'E'+r,(s['등급']||'').trim());
+          s1=_tktCellRepl(s1,'J'+r,(s['권종']||'').trim());
+          var p=num(s['정가']);s1=_tktCellRepl(s1,'R'+r,p||(s['정가']||'').trim(),!!p);
+          var c=num(s['석수']);s1=_tktCellRepl(s1,'Y'+r,c||(s['석수']||'').trim(),!!c);
+          s1=_tktCellRepl(s1,'AA'+r,(s['비고']||'').trim());
+        });
+        fs['xl/worksheets/sheet1.xml']=s1;
+        // ─ 장르 드롭다운(시트1) — VML Sel + ctrlProp sel 동기
+        var gsel=_TKT_GENRE_SEL[f['장르']]||1,ssel=_TKT_SUB_SEL[f['부가장르']]||1;
+        fs['xl/drawings/vmlDrawing1.vml']=_tktDropSel(_tktDropSel(fs['xl/drawings/vmlDrawing1.vml'],'$AK$2:$AK$10',gsel),'$AL$2:$AL$4',ssel);
+        fs['xl/ctrlProps/ctrlProp9.xml']=_tktCtrlSel(fs['xl/ctrlProps/ctrlProp9.xml'],gsel);
+        fs['xl/ctrlProps/ctrlProp10.xml']=_tktCtrlSel(fs['xl/ctrlProps/ctrlProp10.xml'],ssel);
+        // ─ 시트2 (직접 셀 + 시트1 참조 수식의 캐시 갱신)
+        var s2=fs['xl/worksheets/sheet2.xml'];
+        s2=_tktCellRepl(s2,'I6',f['선오픈'].trim()||'해당 없음');
+        s2=_tktCellRepl(s2,'W6',_tktFmtDot(f['오픈일시']));
+        s2=_tktCellRepl(s2,'O7',f['공지노출']?('  '+_tktFmtDot(f['공지노출'],true)):'');
+        s2=_tktCellRepl(s2,'D11',' ◎ 티켓 가격 : '+f['가격요약'].trim());
+        s2=_tktCellRepl(s2,'D18',f['공연내용']);
+        s2=_tktFCache(s2,'D3',f['제목'].trim()+(f['부제목'].trim()?(' : '+f['부제목'].trim()):''));
+        s2=_tktFCache(s2,'D8','   ◎ 공연 기간 : '+f['기간'].trim());
+        s2=_tktFCache(s2,'D9','   ◎ 공연 시간 : '+f['시간'].trim());
+        s2=_tktFCache(s2,'D10','   ◎ 공연 장소 : '+f['장소'].trim());
+        s2=_tktFCache(s2,'D12','   ◎ 기타 정보 : \n    - 관람연령 : '+(age?age+' 이상':'')+'\n    - 관람시간 : '+(f['러닝타임'].trim()?f['러닝타임'].trim()+'분':'')+'\n    - 할인정보 : '+f['할인정보']);
+        s2=_tktFCache(s2,'D16','   ◎ 협찬 : '+f['후원'].trim());
+        fs['xl/worksheets/sheet2.xml']=s2;
+        // ─ 시트2 장르 체크박스 (전부 해제 후 선택만 체크)
+        var v2=fs['xl/drawings/vmlDrawing2.vml'];
+        Object.keys(_TKT_S2_CTRL).forEach(function(label){
+          var on=(label===f['장르']);
+          v2=_tktVmlCheck(v2,label,on);
+          var pth='xl/ctrlProps/'+_TKT_S2_CTRL[label]+'.xml';
+          fs[pth]=_tktCtrlCheck(fs[pth],on);
+        });
+        // ─ 공지 노출 방식 동기화 — 노출 일시 입력 시 '일시선택', 비우면 '즉시' (단독판매/해당없음은 회사 표준 고정)
+        var vis=!!f['공지노출'];
+        v2=_tktVmlCheck(v2,'즉시',!vis);
+        v2=_tktVmlCheck(v2,'일시선택',vis);
+        fs['xl/ctrlProps/ctrlProp64.xml']=_tktCtrlCheck(fs['xl/ctrlProps/ctrlProp64.xml'],!vis);
+        fs['xl/ctrlProps/ctrlProp65.xml']=_tktCtrlCheck(fs['xl/ctrlProps/ctrlProp65.xml'],vis);
+        fs['xl/drawings/vmlDrawing2.vml']=v2;
+        // ─ 시트5 (현장 지원 요청서 머리)
+        var s5=fs['xl/worksheets/sheet5.xml'];
+        s5=_tktCellRepl(s5,'D3',f['제목'].trim());
+        s5=_tktCellRepl(s5,'D4',f['기간'].trim());
+        s5=_tktCellRepl(s5,'D5',f['장르']);
+        fs['xl/worksheets/sheet5.xml']=s5;
+        // ─ 열 때 전체 재계산 (시트2 수식 최신화 보증)
+        if(fs['xl/workbook.xml'].indexOf('fullCalcOnLoad')<0)fs['xl/workbook.xml']=fs['xl/workbook.xml'].replace('<calcPr ','<calcPr fullCalcOnLoad="1" ');
+        Object.keys(fs).forEach(function(n){zip.file(n,fs[n],{createFolders:false});});
+        return zip.generateAsync({type:'blob',compression:'DEFLATE',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      }).then(function(blob){
+        if(st!==_tktState)return; // 생성 중 모달 닫힘 — 조용히 폐기(공용 PC에 흔적 안 남김)
+        var safe=f['제목'].trim().replace(/[\\/:*?"<>|]/g,'').replace(/[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g,'').replace(/^[.\s]+|[.\s]+$/g,'').slice(0,40);
+        var a=document.createElement('a'),url=URL.createObjectURL(blob);
+        a.href=url;a.download='공연입장권 판매대행 의뢰서_GS칼텍스 예울마루_'+yymmddName()+'_'+safe+'.xlsx';
+        document.body.appendChild(a);a.click();a.remove();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        done(true,'의뢰서 엑셀 생성 완료 — 다운로드했어요. 열어서 최종 확인!');
+      });
+    }).catch(function(e){
+      console.error('[tkt build]',e);
+      if(st!==_tktState)return;
+      done(false,'엑셀 생성 실패: '+(e&&e.message?e.message:'알 수 없는 오류'));
+    });
+  });
+  function yymmddName(){var n=new Date(Date.now()+9*3600e3);return String(n.getUTCFullYear()).slice(2)+String(n.getUTCMonth()+1).padStart(2,'0')+String(n.getUTCDate()).padStart(2,'0');}
+}
+
 
 function openNaverBlogTool(){
   var el=document.getElementById('nblog-board');
