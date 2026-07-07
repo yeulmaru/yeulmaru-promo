@@ -1545,6 +1545,40 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .fbar-chip input{width:14px;height:14px;margin:0;flex-shrink:0;cursor:pointer;accent-color:var(--accent)}
 .fbar-chip.on input{accent-color:#fff}
 .fbar-chip.lock{cursor:not-allowed;opacity:.85}
+/* ===== 판매 레일 — 메인 캘린더 3/4 + 판매중 사업현황 1/4 (.srail-* 네임스페이스).
+   데이터·표기 = 판매현황(_salesBuild)+분석 보드(.ana-*) 스크린1·드릴 KPI 계승(스파크라인·어제대비·목표 대비).
+   글래스 값 = .cal(흰 .43/blur 11/보더 .7)·--glass-* 토큰 계승, 색 전부 기존 토큰·alpha 변주 — 신규 raw hex 0. */
+#sales-rail{width:25%;min-width:300px;max-width:430px;flex-shrink:0;padding:24px 28px 24px 0}
+.srail{position:sticky;top:72px;max-height:calc(100vh - 96px);display:flex;flex-direction:column;background:rgba(255,255,255,.43);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);overflow:hidden}
+.srail-hd{display:flex;align-items:center;gap:7px;padding:14px 16px 9px;flex-shrink:0}
+.srail-tt{font-size:14.5px;font-weight:800;color:var(--text)}
+.srail-cnt{font-size:10.5px;font-weight:800;color:var(--accent);background:rgba(74,77,231,.08);border:1px solid rgba(74,77,231,.18);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.srail-asof{font-size:10.5px;color:var(--dim);font-weight:600;margin-left:auto;white-space:nowrap}
+.srail-sum{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 16px 10px;font-size:11px;color:var(--neutral-text);font-weight:600;flex-shrink:0}
+.srail-body{flex:1;overflow-y:auto;padding:2px 12px 8px;min-height:0}
+.srail-card{background:var(--glass-surface);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:11px 13px 12px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,transform .15s}
+.srail-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.srail-r1{display:flex;align-items:baseline;gap:8px;min-width:0}
+.srail-name{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srail-dday{font-size:10.5px;font-weight:800;flex-shrink:0;font-variant-numeric:tabular-nums}
+.srail-meta{font-size:10.5px;color:var(--dim);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srail-r2{display:flex;align-items:baseline;gap:8px;margin-top:7px}
+.srail-occ{font-size:21px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+.srail-delta{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.srail-delta.up{color:var(--green)}
+.srail-delta.dn{color:var(--danger)}
+.srail-delta.fl{color:var(--dim)}
+.srail-spark{margin-top:7px}
+.srail-spark svg{display:block;width:100%;height:34px}
+.srail-bar{position:relative;height:5px;border-radius:999px;background:var(--neutral);margin-top:8px}
+.srail-bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--accent)}
+.srail-bar>b{position:absolute;top:-2.5px;width:2px;height:10px;border-radius:1px;background:var(--peach-text)}
+.srail-r3{display:flex;justify-content:space-between;gap:8px;margin-top:7px;font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.srail-r3 .tgt.ok{color:var(--green)}
+.srail-r3 .tgt.bad{color:var(--danger)}
+.srail-ft{padding:8px 16px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.srail-note{font-size:10px;color:var(--muted);line-height:1.4;flex:1}
+@media(max-width:1200px){#sales-rail{display:none}}
 </style>
   <!-- MSAL.js for Microsoft OAuth (OneDrive 폴더 트리) — 공식 docs 권장 이중 fallback -->
   <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
@@ -1642,6 +1676,15 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
       <div class="cal-head-wrap" id="cal-head-wrap"></div>
         <div class="cal" id="cal"></div>
     </div>
+    <!-- 판매 레일 (캘린더 3/4 + 판매중 사업현황 1/4) — 판매현황·분석 보드와 _salesState 캐시 공유. data-panel = 레일 클릭이 사이드패널 closePanel을 타지 않게 -->
+    <aside id="sales-rail" data-panel aria-label="판매 현황 (판매중 공연)">
+      <div class="srail">
+        <div class="srail-hd"><span class="srail-tt">판매 현황</span><span class="srail-cnt" id="srail-cnt" style="display:none">0</span><span class="srail-asof" id="srail-asof"></span><button class="ana-chip" onclick="openSalesBoard()" title="판매 현황 전체 보드 열기">전체</button></div>
+        <div class="srail-sum" id="srail-sum" style="display:none"></div>
+        <div class="srail-body" id="srail-body"></div>
+        <div class="srail-ft"><span class="srail-note">일일입력 최신분 기준 · 카드를 누르면 개별 분석이 열려요</span><button class="ana-chip" onclick="_srailInit(true)" title="판매 데이터 다시 불러오기">새로고침</button></div>
+      </div>
+    </aside>
     <div id="panel" class="panel" style="display:none" data-panel></div>
   </div>
 </div>
@@ -3137,6 +3180,7 @@ async function initApp(){
   //   · 순서 의존성은 loadPrograms→updatePerfOpen 하나뿐(나머지 로더 결과는 updatePerfOpen이 안 씀).
   //   · loadPromoSpecial 중복 호출 제거 — loadData가 이미 특별일정을 로드함.
   loadData();  // records + 특별일정 → render() : 캘린더 즉시 표시
+  try{_srailInit();}catch(_e){console.warn('[initApp srail]',_e);}  // 판매 레일 — 백그라운드 병렬(캘린더 비차단), _salesState 공유 캐시 선채움
   var _pPrograms=loadPrograms().then(function(){ updatePerfOpen(); _perfReady=true; }).catch(function(e){console.warn('[initApp loadPrograms]',e);});
   Promise.all([
     _pPrograms,
@@ -3782,6 +3826,112 @@ function openSalesBoard(){
   });
 }
 function closeSalesBoard(){ if(_salesState.escHandler)document.removeEventListener('keydown',_salesState.escHandler); var el=document.getElementById('sales-board'); if(el)el.innerHTML=''; }
+
+/* ============================================================
+   판매 레일 (메인 캘린더 3/4 + 판매중 사업현황 1/4) — _srail*
+   데이터 = _salesState 공유 캐시 + _salesBuild() (판매/분석 보드와 동일 출처 —
+   레일이 먼저 채우면 두 보드는 재fetch 없이 즉시 열림).
+   표기 = 분석 보드 스크린1(스파크·어제대비 %p)·드릴 KPI(목표 대비) 계승.
+   ============================================================ */
+var _srailBusy=false;
+function _srailEls(){ return { body:document.getElementById('srail-body'), cnt:document.getElementById('srail-cnt'), sum:document.getElementById('srail-sum'), asof:document.getElementById('srail-asof') }; }
+function _srailInit(force){
+  var els=_srailEls(); if(!els.body)return;
+  if(force){ _salesState.master=null;_salesState.daily=null;_salesState.rounds=null;_salesState.ops=null;_salesState._opsIdx=null; }
+  if(_salesState.daily&&_salesState.master&&_salesState.rounds&&_salesState.ops){ _srailRender(); return; }
+  if(_srailBusy)return; _srailBusy=true;
+  els.body.innerHTML='<div class="srail-note" style="padding:20px 6px">판매 데이터 불러오는 중…</div>';
+  Promise.all([
+    _salesState.daily?Promise.resolve(_salesState.daily):api('GET','/api/ops?sheet='+encodeURIComponent('일일입력')),
+    _salesState.master?Promise.resolve(_salesState.master):api('GET','/api/ops?sheet='+encodeURIComponent('공연마스터')),
+    _salesState.rounds?Promise.resolve(_salesState.rounds):api('GET','/api/ops?sheet='+encodeURIComponent('회차상세')),
+    _salesState.ops?Promise.resolve(_salesState.ops):((_bizState&&_bizState.raw)?Promise.resolve(_bizState.raw):api('GET','/api/ops?sheet='+encodeURIComponent('세부운영관리대장(정리)')))
+  ]).then(function(res){
+    _salesState.daily=res[0];_salesState.master=res[1];_salesState.rounds=res[2];_salesState.ops=res[3];_salesState._opsIdx=null;
+    if(_bizState&&!_bizState.raw)_bizState.raw=res[3];
+    _srailBusy=false; _srailRender();
+  }).catch(function(e){
+    _srailBusy=false; console.warn('[srail]',e);
+    var b=_srailEls().body; if(!b)return;
+    b.innerHTML='<div class="u-empty" style="padding:26px 8px"><div class="ico">📡</div><div class="msg">판매 데이터를 못 불러왔어요</div><button class="ana-chip" onclick="_srailInit(true)">다시 시도</button></div>';
+  });
+}
+// 최신 일일입력 기준일 — 헤더 '기준 M.D' 표기
+function _srailAsof(){
+  var rows=((_salesState.daily&&_salesState.daily.rows)||[]).map(_salesNorm); var mx=0;
+  rows.forEach(function(r){ var v=parseInt(String(r['기준일자']||'').replace(/[^0-9]/g,''),10); if(!isNaN(v)&&v>mx)mx=v; });
+  if(!mx)return '';
+  return '기준 '+(Math.floor(mx/100)%100)+'.'+(mx%100);
+}
+// 스파크라인(최근 7일 점유율) — _anaSpark 계승·레일용 가변폭(viewBox 스케일) + 면 채움. 색 = accent 토큰·alpha 변주만.
+function _srailSpark(arr){
+  arr=(arr||[]).filter(function(v){return v!==null&&v!==undefined&&!isNaN(v);});
+  if(arr.length<2)return '<span style="font-size:10px;color:var(--muted)">추이 수집 전 (일일입력 2회부터)</span>';
+  var W=132,H=30,pad=3;
+  var mn=Math.min.apply(null,arr)-2,mx=Math.max.apply(null,arr)+2; if(mx-mn<1)mx=mn+1;
+  var pts=arr.map(function(v,i){ var x=pad+(W-2*pad)*i/(arr.length-1); var y=H-pad-(H-2*pad)*(v-mn)/(mx-mn); return [x,y]; });
+  var d=pts.map(function(q,i){return (i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1);}).join(' ');
+  var area=d+' L'+pts[pts.length-1][0].toFixed(1)+' '+(H-pad)+' L'+pts[0][0].toFixed(1)+' '+(H-pad)+' Z';
+  var last=pts[pts.length-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'
+    +'<path d="'+area+'" fill="rgba(74,77,231,.10)"/>'
+    +'<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+    +'<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="2.2" fill="var(--accent)"/>'
+    +'</svg>';
+}
+function _srailCard(p){
+  var dpp=p.deltaPP, dCls, dStr;
+  if(dpp===null){ dCls='fl'; dStr='어제대비 —'; }
+  else if(dpp>0.04){ dCls='up'; dStr='▲ +'+dpp.toFixed(1)+'%p'; }
+  else if(dpp<-0.04){ dCls='dn'; dStr='▼ '+dpp.toFixed(1)+'%p'; }
+  else { dCls='fl'; dStr='— 0.0%p'; }
+  var tgt=p.목표||50, gap=p.occ-tgt;
+  var meta=(p.genre||'기타')+' · '+_anaProfitAxis(p['수익성'])+(p.dateStr?' · '+p.dateStr:'');
+  var dd=_salesDdayStr(p.dday);
+  return '<div class="srail-card" onclick="_srailOpenDrill(\''+_anaEsc(p.name)+'\')" title="'+_anaEsc(p.name)+' — 개별 분석 열기">'
+    +'<div class="srail-r1"><span class="srail-name">'+escapeHtml(p.name)+'</span>'+(dd?'<span class="srail-dday" style="color:'+_salesDdayColor(p.dday)+'">'+dd+'</span>':'')+'</div>'
+    +'<div class="srail-meta">'+escapeHtml(meta)+'</div>'
+    +'<div class="srail-r2"><span class="srail-occ">'+p.occ.toFixed(1)+'%</span><span class="srail-delta '+dCls+'">'+dStr+'</span></div>'
+    +'<div class="srail-spark">'+_srailSpark(p.spark)+'</div>'
+    +'<div class="srail-bar"><i style="width:'+Math.min(p.occ,100).toFixed(1)+'%"></i><b style="left:'+Math.min(tgt,100)+'%"></b></div>'
+    +'<div class="srail-r3"><span>'+p.seats.toLocaleString()+' / '+p.totalOpen.toLocaleString()+'석</span><span class="tgt '+(gap>=0?'ok':'bad')+'">목표 '+tgt+'% '+(gap>=0?'+':'')+gap.toFixed(1)+'%p</span></div>'
+    +'</div>';
+}
+function _srailRender(){
+  var els=_srailEls(); if(!els.body)return;
+  var perfs; try{ perfs=_salesBuild(); }catch(e){ console.warn('[srail build]',e); perfs=[]; }
+  // 판매중만 · 공연일 임박순(진행 중 D+ 최상단, 미상은 마지막) · 동률이면 점유율 낮은 순(주의 대상 위로)
+  var actives=perfs.filter(function(p){return p.status==='active';})
+    .sort(function(a,b){ var ad=(a.dday===null?9e9:a.dday), bd=(b.dday===null?9e9:b.dday); if(ad!==bd)return ad-bd; return a.occ-b.occ; });
+  if(els.cnt){ els.cnt.textContent=actives.length; els.cnt.style.display=actives.length?'':'none'; }
+  if(els.asof)els.asof.textContent=_srailAsof();
+  if(els.sum){
+    if(actives.length){
+      var sum=0,has=false; actives.forEach(function(p){ if(p.diff!==null&&!isNaN(p.diff)){sum+=p.diff;has=true;} });
+      var avg=actives.reduce(function(s,p){return s+p.occ;},0)/actives.length;
+      var dHtml;
+      if(!has)dHtml='<span>어제 증감 수집 전</span>';
+      else if(sum>0)dHtml='<span>어제 <b style="color:var(--green)">▲ +'+sum.toLocaleString()+'석</b></span>';
+      else if(sum<0)dHtml='<span>어제 <b style="color:var(--danger)">▼ '+sum.toLocaleString()+'석</b></span>';
+      else dHtml='<span>어제 <b>±0석</b></span>';
+      els.sum.innerHTML=dHtml+'<span>·</span><span>평균 점유율 <b style="color:var(--accent)">'+avg.toFixed(1)+'%</b></span>';
+      els.sum.style.display='';
+    } else els.sum.style.display='none';
+  }
+  if(!actives.length){
+    els.body.innerHTML='<div class="u-empty" style="padding:30px 8px"><div class="ico">🎫</div><div class="msg">지금 판매중인 공연이 없어요</div></div>';
+    return;
+  }
+  els.body.innerHTML=actives.map(_srailCard).join('');
+}
+// 카드 클릭 → 분석 보드 해당 공연 드릴 직행. 캐시 없으면 openAnalyticsBoard 로드 완료 콜백이 드릴을 그림.
+function _srailOpenDrill(name){
+  openAnalyticsBoard();
+  if(_anaState){
+    _anaState.drillName=name; _anaState.cmp={tray:[],bars:false}; _anaState.screen=2;
+    if(_salesState.daily&&_salesState.master&&_salesState.ops)_anaRender();
+  }
+}
 
 /* ============================================================
    판매·사업현황 분석 보드 (beta) — openAnalyticsBoard + _ana*
@@ -4460,6 +4610,7 @@ async function _dailySubmit(){
     showToast(rows.length+'건 저장됐어요 ('+date+')');
     closeDailyInput();
     _salesState.master=null;_salesState.daily=null;_salesState.rounds=null;
+    try{_srailInit();}catch(_e){}  // 판매 레일 최신화(일일입력 반영 재fetch)
     if(document.getElementById('sales-board')&&document.getElementById('sales-board').innerHTML){openSalesBoard();}
   }catch(e){ if(msg)msg.textContent='저장 실패: '+(e.message||e); if(btn){btn.disabled=false;btn.textContent='저장';} }
 }
@@ -14661,7 +14812,12 @@ function onEvContextMenu(event,rowIndex,dateKey){
 
 function openPanel(dateObj,recs){
   panelOpen=true;var p=document.getElementById('panel'),dn=DAY_NAMES[dateObj.getDay()];
-  document.getElementById('main-area').style.marginRight='360px';
+  // 판매 레일이 보이는 동안엔 패널이 레일 자리를 정확히 덮고(폭=레일 폭), 캘린더는 안 밀림(3/4 유지).
+  // 레일이 숨는 폭(≤1200px)·모바일에선 기존 동작(360px 밀기, 모바일 CSS가 !important로 승).
+  var _srEl=document.getElementById('sales-rail');
+  var _srW=(_srEl&&_srEl.offsetWidth)?_srEl.offsetWidth:0;
+  p.style.width=(_srW>360?_srW:360)+'px';
+  document.getElementById('main-area').style.marginRight=(_srW>=360?0:(360-_srW))+'px';
   var _pKey=dk(dateObj);
   var _pHol=(window._holidays&&_holidays[_pKey])||'';
   var _pPerfs=((typeof getPerfs==='function')?getPerfs(dateObj):[]).filter(function(p){return p.t!=='e';});
@@ -15036,7 +15192,7 @@ function openPanelWithPerfHighlight(perfName, dateKey){
   }, 60);
 }
 
-function closePanel(){panelOpen=false;selected=null;_panelProgLastAnimKey=null;document.getElementById('panel').style.display='none';document.getElementById('main-area').style.marginRight='0';render();}
+function closePanel(){panelOpen=false;selected=null;_panelProgLastAnimKey=null;var _pnl=document.getElementById('panel');_pnl.style.display='none';_pnl.style.width='';document.getElementById('main-area').style.marginRight='0';render();}
 function changeMonth(delta){currentMonth+=delta;if(currentMonth<1){currentMonth=12;currentYear--;}if(currentMonth>12){currentMonth=1;currentYear++;}_weekState={};_calAnimateOnNextRender=true;if(window.matchMedia('(max-width:768px)').matches){render();}else{closePanel();}}
 
 function onPlatChange(){
