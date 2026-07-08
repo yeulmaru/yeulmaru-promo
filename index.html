@@ -17422,13 +17422,14 @@ function _nbRender(){
       +'<button type="button" class="nb-btn ghost" onclick="_nbTagsCopy()" style="padding:7px 14px;font-size:12px">📋 태그 전체 복사</button>'
     +'</div>';
   }
-  // [BW-2] 리서치 노트 — AI가 검색으로 확인한 사실(팩트체크·살 붙이기 참고), 접이식
+  // [BW-2] 리서치 노트 — AI가 검색으로 확인한 사실(팩트체크·살 붙이기 참고). 접기/펼치기 = 기존 _nbSet 토글 패턴 계승
   var resHtml='';
   if(_cv&&String(_cv.research||'').trim()&&s.output&&!s.genBusy){
-    resHtml='<details class="nb-field" style="margin-top:10px">'
-      +'<summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--dim)">🔎 리서치 노트 — AI가 웹에서 조사해 확인한 자료 (검증용)</summary>'
-      +'<div class="nb-note" style="white-space:pre-wrap;margin-top:7px">'+escapeHtml(_cv.research)+'</div>'
-    +'</details>';
+    resHtml='<div class="nb-field" style="margin-top:10px">'
+      +'<button type="button" class="nb-btn ghost" onclick="_nbSet(\'resOpen\',!_nbState.resOpen)" style="padding:7px 14px;font-size:12px">🔎 리서치 노트 '+(s.resOpen?'접기 ▴':'보기 ▾')+'</button>'
+      +'<span style="font-size:11px;color:var(--muted);margin-left:8px">AI가 웹에서 조사해 확인한 자료 — 발행 전 검증용</span>'
+      +(s.resOpen?'<div class="nb-note" style="white-space:pre-wrap;margin-top:8px">'+escapeHtml(_cv.research)+'</div>':'')
+    +'</div>';
   }
   body.innerHTML=''
    +'<div class="nb-wrap">'
