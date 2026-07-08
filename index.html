@@ -3850,7 +3850,7 @@ function _salesBuild(){
   });
   // [판매중 노출 2차] 공연마스터·일일입력에 아예 없는 신규 오픈 공연(하반기 라인업 등)은 프로그램 시트(PERFS)
   // 판매기간(판매시작일≤오늘≤판매종료일, 종료 폴백=공연 종료일)으로 잡아 "집계 전(0석)" 카드로 노출(운영자 260708 — 마스터 미등록 공연이 판매 현황에 안 뜸).
-  // 공연('c')만 — 전시는 레일 _srailExhibs 별도 경로(이중 노출 방지), 교육·대관은 일일판매 범위 밖.
+  // t='c'(공연·기타 — typeMap상 '기타'도 'c', 판매기간 보유 시 판매물로 간주)만 — 전시('e')는 레일 _srailExhibs 별도 경로(이중 노출 방지), 교육('a')·대관('r')은 일일판매 범위 밖.
   // 마스터에 등록된 공연은 마스터 판정이 정본(위 루프) — 마스터 전체 이름·ID를 dedup에 넣어 프로그램 폴백 차단.
   perfs.forEach(function(p){ seenNames[_uName(p.name)]=1; if(p._mid)seenIds[p._mid]=1; });
   Object.keys(master).forEach(function(nm){ seenNames[_uName(nm)]=1; if(master[nm].ID)seenIds[master[nm].ID]=1; });
@@ -3858,7 +3858,8 @@ function _salesBuild(){
   ((typeof PERFS!=='undefined'&&PERFS)||[]).forEach(function(pg){
     if(pg.t!=='c')return;
     var nm3=String(pg.f||pg.n||'').trim(); if(!nm3)return;
-    if(seenNames[_uName(nm3)]||(pg.id&&seenIds[pg.id]))return;
+    // dedup은 풀네임+줄임말 양쪽 — 일일입력 공연명이 줄임말과만 맞는 케이스에서 유령 집계 전 카드 방지(분신술 MED 반영)
+    if(seenNames[_uName(nm3)]||(pg.n&&seenNames[_uName(pg.n)])||(pg.id&&seenIds[pg.id]))return;
     var until=pg.se||pg.e;
     if(!pg.ss||!until||!(pg.ss<=todayISO&&todayISO<=until))return;   // ISO 문자열 사전순 = 날짜순
     if(pg.e&&pg.e<todayISO)return;   // 종료 강제 보정(기존 원칙과 동일): 공연이 끝났으면 판매기간이 남아도 제외
@@ -4927,7 +4928,7 @@ function _salesCopyExcel(){
   var end=perfs.filter(function(p){return p.status==='ended';}).sort(function(a,b){return (a.startDate&&b.startDate)?(b.startDate-a.startDate):0;});
   var all=act.concat(end);
   if(!all.length){showToast('복사할 판매 데이터가 없어요','error');return;}
-  function cell(v){return String(v===null||v===undefined?'':v).replace(/[\t\r\n]+/g,' ');}
+  function cell(v){return String(v===null||v===undefined?'':v).replace(/[\t\r\n]+/g,' ').replace(/"/g,'”');}   // 탭·개행=셀 분리 방지, 큰따옴표=엑셀 텍스트 한정자 오파싱 방지
   var rows=[['상태','공연일','공연명','D-day','판매좌석','전일대비','오픈석','점유율(%)','판매금액(원)']];
   all.forEach(function(p){
     rows.push([p.status==='active'?'판매중':'종료',p.dateStr||'',p.name,p.status==='active'?(_salesDdayStr(p.dday)||''):'종료',p.seats,(p.diff===null?'':p.diff),p.totalOpen,(p.noData?'집계 전':p.occ.toFixed(1)),p.money]);
