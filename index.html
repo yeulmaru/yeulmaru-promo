@@ -17419,16 +17419,16 @@ function _nbRender(){
     tagHtml='<div class="nb-field" style="margin-top:14px">'
       +'<label class="nb-label">🏷️ 추천 태그 '+_cv.tags.length+'개 <span style="color:var(--muted);font-weight:500">— 네이버 발행 시 태그란에 붙여넣기 (여수·순천·광양 검색 유입 포함)</span></label>'
       +'<div class="nb-chiprow" style="margin-bottom:8px">'+_cv.tags.map(function(t){return '<span class="nb-chip" style="cursor:default">#'+escapeHtml(t)+'</span>';}).join('')+'</div>'
-      +'<button type="button" class="nb-btn ghost" onclick="_nbTagsCopy()" style="padding:7px 14px;font-size:12px">📋 태그 전체 복사</button>'
+      +'<button type="button" class="nb-btn ghost" onclick="_nbTagsCopy()" style="padding:7px 14px;font-size:12px">태그 전체 복사</button>'
     +'</div>';
   }
   // [BW-2] 리서치 노트 — AI가 검색으로 확인한 사실(팩트체크·살 붙이기 참고). 접기/펼치기 = 기존 _nbSet 토글 패턴 계승
   var resHtml='';
   if(_cv&&String(_cv.research||'').trim()&&s.output&&!s.genBusy){
     resHtml='<div class="nb-field" style="margin-top:10px">'
-      +'<button type="button" class="nb-btn ghost" onclick="_nbSet(\'resOpen\',!_nbState.resOpen)" style="padding:7px 14px;font-size:12px">🔎 리서치 노트 '+(s.resOpen?'접기 ▴':'보기 ▾')+'</button>'
-      +'<span style="font-size:11px;color:var(--muted);margin-left:8px">AI가 웹에서 조사해 확인한 자료 — 발행 전 검증용</span>'
-      +(s.resOpen?'<div class="nb-note" style="white-space:pre-wrap;margin-top:8px">'+escapeHtml(_cv.research)+'</div>':'')
+      +'<button type="button" class="nb-btn ghost" onclick="_nbSet(\'resOpen\',!_nbState.resOpen)" style="padding:7px 14px;font-size:12px">리서치 노트 '+(s.resOpen?'접기 ▲':'보기 ▼')+'</button>'
+      +'<span style="font-size:11px;color:var(--muted);margin-left:8px">🔍 AI가 웹에서 조사해 확인한 자료 — 발행 전 검증용</span>'
+      +(s.resOpen?'<div class="nb-note" style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:8px">'+escapeHtml(_cv.research)+'</div>':'')
     +'</div>';
   }
   body.innerHTML=''
@@ -17503,7 +17503,7 @@ async function _nbDispatch(payload){
   return j.id||id;
 }
 async function _nbPollDraft(id,maxMs){
-  var t0=Date.now();maxMs=maxMs||480000;   // 최대 ~8분(러너 시작+설치+웹 리서치 멀티턴+생성 — BW-2로 상향)
+  var t0=Date.now();maxMs=maxMs||600000;   // 최대 ~10분(러너 시작+설치+웹 리서치 멀티턴+생성, 직렬 큐 1건 대기까지 흡수 — BW-2로 상향)
   while(Date.now()-t0<maxMs){
     await new Promise(function(res){setTimeout(res,4000);});
     try{
@@ -17519,7 +17519,7 @@ async function _nbPollDraft(id,maxMs){
 function _nbGenErr(msg){
   if(msg.indexOf('NO_PAT')>-1)showToast('초안 생성이 서버에 아직 설정되지 않았어요 — 관리자에게 문의해 주세요','error');
   else if(msg.indexOf('PAT_DENIED')>-1)showToast('서버 GitHub 토큰 권한이 부족해요(Contents: write) — 관리자 문의','error');
-  else if(msg.indexOf('TIMEOUT')>-1)showToast('시간이 초과됐어요 — 잠시 후 다시 시도해 주세요','error');
+  else if(msg.indexOf('TIMEOUT')>-1)showToast('시간이 초과됐어요 — 다른 초안이 먼저 생성 중이면 순서가 밀릴 수 있어요. 잠시 후 다시 시도해 주세요','error');
   else showToast('생성 실패: '+msg,'error');
 }
 async function _nbGenerate(){
