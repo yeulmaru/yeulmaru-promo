@@ -4305,11 +4305,11 @@ function _anaRender(){
   var body=document.getElementById('ana-body'); if(!body)return;
   _anaPopClose();
   var h='';
-  // 상단 탭 (스크린 1=판매현황진입 / 3=사업현황 / 4=계절성). 드릴(2)은 스크린1 표에서 진입.
+  // 상단 탭 (스크린 1=판매현황진입 / 3=사업현황). 드릴(2)은 스크린1 표에서 진입. 계절성 히트맵은 260708부터 스크린1 하단 병합(_anaHeatHtml — 운영자: 계절성 탭 제거, 판매현황이 갈음).
   var s=_anaState.screen;
   var navScreen=(s===2)?1:s;   // 드릴 중엔 '판매현황' 탭 활성 유지
   h+='<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">';
-  [['판매현황',1],['사업현황',3],['계절성',4]].forEach(function(t){
+  [['판매현황',1],['사업현황',3]].forEach(function(t){
     var on=navScreen===t[1];
     h+='<button class="ana-tab'+(on?' on':'')+'" onclick="_anaGo('+t[1]+')">'+t[0]+'</button>';
   });
@@ -4319,7 +4319,6 @@ function _anaRender(){
   if(s===1)_anaScreen1(sc);
   else if(s===2)_anaScreen2(sc);
   else if(s===3)_anaScreen3(sc);
-  else if(s===4)_anaScreen4(sc);
 }
 function _anaGo(n){ _anaState.screen=n; _anaRender(); }
 
@@ -4381,6 +4380,7 @@ function _anaScreen1(sc){
   });
   h+='</tbody></table>';
   h+='<div style="color:#bbb;font-size:11px;margin-top:12px">행 클릭 → 개별 프로그램 분석 · 데이터: 운영_일일입력(공연명 조인) · 마스터=공연마스터/폴백=운영대장 추정/프로그램=프로그램 시트 판매기간(집계 전)</div>';
+  h+=_anaHeatHtml();   // 계절성 히트맵 병합(구 계절성 탭 갈음 — 전시는 _anaExhibScreen1 위임이라 자동 제외)
   sc.innerHTML=h;
 }
 function _anaEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
@@ -4807,10 +4807,10 @@ function _anaDownloadCsv(){
   showToast('CSV를 내려받았어요');
 }
 
-/* ---------- 스크린 4: 계절성 (장르 × 월 히트맵) ---------- */
-function _anaScreen4(sc){
+/* ---------- 계절성 히트맵 (장르 × 월) — 스크린1 하단 병합 섹션(구 스크린4 탭) ---------- */
+function _anaHeatHtml(){
   var recs=_bizClean();   // 발권유료÷기준석=_occ, _date(월), _genre, _name
-  if(!recs.length){ sc.innerHTML='<div class="u-empty"><div class="ico">📭</div><div class="msg">운영대장 데이터가 없어요</div></div>'; return; }
+  if(!recs.length)return '';   // 운영대장 없으면 섹션 자체 생략(판매현황 본표는 그대로)
   var order=['클래식','뮤지컬','대중','발레/연극','어린이·가족','기타'];
   // (장르,월) → occ 목록 (다년 누적)
   var cellMap={}; var repMap={};   // repMap: 대표 프로그램(가장 최근) for click
@@ -4821,7 +4821,7 @@ function _anaScreen4(sc){
   function ramp(v){ var t=Math.max(0,Math.min(1,v/100)); var r=Math.round(255+(74-255)*t), g=Math.round(255+(77-255)*t), b=Math.round(255+(231-255)*t); return 'rgb('+r+','+g+','+b+')'; }
   var yrs={}; recs.forEach(function(r){if(r._date)yrs[r._date.getFullYear()]=1;}); var yrSpan=Object.keys(yrs).map(Number);
   var minY=yrSpan.length?Math.min.apply(null,yrSpan):'',maxY=yrSpan.length?Math.max.apply(null,yrSpan):'';
-  var h='<div class="ana-sec">장르 × 월 평균 점유율 히트맵 <span style="font-size:11px;color:#aaa;font-weight:500">('+minY+'~'+maxY+' 다년 평균 · 발권유료÷기준석)</span></div>';
+  var h='<div class="ana-sec" style="margin-top:26px">장르 × 월 평균 점유율 히트맵 <span style="font-size:11px;color:#aaa;font-weight:500">('+minY+'~'+maxY+' 다년 평균 · 발권유료÷기준석)</span></div>';
   h+='<div style="overflow-x:auto"><table class="ana-mtx" style="min-width:680px"><thead><tr><th style="text-align:left">장르 \\ 월</th>';
   for(var m=1;m<=12;m++)h+='<th>'+m+'월</th>';
   h+='</tr></thead><tbody>';
@@ -4832,7 +4832,7 @@ function _anaScreen4(sc){
   });
   h+='</tbody></table></div>';
   h+='<div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#999"><span>낮음</span><span style="display:inline-block;width:120px;height:12px;border-radius:3px;background:linear-gradient(90deg,'+ramp(0)+','+ramp(50)+','+ramp(100)+');border:1px solid #eee"></span><span>높음 (점유율 %)</span><span style="margin-left:10px;color:#bbb">셀 클릭 → 그 칸 대표(최근) 프로그램 분석</span></div>';
-  sc.innerHTML=h;
+  return h;
 }
 // 히트맵 셀 → 판매현황 일일 데이터가 있으면 드릴, 없으면 토스트(공연 단위 일일 미존재)
 function _anaDrillFromHeat(name){
