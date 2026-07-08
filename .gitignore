@@ -40,6 +40,8 @@ _*_secret.txt
 # Build output
 dist/
 build/
+# 예외: 플레이그라운드 애니어그램 툴킷의 빌드 소스(스크립트·폰트 b64)는 재빌드 재현용으로 추적
+!playground/enneagram/build/
 
 # Logs
 *.log
