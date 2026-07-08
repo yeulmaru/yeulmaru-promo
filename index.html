@@ -3779,6 +3779,7 @@ function _salesBuild(){
     var name=String(r['공연명']||'').trim(); var bd=_salesNum(r['기준일자']); if(!name||bd===null)return; (dmap[name]=dmap[name]||[]).push(r);
   });
   var today=new Date(); today.setHours(0,0,0,0);
+  var todayISO=today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2)+'-'+('0'+today.getDate()).slice(-2);
   var perfs=[];
   Object.keys(dmap).forEach(function(name){
     var rows=dmap[name].sort(function(a,b){return _salesNum(a['기준일자'])-_salesNum(b['기준일자']);});
@@ -3800,12 +3801,21 @@ function _salesBuild(){
     var occ=totalOpen>0?Math.min(seats/totalOpen*100,100):0;
     var startDate=m?m.시작:(ops&&ops.first?ops.first:null);
     var endDate=m?m.종료:(ops&&ops.last?ops.last:null);
+    // 마스터·운영대장 이중 미스(마스터 미등록 신규 오픈 공연에 집계가 먼저 들어온 경우) → 날짜 전무 →
+    // status 'unknown'으로 카드가 레일·보드·엑셀·분석 전부에서 숨는 갭(분신술 MED 반영) — 프로그램 시트(id 우선)로 날짜 보강.
+    var pgf=null;
+    if(!m&&!ops){
+      var un=_uName(name);
+      ((typeof PERFS!=='undefined'&&PERFS)||[]).some(function(pg){ if((rid&&pg.id&&pg.id===rid)||(pg.f&&_uName(pg.f)===un)||(pg.n&&_uName(pg.n)===un)){pgf=pg;return true;} return false; });
+      if(pgf){ if(!startDate)startDate=_salesDate(pgf.s); if(!endDate&&pgf.e)endDate=_salesDate(pgf.e); }
+    }
     var dday=startDate?Math.round((startDate-today)/86400000):null;
     var dateStr='';
     if(m&&m.ID&&rounds[m.ID])dateStr=_salesFmtDates(rounds[m.ID]);
     else if(startDate){var ws=['일','월','화','수','목','금','토'];dateStr=(startDate.getMonth()+1)+'.'+startDate.getDate()+'('+ws[startDate.getDay()]+')';}
     var status='unknown';
     if(m&&m.티켓오픈&&m.종료){ if(m.티켓오픈<=today&&today<=m.종료)status='active'; else if(today>m.종료)status='ended'; else status='notyet'; }
+    else if(!m&&pgf&&pgf.ss&&(pgf.se||pgf.e)){ var until1=pgf.se||pgf.e; status=(pgf.ss<=todayISO&&todayISO<=until1)?'active':(todayISO>until1?'ended':'notyet'); }   // 판매기간 중 = 판매중(마스터 티켓오픈~종료 판정·3차 폴백과 동형)
     else if(!m&&endDate){ status=(today>endDate)?'ended':(startDate&&today<startDate?'notyet':'active'); }
     else if(dday!==null){ status=dday>=0?'active':'ended'; }
     // [수정] 판매중 = "마지막 공연일이 아직 안 지난 공연"으로 강제 보정 —
@@ -3856,7 +3866,6 @@ function _salesBuild(){
   // 마스터에 등록된 공연은 마스터 판정이 정본(위 루프) — 마스터 전체 이름·ID를 dedup에 넣어 프로그램 폴백 차단.
   perfs.forEach(function(p){ seenNames[_uName(p.name)]=1; if(p._mid)seenIds[p._mid]=1; });
   Object.keys(master).forEach(function(nm){ seenNames[_uName(nm)]=1; if(master[nm].ID)seenIds[master[nm].ID]=1; });
-  var todayISO=today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2)+'-'+('0'+today.getDate()).slice(-2);
   ((typeof PERFS!=='undefined'&&PERFS)||[]).forEach(function(pg){
     if(pg.t!=='c')return;
     var nm3=String(pg.f||pg.n||'').trim(); if(!nm3)return;
@@ -4850,22 +4859,23 @@ function _dailyMasters(){
     .map(function(m){ var name=String(m['사업명']||'').trim(); return {name:name, id:String(m['ID']||'').trim(), open:(_salesNum(m['총오픈석'])||((_salesNum(m['기준석'])||926)*(_salesNum(m['총회차'])||1))), cat:(catIdx[_uName(name)]||'')}; });
   // [운영자 260708] 공연마스터 미등록 신규 오픈 공연 폴백 — 목록에 없으면 집계 자체를 못 넣는다.
   // 프로그램 시트 판매기간(판매시작일≤오늘≤판매종료일, 폴백=공연 종료일)로 판정 — 판매 현황 3차 폴백(_salesBuild)과 동일 원칙.
-  // 마스터 전체 이름 dedup(마스터 등록 공연은 마스터 판정이 정본) · 전시·교육·대관 제외(공연 일일판매 범위 밖).
-  var seen={}; rows.forEach(function(m){ var n=String(m['사업명']||'').trim(); if(n)seen[_uName(n)]=1; });
+  // 마스터 전체 이름·ID dedup(마스터 등록 공연은 마스터 판정이 정본 — _salesBuild 3차와 동일 3중 dedup) · 전시·교육·대관 제외(공연 일일판매 범위 밖).
+  var seen={}, seenId={}; rows.forEach(function(m){ var n=String(m['사업명']||'').trim(); if(n)seen[_uName(n)]=1; var mid=String(m['ID']||'').trim(); if(mid)seenId[mid]=1; });
   var todayISO=_dailyToday();
   (_dailyState.programs||[]).forEach(function(p){
     var name=String(p['풀네임']||p['줄임말']||'').trim(); if(!name)return;
-    if(seen[_uName(name)]||(p['줄임말']&&seen[_uName(p['줄임말'])]))return;
+    var pid=String(p['프로그램ID']||p['공연ID']||'').trim();
+    if(seen[_uName(name)]||(p['줄임말']&&seen[_uName(p['줄임말'])])||(pid&&seenId[pid]))return;
     var cat=String(p['콘텐츠구분']||'').trim();
     if(cat==='전시'||cat==='예술교육'||cat==='대관')return;
     var ss=excelSerialToISO(p['판매시작일']), se=excelSerialToISO(p['판매종료일']), e=excelSerialToISO(p['종료일']);
     var until=se||e;
     if(!ss||!until||!(ss<=todayISO&&todayISO<=until))return;   // ISO 문자열 사전순 = 날짜순
     if(e&&e<todayISO)return;   // 공연이 끝났으면 판매기간이 남아도 제외
-    seen[_uName(name)]=1;
+    seen[_uName(name)]=1; if(pid)seenId[pid]=1;
     var open=_SALES_FALLBACK_SEAT;
-    try{ var yr=parseInt(String(excelSerialToISO(p['시작일'])).slice(0,4),10)||(new Date()).getFullYear(); var opsP=(_salesState&&_salesState.ops)?_opsLookup(name,yr):null; if(opsP)open=(opsP.base||_SALES_FALLBACK_SEAT)*(opsP.count||1); }catch(_e){}
-    out.push({name:name, id:String(p['프로그램ID']||p['공연ID']||'').trim(), open:open, cat:cat});
+    try{ var yr=parseInt(String(excelSerialToISO(p['시작일'])).slice(0,4),10)||(new Date()).getFullYear(); var opsP=(_salesState&&_salesState.ops)?((pid?_opsLookupById(pid):null)||_opsLookup(name,yr)):null; if(opsP)open=(opsP.base||_SALES_FALLBACK_SEAT)*(opsP.count||1); }catch(_e){}
+    out.push({name:name, id:pid, open:open, cat:cat});
   });
   return out.filter(function(m){ if(!m.name)return false; if(!allowed)return true; if(!m.cat)return true; return allowed.indexOf(m.cat)>=0; });  // 담당 카테고리만(카테고리 미상=조인실패는 표시해 입력 누락 방지)
 }
