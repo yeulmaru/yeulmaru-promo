@@ -530,6 +530,30 @@ button{font-family:inherit;cursor:pointer}
 /* 헤더 밴드 전경색 제거(운영자 260705) — 옛 불투명 --bg 판때기가 메시 위를 덮던 것 → 투명(메시가 그대로 이어짐) */
 .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:0;flex-wrap:wrap;gap:12px;position:sticky;top:56px;z-index:6;background:transparent;padding:16px 0 12px 0}
 /* ═══ 배너 펫(산책 마스코트) — .hdr 하단 라인(요일 헤더 바로 위)을 좌우로 산책. 공 차는 모션은 webp에 내장, CSS는 좌우 이동만 ═══ */
+.pet{position:absolute;left:clamp(120px,14%,200px);bottom:2px;height:40px;width:auto;pointer-events:none;user-select:none;z-index:6;will-change:transform,opacity;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35));opacity:0}
+.pet.in{opacity:1;animation:petEnter .75s cubic-bezier(.2,1.25,.4,1) both,petStroll 9s ease-in-out .75s infinite}
+@keyframes petStroll{
+  0%{transform:translateX(0) scaleX(1)}
+  9%{transform:translateX(136px) scaleX(1)}
+  15%{transform:translateX(116px) scaleX(1)}
+  21%{transform:translateX(121px) scaleX(1)}
+  40%{transform:translateX(320px) scaleX(1)}
+  49%{transform:translateX(320px) scaleX(1)}
+  51%{transform:translateX(314px) scaleX(-1)}
+  59%{transform:translateX(184px) scaleX(-1)}
+  65%{transform:translateX(204px) scaleX(-1)}
+  85%{transform:translateX(15px) scaleX(-1)}
+  93%{transform:translateX(15px) scaleX(-1)}
+  98%{transform:translateX(0) scaleX(1)}
+  100%{transform:translateX(0) scaleX(1)}
+}
+@keyframes petEnter{
+  0%{opacity:0;transform:translateX(-170px) scaleX(1)}
+  60%{opacity:1}
+  100%{opacity:1;transform:translateX(0) scaleX(1)}
+}
+@media (prefers-reduced-motion:reduce){.pet{opacity:1}.pet.in{animation:none}}
+@media (max-width:768px){.pet{display:none}}
 .month-nav{display:flex;align-items:center;gap:16px}
 .arrow{width:38px;height:38px;border-radius:50%;border:1px solid rgba(0,0,0,0.06);background:var(--glass);backdrop-filter:blur(8px);font-size:18px;display:flex;align-items:center;justify-content:center;color:#666;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
 .arrow:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent-glow);box-shadow:0 4px 12px rgba(74,77,231,0.15)}
@@ -1671,6 +1695,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
           <button class="arrow" onclick="changeMonth(1)">›</button>
         </div>
         <div class="chips" id="chips"></div>
+        <img class="pet" src="image/pet.webp" alt="" aria-hidden="true" draggable="false">
       </div>
       <div class="cal-head-wrap" id="cal-head-wrap"></div>
         <div class="cal" id="cal"></div>
@@ -3579,7 +3604,7 @@ function buildNav(){
       if(m.id==='schedule'){_ddOpen(b,_scheduleMenuBuild,210);return;}
       if(m.id==='platform'){openPlatformBoard();return;}
       if(m.id==='business'){openBusinessBoard();return;}
-      if(m.id==='sales'){openSalesBoard();return;}
+      if(m.id==='sales'){openAnalyticsBoard();return;}
       if(m.id==='playzone'){_ddOpen(b,_playzoneMenuBuild,210);return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
@@ -4252,7 +4277,10 @@ function openAnalyticsBoard(){
   el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeAnalyticsBoard)">'
     +'<div class="modal" style="width:96vw;max-width:1280px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff">'
     +'<button class="modal-x" onclick="closeAnalyticsBoard()" title="닫기" style="position:absolute;top:14px;right:14px;z-index:10">✕</button>'
-    +'<div style="padding:18px 24px;border-bottom:1px solid #eee;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">🧪 <span>판매·사업현황 분석</span><span style="font-size:11px;color:#aaa;font-weight:500">· beta</span></div>'
+    +'<div style="padding:18px 24px;border-bottom:1px solid #eee;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">📈 <span>판매 현황</span>'
+    +'<button onclick="_salesCopyExcel()" style="margin-left:auto;margin-right:'+(userRole==='admin'?'8px':'34px')+';padding:6px 13px;border-radius:8px;border:1.5px solid var(--green);background:rgba(26,107,60,0.07);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" title="판매 현황 표를 복사 — 엑셀에 그대로 붙여넣기(Ctrl+V)">📋 엑셀 복사</button>'
+    +(userRole==='admin'?'<button onclick="openDailyInput()" style="margin-right:34px;padding:6px 13px;border-radius:8px;border:1.5px solid var(--accent);background:rgba(74,77,231,0.07);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">➕ 일일입력</button>':'')
+    +'</div>'
     +'<div id="ana-body" style="flex:1;overflow:auto;padding:18px 24px;min-width:0"></div>'
     +'</div></div>';
   _anaState=_anaState||{screen:1,cat:'공연',profit:'예술성',genre:'전체',year:null,drillName:null,xstep:3,cmp:{tray:[],bars:false}};
@@ -4279,21 +4307,19 @@ function _anaPopClose(){ var p=document.getElementById('ana-pop'); if(p)p.remove
 function _anaRender(){
   var body=document.getElementById('ana-body'); if(!body)return;
   _anaPopClose();
-  var h='';
-  // 상단 탭 (스크린 1=판매현황진입 / 3=사업현황). 드릴(2)은 스크린1 표에서 진입. 계절성 히트맵은 260708부터 스크린1 하단 병합(_anaHeatHtml — 운영자: 계절성 탭 제거, 판매현황이 갈음).
+  // 탭 폐지(운영자 260708 — "탭 1,2,3을 위아래로 내리면 되지") — 판매현황(스크린1·계절성 히트맵 병합) ↓ 사업현황(스크린3) 세로 나열.
+  // 드릴(스크린2)만 단독 화면 전환 — _anaGo(1) 복귀 = 나열 화면. #ana-screen ID는 전시 로딩 등 내부 참조가 있어 유지.
   var s=_anaState.screen;
-  var navScreen=(s===2)?1:s;   // 드릴 중엔 '판매현황' 탭 활성 유지
-  h+='<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">';
-  [['판매현황',1],['사업현황',3]].forEach(function(t){
-    var on=navScreen===t[1];
-    h+='<button class="ana-tab'+(on?' on':'')+'" onclick="_anaGo('+t[1]+')">'+t[0]+'</button>';
-  });
-  h+='</div>';
-  body.innerHTML=h+'<div id="ana-screen"></div>';
-  var sc=document.getElementById('ana-screen');
-  if(s===1)_anaScreen1(sc);
-  else if(s===2)_anaScreen2(sc);
-  else if(s===3)_anaScreen3(sc);
+  if(s===2){
+    body.innerHTML='<div id="ana-screen"></div>';
+    _anaScreen2(document.getElementById('ana-screen'));
+    return;
+  }
+  body.innerHTML='<div id="ana-screen"></div>'
+    +'<div class="ana-sec" style="margin-top:34px;padding-top:18px;border-top:1px solid var(--border)">사업현황</div>'
+    +'<div id="ana-screen3"></div>';
+  _anaScreen1(document.getElementById('ana-screen'));
+  _anaScreen3(document.getElementById('ana-screen3'));
 }
 function _anaGo(n){ _anaState.screen=n; _anaRender(); }
 
@@ -4931,7 +4957,7 @@ async function _dailySubmit(){
     closeDailyInput();
     _salesState.master=null;_salesState.daily=null;_salesState.rounds=null;
     try{_srailInit();}catch(_e){}  // 판매 레일 최신화(일일입력 반영 재fetch)
-    if(document.getElementById('sales-board')&&document.getElementById('sales-board').innerHTML){openSalesBoard();}
+    if(document.getElementById('analytics-board')&&document.getElementById('analytics-board').innerHTML){openAnalyticsBoard();}
   }catch(e){ if(msg)msg.textContent='저장 실패: '+(e.message||e); _btnBusy(btn,false,'저장'); }
 }
 // === 티켓링크 판매현황 xlsx 업로드 → 순판매를 날짜순 누적해 일일입력에 자동 반영 ===
@@ -5054,7 +5080,7 @@ async function _dsxSubmit(){
     closeDailyInput();
     _salesState.master=null;_salesState.daily=null;_salesState.rounds=null;
     try{_srailInit();}catch(_e){}
-    if(document.getElementById('sales-board')&&document.getElementById('sales-board').innerHTML){openSalesBoard();}
+    if(document.getElementById('analytics-board')&&document.getElementById('analytics-board').innerHTML){openAnalyticsBoard();}
   }catch(e){ if(msg)msg.textContent='저장 실패: '+(e.message||e); _btnBusy(btn,false,rows.length+'건 저장'); }
 }
 function _salesToggleEnded(){ _salesState.showEnded=!_salesState.showEnded; _salesRender(); }
@@ -14539,6 +14565,13 @@ function _typeLoop(elId,text,speed){
   }
   setTimeout(tick,100);
 }
+var _petShown=false;
+function _petEnter(){
+  // 데이터 로딩이 끝나면 펫이 왼쪽에서 챠르륵 슬라이드+살짝 오버슈트하며 한 번만 등장
+  if(_petShown)return;_petShown=true;
+  var p=document.querySelector('.pet');if(!p)return;
+  requestAnimationFrame(function(){p.classList.add('in');});
+}
 // 캘린더 로딩 스켈레톤(글래스 셀 18칸 + 광택 스윕) — 바 폭은 자리표시용 고정 패턴(난수 금지)
 function _calSkelHtml(){
   var w=['62%','38%','74%','46%','58%','30%'],h='<div class="cal-skel" role="status" aria-live="polite" aria-label="캘린더 불러오는 중">';
@@ -14563,7 +14596,7 @@ async function loadData(){
   try{const d=await api('GET','/api/records');var _all=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});_DRAFTS=_all.filter(_isDraftRec);records=_all.filter(function(r){return !_isDraftRec(r);});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--danger);font-size:14px">데이터 로드 실패</div>';return;}
   // 특별 일정 — 위에서 병렬 출발한 것 완료 대기 (실패해도 records 렌더는 진행)
   try{await _spP;}catch(e){}
-  _typingId++;render();if(typeof _refreshSeenMod==='function')_refreshSeenMod();}
+  _typingId++;render();_petEnter();if(typeof _refreshSeenMod==='function')_refreshSeenMod();}
 
 // SharePoint Graph API 일관성 지연 회피용 - 변경 후 row 수 검증 + 자동 재시도
 async function syncReload(expectedDelta){
@@ -16390,7 +16423,7 @@ function _bnavBuild(){
   const items=[
     {id:'cal',ico:'🗓️',label:'캘린더',fn:_bnavCal},
     {id:'schedule',ico:'📋',label:'일정 확인',fn:function(){openPromoBoard();}},
-    isAdmin?{id:'sales',ico:'📈',label:'판매',fn:function(){openSalesBoard();}}:{id:'promo',ico:'✏️',label:'신청',fn:function(){openPromoWizard();}},
+    isAdmin?{id:'sales',ico:'📈',label:'판매',fn:function(){openAnalyticsBoard();}}:{id:'promo',ico:'✏️',label:'신청',fn:function(){openPromoWizard();}},
     {id:'annual',ico:'📅',label:'연간',fn:function(){openAnnualCalendar();}},
     {id:'more',ico:'⋯',label:'더보기',fn:_bnavMore}
   ];
@@ -16416,7 +16449,7 @@ function _bnavMore(){
   add('📝','네이버 블로그 글쓰기','openNaverBlogTool()');
   add('🧩','플랫폼 현황','openPlatformBoard()');
   add('🏢','사업 현황','openBusinessBoard()');
-  if(!isAdmin)add('📈','판매 현황','openSalesBoard()');
+  if(!isAdmin)add('📈','판매 현황','openAnalyticsBoard()');
   if(isAdmin)add('✏️','직접 등록','openAdminWizard()');
   if(isAdmin)add('⚙️','관리','openAdminPanel()');
   add('💬','도우미 챗봇','_cbToggle()');
