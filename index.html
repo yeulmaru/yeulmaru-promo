@@ -66,6 +66,7 @@ button{font-family:inherit;cursor:pointer}
 .pf{}.ps{display:none}
 @media(max-width:1200px){.pf{display:none !important}.ps{display:inline !important}}
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .cell:hover{transform:scale(1.01);transition:transform .15s}
 .c:hover{box-shadow:0 2px 8px rgba(0,0,0,0.05)}
@@ -766,7 +767,10 @@ button{font-family:inherit;cursor:pointer}
 }
 
 /* ═══ PANEL ═══ */
-.panel{position:fixed;top:56px;right:0;width:360px;height:calc(100vh - 56px);background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-left:1px solid var(--glass-border);box-shadow:-8px 0 32px rgba(74,77,231,0.06);z-index:10;display:flex;flex-direction:column;animation:slideIn .25s ease}
+/* 날짜 상세 패널 = 캘린더 위 오버레이(레일 유지·main-area 안 밀림, right는 _panelRailReflow가 레일 폭으로 동적 설정) · 무채색 글래스(운영자 260708 플레이그라운드 확정: 흰 .40/blur 6/그림자 --text계열 .03). 열고닫기 = .pn-in/.pn-out(.35s) */
+.panel{position:fixed;top:56px;right:0;width:360px;height:calc(100vh - 56px);background:rgba(255,255,255,0.40);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-left:1px solid var(--glass-border);box-shadow:-8px 0 32px rgba(26,26,46,0.03);z-index:10;display:flex;flex-direction:column}
+.panel.pn-in{animation:slideIn .35s ease}
+.panel.pn-out{animation:slideOut .35s ease}
 .panel-hdr{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border)}
 .panel-date{font-size:20px;font-weight:700}
 .panel-day{font-size:13px;color:var(--dim);margin-top:2px}
@@ -1572,7 +1576,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
    데이터·표기 = 판매현황(_salesBuild)+분석 보드(.ana-*) 스크린1·드릴 KPI 계승(스파크라인·어제대비·목표 대비).
    글래스 값 = .cal(흰 .43/blur 11/보더 .7)·--glass-* 토큰 계승, 색 전부 기존 토큰·alpha 변주 — 신규 raw hex 0. */
 #sales-rail{width:25%;min-width:300px;max-width:430px;flex-shrink:0;padding:24px 28px 24px 0}
-.srail{position:sticky;top:112px;max-height:calc(100vh - 136px);display:flex;flex-direction:column;background:rgba(255,255,255,.43);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);overflow:hidden}
+.srail{position:sticky;top:112px;min-height:calc((100vh - 136px) * 0.61);max-height:calc(100vh - 136px);display:flex;flex-direction:column;background:rgba(255,255,255,.43);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);overflow:hidden}
 .srail-hd{display:flex;align-items:center;gap:7px;padding:14px 16px 9px;flex-shrink:0}
 .srail-tt{font-size:14.5px;font-weight:800;color:var(--text)}
 .srail-cnt{font-size:10.5px;font-weight:800;color:var(--accent);background:rgba(74,77,231,.08);border:1px solid rgba(74,77,231,.18);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
@@ -4026,13 +4030,13 @@ function _srailArmResize(){
     if(typeof panelOpen!=='undefined'&&panelOpen)_panelRailReflow();   // 1200px 경계 리사이즈 시 열린 패널 폭 stale 방지(분신술 1호 LOW)
   });
 }
-// 날짜 패널 폭·캘린더 마진 계산 — 레일이 보이면 패널이 레일 자리를 정확히 덮는다(openPanel + resize 공용)
+// 날짜 패널 위치 계산 — 캘린더 위 오버레이(레일 유지). 레일이 보이면 패널 오른쪽 끝을 레일 왼쪽 경계에 맞추고, 숨으면 우측 끝. 캘린더(main-area)는 안 밀림(운영자 260708). resize 공용.
 function _panelRailReflow(){
   var p=document.getElementById('panel'); if(!p)return;
   var sr=document.getElementById('sales-rail');
-  var w=(sr&&sr.offsetWidth)?sr.offsetWidth:0;
-  p.style.width=(w>360?w:360)+'px';
-  document.getElementById('main-area').style.marginRight=(w>=360?0:(360-w))+'px';
+  var w=(sr&&sr.offsetParent!==null&&sr.offsetWidth)?sr.offsetWidth:0;
+  p.style.right=w+'px';
+  var ma=document.getElementById('main-area'); if(ma)ma.style.marginRight='0';
 }
 // 최신 입력 기준일 — 헤더 '기준 M.D' 표기 (공연 일일입력 + 전시일일 중 최신)
 function _srailAsof(){
@@ -15555,8 +15559,8 @@ function openPanel(dateObj,recs){
     h+='</div></div>';
   }
   h+='</div>';
-  p.innerHTML=h;p.style.display='flex';
-  // 자동 펼침 애니메이션 — 사이드바 슬라이드 인(.25s) 직후 재생
+  p.classList.remove('pn-out');p.classList.add('pn-in');p.innerHTML=h;p.style.display='flex';
+  // 자동 펼침 애니메이션 — 사이드바 슬라이드 인(.35s) 직후 재생
   if(typeof _pAnimate!=='undefined'&&_pAnimate){
     setTimeout(function(){
       var b=document.getElementById('panel-prog-body');
@@ -15761,7 +15765,23 @@ function openPanelWithPerfHighlight(perfName, dateKey){
   }, 60);
 }
 
-function closePanel(){panelOpen=false;selected=null;_panelProgLastAnimKey=null;var _pnl=document.getElementById('panel');_pnl.style.display='none';_pnl.style.width='';document.getElementById('main-area').style.marginRight='0';render();}
+function closePanel(){
+  var _pnl=document.getElementById('panel');
+  var _wasOpen=panelOpen;
+  panelOpen=false;selected=null;_panelProgLastAnimKey=null;
+  var _ma=document.getElementById('main-area');if(_ma)_ma.style.marginRight='0';
+  // 닫기 촤르륵(slideOut) — 데스크톱 오버레이에서만. 모바일(하단시트 slideUp)·reduced-motion은 즉시 닫기(회귀 0).
+  var _anim=_wasOpen&&_pnl&&_pnl.style.display!=='none'&&!window.matchMedia('(max-width:768px)').matches&&!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+  if(_anim){
+    _pnl.classList.remove('pn-in');_pnl.classList.add('pn-out');
+    var _done=function(){ if(!panelOpen){_pnl.style.display='none';_pnl.style.width='';_pnl.style.right='';_pnl.classList.remove('pn-out');} _pnl.removeEventListener('animationend',_done); };
+    _pnl.addEventListener('animationend',_done);
+    setTimeout(_done,450);   // 폴백(.35s + 여유) — animationend 미발동 대비
+  }else if(_pnl){
+    _pnl.style.display='none';_pnl.style.width='';_pnl.style.right='';_pnl.classList.remove('pn-in');_pnl.classList.remove('pn-out');
+  }
+  render();
+}
 function changeMonth(delta){currentMonth+=delta;if(currentMonth<1){currentMonth=12;currentYear--;}if(currentMonth>12){currentMonth=1;currentYear++;}_weekState={};_calAnimateOnNextRender=true;if(window.matchMedia('(max-width:768px)').matches){render();}else{closePanel();}}
 
 function onPlatChange(){
