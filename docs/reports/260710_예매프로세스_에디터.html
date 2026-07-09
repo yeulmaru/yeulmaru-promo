@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>예매 프로세스 — 피그마식 다이어그램 에디터 + 파일 시스템 (결과 보고)</title>
+<style>
+:root{--accent:#4A4DE7;--accent-light:#E8E8FD;--peach-light:#FBF0EC;--peach-text:#D88455;--green:#1A6B3C;--danger:#E24B4A;--text:#1A1A2E;--dim:#888;--muted:#bbb;--neutral:#EEEDF3;--neutral-text:#6B6B7B;--border:rgba(0,0,0,.09);--border2:rgba(0,0,0,.12);--surface:#fff;--r:16px;--c4:#C02872;--c5:#2D8AB3;--c6:#F5B400}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);color:var(--text);line-height:1.65;font-size:14px}
+.wrap{max-width:900px;margin:0 auto;padding:36px 20px 80px}
+h1{font-size:21px;letter-spacing:-.02em;margin:0 0 4px}
+.sub{font-size:12px;color:var(--dim);margin-bottom:26px}
+h2{font-size:15px;margin:34px 0 10px;padding-left:10px;border-left:3.5px solid var(--accent)}
+.card{background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.6);border-radius:var(--r);box-shadow:0 8px 32px rgba(74,77,231,.08),0 2px 8px rgba(0,0,0,.04);padding:18px 20px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{font-size:11px;color:var(--neutral-text);font-weight:800;letter-spacing:.03em;white-space:nowrap}
+td b{color:var(--accent)}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 9px;margin-right:4px}
+.tag.g{background:rgba(26,107,60,.1);color:var(--green)}
+.tag.a{background:rgba(74,77,231,.09);color:var(--accent)}
+.tag.d{background:rgba(226,75,74,.1);color:var(--danger)}
+.tag.n{background:var(--neutral);color:var(--neutral-text)}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.ba{grid-template-columns:1fr}}
+.ba .col{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:14px 16px}
+.ba .col h3{margin:0 0 8px;font-size:12.5px}
+.ba .col.before h3{color:var(--dim)}
+.ba .col.after h3{color:var(--accent)}
+ul{margin:6px 0;padding-left:19px}
+li{margin:3px 0}
+.small{font-size:11.5px;color:var(--dim)}
+code{background:var(--neutral);border-radius:5px;padding:1px 6px;font-size:11.5px;font-family:ui-monospace,Consolas,monospace;color:var(--neutral-text)}
+.kbd{display:inline-block;border:1px solid var(--border2);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:800;color:var(--neutral-text);background:var(--surface)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;font-weight:700}
+.flow .st{background:var(--surface);border:1.5px solid var(--border2);border-radius:10px;padding:7px 12px}
+.flow .st.hi{background:var(--accent);border-color:var(--accent);color:#fff}
+.flow .ar{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🗺️ 예매 프로세스 — 피그마식 다이어그램 에디터 + 파일 시스템</h1>
+<div class="sub">2026-07-10 (KST) · PR <b>#178</b> → main <code>f77b2e7</code> (+1,255 / −109, index.html 단일 파일) · 분신술 1차 5인 → 수정 → 재검증 3인 전원 APPROVE</div>
+
+<h2>무엇이 바뀌었나 (전 → 후)</h2>
+<div class="card">
+<div class="ba">
+<div class="col before">
+<h3>변경 전 (#169)</h3>
+<ul>
+<li>순서도가 좌표 하드코딩(노드 div + SVG path 22개)</li>
+<li>수정하려면 코드를 고쳐야 함 — 화면에서는 편집 불가</li>
+<li>도표 1개 고정, 저장 개념 없음</li>
+<li>문의 배지 5곳(localStorage, 라인 고정)</li>
+</ul>
+</div>
+<div class="col after">
+<h3>변경 후 (#178)</h3>
+<ul>
+<li><b>화면에서 직접 그린다</b> — 도형·프로세스·화살표 추가, 드래그·리사이즈·연결·글자 편집</li>
+<li><b>파일 시스템</b> — 여러 도표를 이름·저장시각과 함께 보관, 복제·삭제·JSON 백업</li>
+<li><b>항상 자동 저장</b> — 저장 버튼 없이 그리는 족족 임시저장(=저장)</li>
+<li>기존 순서도는 「기본 순서도」 템플릿으로 그대로(좌표 동일) · 문의 배지는 파일별로 유지 + 아무 도형에나 달 수 있음</li>
+</ul>
+</div>
+</div>
+</div>
+
+<h2>사용 흐름</h2>
+<div class="card">
+<div class="flow">
+<span class="st">예매 관리 ▸ 예매 프로세스</span><span class="ar">→</span>
+<span class="st hi">홈</span><span class="ar">→</span>
+<span class="st">새 도화지 / 기본 순서도 / JSON 가져오기 / 저장된 도표</span><span class="ar">→</span>
+<span class="st hi">캔버스</span><span class="ar">→</span>
+<span class="st">[도표 편집]으로 그리기 · 자동 저장</span><span class="ar">→</span>
+<span class="st">[목록]으로 홈 복귀</span>
+</div>
+<p class="small" style="margin:10px 0 0">닫았다 다시 열면 마지막으로 열었던 도표가 그대로 이어짐. 목록으로 나가고 닫으면 다음엔 홈이 먼저.</p>
+</div>
+
+<h2>에디터 기능 (판매 품질 체크)</h2>
+<div class="card">
+<table>
+<tr><th>축</th><th>내용</th></tr>
+<tr><td><b>도구 11종</b></td><td>선택 <span class="kbd">V</span> · 화면 이동 <span class="kbd">H</span> · 프로세스 <span class="kbd">P</span> · 화살표 <span class="kbd">L</span> · 사각형 <span class="kbd">R</span> · 라운드 <span class="kbd">U</span> · 마름모 <span class="kbd">D</span> · 타원 <span class="kbd">O</span> · 텍스트 <span class="kbd">T</span> · 구역 <span class="kbd">F</span> · 구분선</td></tr>
+<tr><td><b>화살표</b></td><td>도형 앵커(4방)를 끌어 연결 — 꺾임/직선/곡선 자동 라우팅, <b>도형을 옮기면 화살표가 따라옴</b>. 점선·화살촉 방향·선 위 라벨 편집. 빈 곳에 놓으면 안내 토스트</td></tr>
+<tr><td><b>편집</b></td><td>클릭·Shift 다중·빈 곳 드래그(마퀴) 선택 / 8px 그리드 + <b>스마트 정렬 가이드</b> 스냅 / 8핸들 리사이즈 / 배치 직후 바로 글자 입력·더블클릭 편집 / 되돌리기·다시하기 60단계 <span class="kbd">Ctrl+Z</span> / 복제 <span class="kbd">Ctrl+D</span>·복붙 <span class="kbd">Ctrl+C/V</span> / 정렬 6종·균등 분배 / 맨 앞·뒤 순서</td></tr>
+<tr><td><b>색</b></td><td>채움 10칩 — 전부 기존 브랜드 토큰(팔레트 폐쇄형). 신규 색 0, raw hex 총량 1641/1641 불변</td></tr>
+<tr><td><b>보기·이동</b></td><td>드래그 팬 · 휠 스크롤 · <span class="kbd">Ctrl</span>+휠 줌(커서 중심) · 맞춤/± 줌 컨트롤 · <span class="kbd">Space</span> 임시 팬</td></tr>
+<tr><td><b>문의 배지</b></td><td>보기 모드에서 ⊕ 클릭 = 문의 등록·조회(기존 그대로) — 이제 <b>파일별로 분리</b> 저장, 속성 패널에서 아무 도형에나 배지 달기 가능. 삭제는 2단계 확인</td></tr>
+<tr><td><b>보관</b></td><td>자동 저장(400ms) + 저장시각 표시 · JSON 내보내기/가져오기(가져오기 = 새 파일) · 파일 복제·삭제(2단계)</td></tr>
+</table>
+</div>
+
+<h2>검증 — 분신술 만장일치 루프</h2>
+<div class="card">
+<table>
+<tr><th>라운드</th><th>앵글</th><th>평결</th><th>핵심</th></tr>
+<tr><td rowspan="5">1차 5인</td><td>회귀·호환</td><td><span class="tag g">APPROVE</span></td><td>기존 문의 데이터 연속·리스너 위생·네임스페이스 격리 통과 + MED 2(Esc-confirm 충돌·Space 버튼 차단)</td></tr>
+<tr><td>로직 정확성</td><td><span class="tag d">REJECT</span></td><td>가져오기 원소 무검증 → 영속 크래시 + 도표 유실 경로</td></tr>
+<tr><td>디자인 기틀</td><td><span class="tag g">APPROVE</span></td><td>신규 raw hex 0 · alpha 변주 전례 확인 · 버튼 규칙 위반 0</td></tr>
+<tr><td>UX·판매품질</td><td><span class="tag g">APPROVE</span></td><td>MED 4(문의 삭제 무경고 · 연결 실패 침묵 · 분배 죽은 버튼 · 엣지 편집 미안내)</td></tr>
+<tr><td>성능·보안</td><td><span class="tag d">REJECT</span></td><td>가져오기/저장 경로 저장형 XSS(id·수치 필드 무이스케이프)</td></tr>
+<tr><td rowspan="3">수정 후 재검증 3인</td><td>보안</td><td><span class="tag g">APPROVE</span></td><td>새니타이저 관문(<code>_bpSanitizeDoc</code>/<code>_bpIdOk</code>) 우회로 0 · 프로토 오염 차단 실증</td></tr>
+<tr><td>로직·파일시스템</td><td><span class="tag g">APPROVE</span></td><td>수정 6건 유효 · cur 댕글링/flush 순서/undo×문의 정합 확인 (LOW 4 수용·일부 즉시 수정)</td></tr>
+<tr><td>UX·회귀</td><td><span class="tag g">APPROVE</span></td><td>수정 5건 실측 · 부수 설명 제거 이행 · 전역 청소 완전 · 옛 참조 0</td></tr>
+</table>
+<p class="small" style="margin:10px 0 0">기계 검증: <code>node --check</code> 3블록 · <code>check_design.py</code>(raw hex 1641/1641) · Playwright 헤드리스 E2E <b>12 시나리오</b>(홈·파일 생성·문의·편집·연결·이름·목록·복제/삭제·재열기·리로드·구버전 마이그레이션·XSS 새니타이저) + 경화 케이스(<code>__proto__</code> 키·null 원소) + 스모크(배치 즉시 타이핑·왕복 undo) 전부 통과, JS 에러 0. 머지 전 #189 전진분 위 rebase 후 <code>git show origin/main</code> 실측.</p>
+</div>
+
+<h2>보안 — 이번에 막은 것</h2>
+<div class="card">
+<ul>
+<li><span class="tag d">HIGH</span> 악성 JSON 가져오기/조작된 localStorage로 도형 <code>id</code>·좌표에 스크립트를 심는 <b>저장형 XSS</b> → 모든 외부 유입 문서가 <code>_bpSanitizeDoc</code> 관문(화이트리스트·수치 클램프·예약키 배제)을 통과해야만 렌더. 헤드리스 실증: 페이로드 주입 시 실행 0·태그 주입 0·악성 id 재발급</li>
+<li><span class="tag d">HIGH</span> 깨진 문서로 인한 <b>영속 크래시 + 도표 유실</b> → 같은 관문 + 열기 실패 시 빈 도화지 폴백</li>
+<li><span class="tag a">MED</span> 전역 <code>escapeHtml</code>에 작은따옴표 이스케이프 추가(405개 사용처 회귀 없음 확인)</li>
+</ul>
+</div>
+
+<h2>수용한 한계 (운영자 판단 참고)</h2>
+<div class="card">
+<ul>
+<li><span class="tag n">LOW</span> 저장 = 이 브라우저 localStorage 한정 — <b>팀 공유(시트·Worker 연동)는 후속 결정</b> (기존 문의 저장과 동일한 위상)</li>
+<li><span class="tag n">LOW</span> 같은 브라우저 다중 탭 동시 편집 시 늦게 저장한 쪽이 이김(단일 사용자 도구 전제)</li>
+<li><span class="tag n">LOW</span> 배지를 뗀 도형의 옛 문의 기록은 문서 안에 남음 — 도형 삭제를 되돌렸을 때 문의가 함께 복원되도록 의도한 동작</li>
+<li><span class="tag n">참고</span> 기존 순서도 시각 재현은 자동 라우팅 근사(꺾임 지점 일부 상이) — 좌표·구성·의미 동일</li>
+</ul>
+</div>
+
+<p class="small">정본: 이 파일 = <code>docs/reports/260710_예매프로세스_에디터.html</code> · 원장 = <code>docs/작업이력.md</code> 2026-07-10 블록 · 코드 = <code>index.html</code> <code>.bp-*</code> 네임스페이스(값 전부 <code>:root</code> 토큰 계승 — 이 보고서의 색상은 토큰 사본).</p>
+</div>
+</body>
+</html>
