@@ -4648,7 +4648,7 @@ function _srailRenderDrill(els,p,activeCount){
   h+=_srailAiRow('var(--accent)','최대 레버',_anaTopLever(_anaDailySeries(p)));
   h+='</div>';
   h+='<div class="sr-ai-card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="ana-next" style="margin-top:0">▶ '+act+'</span><button class="ana-chip" onclick="_srailOpenBoard(\''+_anaEsc(p.name)+'\')" title="분석 보드에서 비슷한 공연 비교까지 크게 보기">크게 보기</button>'
-    +((typeof userRole!=='undefined'&&userRole==='admin')?'<button class="ana-chip" onclick="_srailEditOpen(\''+_anaEsc(p.name)+'\')" title="이 공연의 일일입력 실적을 시트(DB)에서 불러와 수정(관리자 전용)">실적 수정</button>':'')
+    +((typeof userRole!=='undefined'&&userRole==='admin')?'<button class="ana-chip" onclick="_srailEditOpen(\'perf\',\''+_anaEsc(p.name)+'\')" title="이 공연의 일일입력 실적을 시트(DB)에서 불러와 수정(관리자 전용)">실적 수정</button>':'')
     +'</div>';
   h+='</div>';
   els.body.innerHTML=h;
@@ -4679,7 +4679,9 @@ function _srailRenderDrillEx(els,e,activeCount){
   h+=_srailAiHd();
   h+=_srailAiRow(e.occ>=100?'var(--green)':'var(--peach-text)','상황','목표관객 '+_srailNumTxt(e._goal)+'명 대비 유료 '+_srailNumTxt(e._paid)+'명 ('+(e.occ>=100?'초과달성 ':'')+(e.occ-100>=0?'+':'')+(e.occ-100).toFixed(1)+'%p) · 달성률은 좌석 점유가 아니라 목표 대비 비율');
   h+='</div>';
-  h+='<div class="sr-ai-card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="ana-chip" onclick="_srailOpenBoardEx(\''+_anaEsc(e.id)+'\')" title="분석 보드 전시 탭에서 크게 보기">크게 보기</button></div>';
+  h+='<div class="sr-ai-card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="ana-chip" onclick="_srailOpenBoardEx(\''+_anaEsc(e.id)+'\')" title="분석 보드 전시 탭에서 크게 보기">크게 보기</button>'
+    +((typeof userRole!=='undefined'&&userRole==='admin')?'<button class="ana-chip" onclick="_srailEditOpen(\'ex\',\''+_anaEsc(e.id)+'\')" title="이 전시의 전시일일 실적을 시트(DB)에서 불러와 수정(관리자 전용)">실적 수정</button>':'')
+    +'</div>';
   h+='</div>';
   els.body.innerHTML=h;
 }
@@ -4754,37 +4756,86 @@ function _srailOpenBoard(name){
     if(_salesState.daily&&_salesState.master&&_salesState.ops)_anaRender();
   }
 }
-/* ── [260710 운영자] 판매 실적 수정(관리자) — 일일입력 시트를 Worker API로 불러와 해당 공연 행만 고쳐서 저장.
+/* ── [260710 운영자] 판매 실적 수정(관리자) — 시트를 Worker API로 불러와 해당 건 행만 고쳐서 저장.
+   260710 후속(운영자 "전시도 동일하게, 교육도"): 종별 설정(_srailEditCfg) 기반 공용화 — 공연(일일입력)·전시(전시일일).
+   교육은 판매 시트가 아직 없어 미노출 — 시트가 생기면 여기 cfg 한 항목 추가로 같은 모달이 붙는다(확장점).
    절대명령 9 준수: xlsm 직접 편집 없이 앱 모달 + /api/ops(POST=관리자 전용, Worker가 헤더로 재검증)만 사용.
-   저장 = 전체 시트 재작성(행 단위 수정 API 부재) — 유실 방지 가드(분신술 260710 감사2 반영):
-   ① 매칭 = 카드와 동일한 「원본 공연명 정확 일치」(_uName 강정규화 흡입 금지 — 동명 재연·「- 여수」 접미사 케이스)
+   저장 = 전체 시트 재작성(행 단위 수정 API 부재) — 유실 방지 가드(분신술 260710 감사2 반영, 종별 공통):
+   ① 매칭 = 카드와 동일 축 정확 일치(공연 = 원본 공연명 trim / 전시 = 전시ID trim — _uName 강정규화 흡입 금지)
    ② 저장 직전 재조회(fresh=1 = Worker isolate 캐시 우회, 구버전 Worker는 파라미터 무시=현행 동작)
-   ③ 빈/에러 스냅샷·타공연 행 감소·이 공연 행의 외부 변경 감지 시 저장 중단(빈 스냅샷 기반 전체 재작성 원천 금지)
+   ③ 빈/에러 스냅샷·타 건 행 감소·이 건 행의 외부 변경 감지 시 저장 중단(빈 스냅샷 기반 전체 재작성 원천 금지)
    ④ 저장 성공 = 방금 쓴 본문을 로컬 캐시에 직접 주입(다른 isolate stale 재조회로 "반영 안 됨" 오인 방지) ── */
-var _srailEdit={name:null,rows:[],headers:[],busy:false,baseSig:null,baseOthers:0,baseTotal:0};
-function _srailEditClose(){ var el=document.getElementById('srail-edit-modal'); if(el)el.remove(); _srailEdit={name:null,rows:[],headers:[],busy:false,baseSig:null,baseOthers:0,baseTotal:0}; }
-// 원본 공연명(트림) — _salesBuild dmap 키와 동일 축(카드 1:1)
-function _srailEditNameOf(r){ return String((_salesNorm(r)['공연명'])||'').trim(); }
-// 이 공연 행 시그니처 — 외부 변경 감지용(숫자 정규화로 표현 차이 흡수)
-function _srailEditSig(rows){ return rows.map(function(r){return [_salesNum(r['기준일자']),_salesNum(r['합계좌석']),_salesNum(r['합계금액'])].join('|');}).sort().join(';'); }
-async function _srailEditOpen(name){
+var _srailEdit={cfg:null,rows:[],headers:[],busy:false,baseSig:null,baseOthers:0,baseTotal:0};
+function _srailEditClose(){ var el=document.getElementById('srail-edit-modal'); if(el)el.remove(); _srailEdit={cfg:null,rows:[],headers:[],busy:false,baseSig:null,baseOthers:0,baseTotal:0}; }
+// 종별 설정 — kind: 'perf'(공연·운영_일일입력) / 'ex'(전시·운영_전시일일). key = 공연명 / 전시ID.
+function _srailEditCfg(kind,key){
+  var nk=function(hh){return String(hh).replace(/\s+/g,'');};
+  if(kind==='ex'){
+    var exm=null; try{ exm=_anaExhibBuild().find(function(x){return x.id===String(key).trim();})||null; }catch(e){}
+    var goal=exm?_salesNum(exm.목표관객):null;
+    return {
+      kind:'ex', sheet:'전시일일', keyVal:String(key).trim(), dispName:(exm?exm.name:String(key)),
+      // 매칭 축 = 전시ID 정확 일치(_anaExhibBuild byId와 동일 축)
+      keyOf:function(r){ return String((_salesNorm(r)['전시ID'])||'').trim(); },
+      cols:[{ed:'c1',k:'누계유료',label:'누계유료',w:'22%'},{ed:'c2',k:'누계총인원',label:'누계총인원',w:'22%'},{ed:'c3',k:'일일총인원',label:'일일총인원',w:'20%'}],
+      emptyMsg:'이 전시의 전시일일 행이 없어요 — [+ 행 추가]로 시작',
+      sig:function(rows){ return rows.map(function(r){return [_salesNum(r['기준일자']),_salesNum(r['누계유료']),_salesNum(r['누계총인원']),_salesNum(r['일일총인원'])].join('|');}).sort().join(';'); },
+      validateRow:function(r,i){
+        if(String(r['누계유료']||'').trim()===''||isNaN(parseInt(r['누계유료'],10)))return (i+1)+'행 누계유료가 숫자가 아니에요';
+        var t=String(r['누계총인원']||'').trim(); if(t!==''&&isNaN(parseInt(t,10)))return (i+1)+'행 누계총인원이 숫자가 아니에요';
+        var dd=String(r['일일총인원']||'').trim(); if(dd!==''&&isNaN(parseInt(dd,10)))return (i+1)+'행 일일총인원이 숫자가 아니에요';
+        return null;
+      },
+      fillNewRow:function(row,last){ row['전시ID']=String(key).trim(); if(last){row['누계유료']=String(_salesNum(last['누계유료'])||'');row['누계총인원']=String(_salesNum(last['누계총인원'])||'');} },
+      // 점유율 = 누계유료/목표관객(원본 정의 계승 — 마스터 목표관객 있을 때만 재계산, 없으면 원값 보존)
+      recompute:function(mine,headers){
+        if(!(goal&&goal>0))return;
+        var occHdr=headers.filter(function(hh){return nk(hh)==='점유율';})[0]||null; if(!occHdr)return;
+        mine.forEach(function(r){ var pv=_salesNum(r['누계유료']); r[nk(occHdr)]=(pv===null)?'':String(Math.round(pv/goal*1000)/10); });
+      },
+      inject:function(headers,rows){ if(typeof _anaState!=='undefined'&&_anaState)_anaState._exDaily={sheet:'전시일일',headers:headers,rows:rows,count:rows.length}; }
+    };
+  }
+  return {
+    kind:'perf', sheet:'일일입력', keyVal:String(key).trim(), dispName:String(key),
+    // 매칭 축 = 원본 공연명 trim 정확 일치(_salesBuild dmap 키와 1:1 — 분신술 M1)
+    keyOf:function(r){ return String((_salesNorm(r)['공연명'])||'').trim(); },
+    cols:[{ed:'c1',k:'합계좌석',label:'합계좌석',w:'24%'},{ed:'c2',k:'합계금액',label:'합계금액',w:'28%'}],
+    emptyMsg:'이 공연의 일일입력 행이 없어요 — [+ 행 추가]로 시작',
+    sig:function(rows){ return rows.map(function(r){return [_salesNum(r['기준일자']),_salesNum(r['합계좌석']),_salesNum(r['합계금액'])].join('|');}).sort().join(';'); },
+    validateRow:function(r,i){
+      if(String(r['합계좌석']||'').trim()===''||isNaN(parseInt(r['합계좌석'],10)))return (i+1)+'행 합계좌석이 숫자가 아니에요';
+      var mo=String(r['합계금액']||'').trim(); if(mo!==''&&isNaN(parseInt(mo,10)))return (i+1)+'행 합계금액이 숫자가 아니에요';   // 분신술 L2
+      return null;
+    },
+    fillNewRow:function(row,last){ row['공연명']=String(key).trim(); if(last){row['합계좌석']=String(_salesNum(last['합계좌석'])||'');row['합계금액']=String(_salesNum(last['합계금액'])||'');if(last['공연ID'])row['공연ID']=last['공연ID'];} },
+    // 전일대비(석) 재계산(첫 행 = 공란)
+    recompute:function(mine,headers){
+      var deltaHdr=headers.filter(function(hh){return nk(hh)==='전일대비(석)';})[0]||null; if(!deltaHdr)return;
+      mine.forEach(function(r,i){ var cur=parseInt(r['합계좌석'],10)||0, prev=(i>0)?(parseInt(mine[i-1]['합계좌석'],10)||0):null; r[nk(deltaHdr)]=(prev===null)?'':String(cur-prev); });
+    },
+    inject:function(headers,rows){ _salesState.daily={sheet:'일일입력',headers:headers,rows:rows,count:rows.length}; }
+  };
+}
+async function _srailEditOpen(kind,key){
   if(typeof userRole==='undefined'||userRole!=='admin'){ showToast('관리자만 수정할 수 있어요','error'); return; }
   _srailEditClose();
+  var cfg=_srailEditCfg(kind,key);
   var wrap=document.createElement('div'); wrap.id='srail-edit-modal';
-  wrap.innerHTML='<div class="modal-bg show" style="z-index:var(--z-confirm)" onclick="if(event.target===this)_srailEditClose()"><div class="modal" style="width:560px;max-width:94vw;position:relative;text-align:left"><button class="modal-x" onclick="_srailEditClose()" title="닫기" aria-label="닫기">✕</button>'
-    +'<h3 style="margin:0 0 4px;padding-right:40px">실적 수정 — '+escapeHtml(name)+'</h3>'
-    +'<div style="font-size:11.5px;color:var(--dim);margin-bottom:12px">시트(운영_일일입력)에서 방금 불러온 값이에요. 저장하면 시트에 바로 반영됩니다.</div>'
+  wrap.innerHTML='<div class="modal-bg show" style="z-index:var(--z-confirm)" onclick="if(event.target===this)_srailEditClose()"><div class="modal" style="width:600px;max-width:94vw;position:relative;text-align:left"><button class="modal-x" onclick="_srailEditClose()" title="닫기" aria-label="닫기">✕</button>'
+    +'<h3 style="margin:0 0 4px;padding-right:40px">실적 수정 — '+escapeHtml(cfg.dispName)+'</h3>'
+    +'<div style="font-size:11.5px;color:var(--dim);margin-bottom:12px">시트(운영_'+escapeHtml(cfg.sheet)+')에서 방금 불러온 값이에요. 저장하면 시트에 바로 반영됩니다.</div>'
     +'<div id="srail-edit-body" style="max-height:56vh;overflow-y:auto"><div style="padding:26px 0;text-align:center;color:var(--dim);font-size:12px">'+_ldHtml(13)+'시트에서 불러오는 중</div></div>'
     +'<div style="display:flex;gap:8px;margin-top:14px;justify-content:space-between;align-items:center"><button class="ana-chip" onclick="_srailEditAddRow()">+ 행 추가</button><span style="flex:1"></span><button class="m-btn cancel" onclick="_srailEditClose()">취소</button><button class="m-btn save" onclick="_srailEditSave()">저장</button></div>'
     +'</div></div>';
   document.body.appendChild(wrap);
   try{
-    var fresh=await api('GET','/api/ops?sheet='+encodeURIComponent('일일입력')+'&fresh=1');
+    var fresh=await api('GET','/api/ops?sheet='+encodeURIComponent(cfg.sheet)+'&fresh=1');
     if(fresh.note){ throw new Error('시트 응답 이상('+fresh.note+') — 잠시 후 다시 열어줘'); }
-    _srailEdit.name=name; _srailEdit.headers=fresh.headers||[];
-    _srailEdit.rows=(fresh.rows||[]).map(_salesNorm).filter(function(r){return _srailEditNameOf(r)===name;})
+    _srailEdit.cfg=cfg; _srailEdit.headers=fresh.headers||[];
+    _srailEdit.rows=(fresh.rows||[]).map(_salesNorm).filter(function(r){return cfg.keyOf(r)===cfg.keyVal;})
       .sort(function(a,b){return (_salesNum(a['기준일자'])||0)-(_salesNum(b['기준일자'])||0);});
-    _srailEdit.baseSig=_srailEditSig(_srailEdit.rows);
+    _srailEdit.baseSig=cfg.sig(_srailEdit.rows);
     _srailEdit.baseTotal=(fresh.rows||[]).length;
     _srailEdit.baseOthers=_srailEdit.baseTotal-_srailEdit.rows.length;
     _srailEditRender();
@@ -4794,18 +4845,20 @@ async function _srailEditOpen(name){
   }
 }
 function _srailEditRender(){
-  var b=document.getElementById('srail-edit-body'); if(!b)return;
+  var b=document.getElementById('srail-edit-body'); if(!b||!_srailEdit.cfg)return;
+  var cfg=_srailEdit.cfg;
+  var heads=['기준일자(YYYYMMDD)'].concat(cfg.cols.map(function(c){return c.label;})).concat(['']);
   var h='<table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums"><thead><tr>'
-    +['기준일자(YYYYMMDD)','합계좌석','합계금액',''].map(function(t){return '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border2);font-size:11px;color:var(--dim);font-weight:700">'+t+'</th>';}).join('')+'</tr></thead><tbody>';
-  if(!_srailEdit.rows.length)h+='<tr><td colspan="4" style="padding:18px 8px;color:var(--dim);text-align:center">이 공연의 일일입력 행이 없어요 — [+ 행 추가]로 시작</td></tr>';
+    +heads.map(function(t){return '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border2);font-size:11px;color:var(--dim);font-weight:700">'+t+'</th>';}).join('')+'</tr></thead><tbody>';
+  if(!_srailEdit.rows.length)h+='<tr><td colspan="'+(cfg.cols.length+2)+'" style="padding:18px 8px;color:var(--dim);text-align:center">'+cfg.emptyMsg+'</td></tr>';
+  var inSt='width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border2);border-radius:8px;font-size:12.5px;font-family:inherit;background:var(--surface-solid);color:var(--text)';
   _srailEdit.rows.forEach(function(r,i){
-    var inSt='width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border2);border-radius:8px;font-size:12.5px;font-family:inherit;background:var(--surface-solid);color:var(--text)';
     h+='<tr>'
-      +'<td style="padding:4px 4px 4px 8px;width:34%"><input data-ed="bd" data-i="'+i+'" value="'+escapeHtml(String(r['기준일자']||''))+'" inputmode="numeric" maxlength="8" style="'+inSt+'"></td>'
-      +'<td style="padding:4px;width:26%"><input data-ed="seat" data-i="'+i+'" value="'+escapeHtml(String(_salesNum(r['합계좌석'])==null?'':_salesNum(r['합계좌석'])))+'" inputmode="numeric" style="'+inSt+'"></td>'
-      +'<td style="padding:4px;width:30%"><input data-ed="money" data-i="'+i+'" value="'+escapeHtml(String(_salesNum(r['합계금액'])==null?'':_salesNum(r['합계금액'])))+'" inputmode="numeric" style="'+inSt+'"></td>'
-      +'<td style="padding:4px;text-align:center"><button class="ana-chip" title="이 행 삭제" onclick="_srailEditDelRow('+i+')">삭제</button></td>'
-      +'</tr>';
+      +'<td style="padding:4px 4px 4px 8px;width:26%"><input data-ed="bd" data-i="'+i+'" value="'+escapeHtml(String(r['기준일자']||''))+'" inputmode="numeric" maxlength="8" style="'+inSt+'"></td>';
+    cfg.cols.forEach(function(c){
+      h+='<td style="padding:4px;width:'+c.w+'"><input data-ed="'+c.ed+'" data-i="'+i+'" value="'+escapeHtml(String(_salesNum(r[c.k])==null?'':_salesNum(r[c.k])))+'" inputmode="numeric" style="'+inSt+'"></td>';
+    });
+    h+='<td style="padding:4px;text-align:center"><button class="ana-chip" title="이 행 삭제" onclick="_srailEditDelRow('+i+')">삭제</button></td></tr>';
   });
   h+='</tbody></table>';
   b.innerHTML=h;
@@ -4813,69 +4866,65 @@ function _srailEditRender(){
     inp.addEventListener('input',function(){
       var i=parseInt(this.dataset.i,10), r=_srailEdit.rows[i]; if(!r)return;
       var v=this.value.replace(/[^0-9]/g,''); this.value=v;
-      if(this.dataset.ed==='bd')r['기준일자']=v; else if(this.dataset.ed==='seat')r['합계좌석']=v; else r['합계금액']=v;
+      if(this.dataset.ed==='bd'){ r['기준일자']=v; return; }
+      var ed=this.dataset.ed, col=null;
+      _srailEdit.cfg.cols.forEach(function(c){ if(c.ed===ed)col=c; });
+      if(col)r[col.k]=v;
     });
   });
 }
 function _srailEditAddRow(){
-  if(!_srailEdit.headers.length&&_srailEdit.name===null)return;
+  if(!_srailEdit.cfg)return;
   var last=_srailEdit.rows[_srailEdit.rows.length-1];
   var kst=new Date(Date.now()+9*3600e3);
   var todayBd=''+kst.getUTCFullYear()+('0'+(kst.getUTCMonth()+1)).slice(-2)+('0'+kst.getUTCDate()).slice(-2);
   var row={}; _srailEdit.headers.forEach(function(hh){row[String(hh).replace(/\s+/g,'')]='';});   // 키 = 정규화(편집 행 전체와 통일 — 저장 시 역조회)
-  row['공연명']=_srailEdit.name; row['기준일자']=todayBd; row['합계좌석']=last?String(_salesNum(last['합계좌석'])||''):''; row['합계금액']=last?String(_salesNum(last['합계금액'])||''):'';
-  if(last&&last['공연ID'])row['공연ID']=last['공연ID'];
+  row['기준일자']=todayBd;
+  _srailEdit.cfg.fillNewRow(row,last);
   _srailEdit.rows.push(row); _srailEditRender();
 }
 function _srailEditDelRow(i){ _srailEdit.rows.splice(i,1); _srailEditRender(); }
 async function _srailEditSave(){
-  if(_srailEdit.busy)return;
-  // 검증: 기준일자 8자리 「실존」 날짜(롤오버 차단) · 좌석 숫자 · 금액 = 빈값 또는 숫자 · 기준일자 중복 금지
+  if(_srailEdit.busy||!_srailEdit.cfg)return;
+  var cfg=_srailEdit.cfg;
+  // 검증: 기준일자 8자리 「실존」 날짜(롤오버 차단, 분신술 L1) · 종별 숫자 검증 · 기준일자 중복 금지
   var seen={},bad=null;
   _srailEdit.rows.forEach(function(r,i){
     if(bad)return;
     var bd=String(r['기준일자']||'').trim();
     var d=/^\d{8}$/.test(bd)?_salesDate(bd):null;
     var round=d?(''+d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)):'';
-    if(!d||round!==bd){bad=(i+1)+'행 기준일자가 실제 날짜(YYYYMMDD)가 아니에요';return;}   // 20260230 류 롤오버 차단(분신술 L1)
+    if(!d||round!==bd){bad=(i+1)+'행 기준일자가 실제 날짜(YYYYMMDD)가 아니에요';return;}
     if(seen[bd]){bad=(i+1)+'행 기준일자 '+bd+' 중복';return;} seen[bd]=1;
-    if(String(r['합계좌석']||'').trim()===''||isNaN(parseInt(r['합계좌석'],10))){bad=(i+1)+'행 합계좌석이 숫자가 아니에요';return;}
-    var mo=String(r['합계금액']||'').trim();
-    if(mo!==''&&isNaN(parseInt(mo,10))){bad=(i+1)+'행 합계금액이 숫자가 아니에요';return;}   // 분신술 L2
+    bad=cfg.validateRow(r,i);
   });
   if(bad){ showToast(bad,'error'); return; }
-  var ok=await showConfirm('시트(운영_일일입력)에 바로 반영돼요.<br><b>'+escapeHtml(_srailEdit.name)+'</b> '+_srailEdit.rows.length+'행으로 저장할까요?',{title:'실적 저장',html:true,okText:'저장',cancelText:'취소'});
+  var ok=await showConfirm('시트(운영_'+escapeHtml(cfg.sheet)+')에 바로 반영돼요.<br><b>'+escapeHtml(cfg.dispName)+'</b> '+_srailEdit.rows.length+'행으로 저장할까요?',{title:'실적 저장',html:true,okText:'저장',cancelText:'취소'});
   if(!ok)return;
   _srailEdit.busy=true;
   try{
-    // 저장 직전 실시간 재조회(fresh=1 = isolate 캐시 우회) — 그 사이 다른 관리자 입력 보존(이 공연 행만 교체)
-    var fresh=await api('GET','/api/ops?sheet='+encodeURIComponent('일일입력')+'&fresh=1');
-    // [분신술 H1] 빈/에러 스냅샷 기반 전체 재작성 = 타 공연 전 행 말소 → 원천 중단
+    // 저장 직전 실시간 재조회(fresh=1 = isolate 캐시 우회) — 그 사이 다른 관리자 입력 보존(이 건 행만 교체)
+    var fresh=await api('GET','/api/ops?sheet='+encodeURIComponent(cfg.sheet)+'&fresh=1');
+    // [분신술 H1] 빈/에러 스냅샷 기반 전체 재작성 = 타 건 전 행 말소 → 원천 중단
     if(fresh.note||!(fresh.headers&&fresh.headers.length)){ throw new Error('시트 응답이 비정상이라 저장을 중단했어(유실 방지) — 잠시 후 다시 시도'); }
     var allRows=fresh.rows||[];
     if(!allRows.length&&_srailEdit.baseTotal>0){ throw new Error('시트 재조회가 비어 있어 저장을 중단했어(유실 방지) — 잠시 후 다시 시도'); }
     var headers=fresh.headers;
-    // 매칭 = 원본 공연명 정확 일치(카드와 동일 축 — _uName 흡입 금지, 분신술 M1)
     var mineFresh=[],others=[];
-    allRows.forEach(function(r){ if(_srailEditNameOf(r)===_srailEdit.name)mineFresh.push(_salesNorm(r)); else others.push(r); });
-    // [분신술 H1] 타 공연 행이 열 때보다 줄어든 스냅샷 = 퇴행(부분 응답·롤백) → 중단
+    allRows.forEach(function(r){ if(cfg.keyOf(r)===cfg.keyVal)mineFresh.push(_salesNorm(r)); else others.push(r); });
+    // [분신술 H1] 타 건 행이 열 때보다 줄어든 스냅샷 = 퇴행(부분 응답·롤백) → 중단
     if(others.length<_srailEdit.baseOthers){ throw new Error('시트 재조회가 열 때보다 줄어 저장을 중단했어(유실 방지) — 모달을 다시 열어 확인해줘'); }
-    // [분신술 H2] 그 사이 다른 곳에서 이 공연 실적이 바뀜(업로드·타 관리자) → 내 편집이 그걸 덮으면 유실 → 중단
-    if(_srailEditSig(mineFresh)!==_srailEdit.baseSig){ throw new Error('다른 곳에서 이 공연 실적이 갱신됐어 — 모달을 다시 열어 최신값 확인 후 수정해줘'); }
-    // 이 공연 행 재구성: 날짜순 + 전일대비(석) 재계산(첫 행 = 공란). ⚠️ 편집 행 키는 _salesNorm(공백 제거)이라 원본 헤더는 정규화 키로 역조회.
+    // [분신술 H2] 그 사이 다른 곳에서 이 건 실적이 바뀜(업로드·타 관리자) → 내 편집이 그걸 덮으면 유실 → 중단
+    if(cfg.sig(mineFresh)!==_srailEdit.baseSig){ throw new Error('다른 곳에서 이 실적이 갱신됐어 — 모달을 다시 열어 최신값 확인 후 수정해줘'); }
+    // 이 건 행 재구성: 날짜순 + 종별 파생값 재계산. ⚠️ 편집 행 키는 _salesNorm(공백 제거)이라 원본 헤더는 정규화 키로 역조회.
     var nk=function(hh){return String(hh).replace(/\s+/g,'');};
-    var deltaHdr=headers.filter(function(hh){return nk(hh)==='전일대비(석)';})[0]||null;
     var mine=_srailEdit.rows.slice().sort(function(a,b){return parseInt(a['기준일자'],10)-parseInt(b['기준일자'],10);});
-    mine.forEach(function(r,i){
-      var cur=parseInt(r['합계좌석'],10)||0, prev=(i>0)?(parseInt(mine[i-1]['합계좌석'],10)||0):null;
-      if(deltaHdr)r[nk(deltaHdr)]=(prev===null)?'':String(cur-prev);
-    });
+    cfg.recompute(mine,headers);
     var rows=others.map(function(r){ var o={}; headers.forEach(function(hh){o[hh]=(r[hh]===undefined||r[hh]===null)?'':r[hh];}); return o; })
       .concat(mine.map(function(r){ var o={}; headers.forEach(function(hh){var v=r[nk(hh)];o[hh]=(v===undefined||v===null)?'':v;}); return o; }));
-    await api('POST','/api/ops',{sheet:'일일입력',headers:headers,rows:rows});
+    await api('POST','/api/ops',{sheet:cfg.sheet,headers:headers,rows:rows});
     // [분신술 M2] 방금 확정한 본문을 로컬 캐시에 직접 주입 — 다른 isolate의 stale 캐시 재조회로 "반영 안 됨" 오인 방지
-    //  (일일입력만 바뀌었으므로 master·rounds·ops·전시 캐시는 유지 = 불필요 재fetch 0)
-    _salesState.daily={sheet:'일일입력',headers:headers,rows:rows,count:rows.length};
+    cfg.inject(headers,rows);
     _srailEditClose(); showToast('실적이 시트에 반영됐어요');
     _srailRender();
   }catch(e){ console.error('[srailEdit]',e); showToast('저장 실패: '+(e.message||e),'error'); }
