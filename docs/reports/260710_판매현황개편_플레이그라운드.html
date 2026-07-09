@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>판매현황 개편 — 플레이그라운드 (132축)</title>
+<style>
+/* ── index.html :root 토큰 사본(값 SSOT 계승 · 창작 0) ── */
+:root{
+  --accent:#4A4DE7; --accent-light:#E8E8FD; --peach:#F0C4B8; --peach-light:#FBF0EC; --peach-text:#D88455;
+  --muted:#bbb; --dim:#888; --text:#1A1A2E; --border:rgba(0,0,0,0.09); --danger:#E24B4A; --green:#1A6B3C;
+  --glass:rgba(255,255,255,0.55); --glass-border:var(--glass); --glass-surface:rgba(255,255,255,.78); --glass-bd:var(--glass);
+  --glass-shadow:0 8px 32px rgba(74,77,231,0.08),0 2px 8px rgba(0,0,0,0.04);
+  --neutral:#EEEDF3; --neutral-text:#6B6B7B; --today-bg:rgba(230,240,255,0.8);
+  --radius:16px; --radius-xl:24px; --r-btn:10px;
+  --kakao:#F5B400; --insta:#C02872; --blog:var(--green); --c2:#D88455; --c5:#2D8AB3;
+  --sat:#3B7DD8; --sun:#D64545; /* 요일색 = index.html 기존 리터럴 사본 */
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;color:var(--text);background:#eef0f6;line-height:1.55;padding:18px 14px 90px}
+.wrap{max-width:min(1560px,98vw);margin:0 auto}
+h1{font-size:21px;margin:0 0 4px}
+.sub{font-size:12.5px;color:var(--dim);margin-bottom:12px}
+h2{font-size:14px;color:var(--accent);margin:0 0 10px}
+code{background:rgba(74,77,231,.08);border-radius:5px;padding:1px 5px;font-size:11.5px}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px;box-shadow:0 6px 22px rgba(74,77,231,.06)}
+
+/* ── 스테이지(데스크톱 앱 프레임) ── */
+.frame{border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(26,26,46,.10);background:#fff;margin-bottom:12px}
+.frame-bar{height:30px;background:#e9e9ef;display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid var(--border)}
+.frame-bar i{width:11px;height:11px;border-radius:50%;background:#cfcfd8}
+.frame-bar span{margin-left:8px;font-size:10.5px;color:#9a9aa8}
+.frame-tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:auto}
+.frame-tag.cur{background:#efeef4;color:var(--dim)}
+.frame-tag.neo{background:var(--accent-light);color:var(--accent)}
+.stageclip{overflow:hidden}
+.stage{transform-origin:0 0;width:1560px}
+@media(min-width:1150px){.f-tuned{position:sticky;top:6px;z-index:40}}
+
+/* ═══ 실물 재현 CSS — index.html 실측 사본, 튜닝 축만 var(--v-*) 치환 ═══ */
+.app{position:relative;padding:var(--v-padTop) 0 18px;overflow:hidden;
+  background:linear-gradient(var(--v-bgAngle),#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%)}
+.bw{display:flex;align-items:flex-start}
+.calcol{flex:1;min-width:0;padding-left:24px}
+.railcol{width:var(--v-railW);min-width:300px;flex-shrink:0;padding:0 24px 0 var(--v-colGap)}
+/* 캘린더 (요일바 = cal-head-wrap 실측) */
+.chw{background:rgba(255,255,255,var(--v-dhBgA));backdrop-filter:blur(var(--v-dhBlur));-webkit-backdrop-filter:blur(var(--v-dhBlur));
+  border-radius:var(--v-layRad) var(--v-layRad) 0 0;border:1px solid var(--glass-border);border-bottom:1px solid rgba(0,0,0,var(--v-dhBdBotA));overflow:hidden}
+.chead{display:grid;grid-template-columns:repeat(6,1fr)}
+.dh{padding:var(--v-dhPadY) 8px;text-align:center;font-size:var(--v-dhSz);font-weight:var(--v-dhW);color:#666;border-right:1px solid rgba(0,0,0,.07)}
+.dh.sat{color:var(--sat)}.dh.sun{color:var(--sun)}
+.dh.on{color:var(--text);box-shadow:inset 0 calc(var(--v-dhTodayBar)*-1) 0 var(--v-dhTodayColor);font-weight:800}
+.dh.dh-split{display:flex;padding:0;align-items:stretch;border-right:0}
+.dh.dh-split i{font-style:normal;display:grid;place-items:center;padding:var(--v-dhPadY) 0}
+.dh.dh-split .p-sun{flex:3;color:var(--sun)}
+.dh.dh-split .p-mon{flex:1;border-left:1px solid rgba(0,0,0,.07);color:var(--dim)}
+.cal{background:rgba(255,255,255,.43);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);
+  border-radius:0 0 var(--v-layRad) var(--v-layRad);box-shadow:var(--glass-shadow);border:1px solid rgba(255,255,255,.7);border-top:0;overflow:hidden}
+.wkband{display:flex;align-items:center;padding:5px 12px;font-size:11.5px;color:var(--dim);font-weight:600;border-bottom:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.25)}
+.wkband .wc{margin-left:auto;color:var(--accent);font-weight:600;font-size:var(--v-wkCntSz)}
+.wrow{display:grid;grid-template-columns:repeat(6,1fr)}
+.c{height:var(--v-cellH);padding:7px var(--v-cPad) 8px;border-right:1px solid rgba(0,0,0,.07);border-bottom:1px solid rgba(0,0,0,.07);position:relative;overflow:hidden;background:rgba(255,255,255,0)}
+.c.today{background:rgba(230,240,255,var(--v-todayBgA))}
+.c.split{display:flex;padding:0}
+.c.split>div{flex:1;padding:7px var(--v-cPad) 8px;min-width:0}
+.c.split>div:last-child{border-left:1px solid rgba(0,0,0,.07)}
+.dn{font-size:var(--v-dnSz);font-weight:600;margin-bottom:2px;color:var(--text);display:flex;align-items:center;gap:5px}
+.dn.sat{color:var(--sat)}.dn.sun{color:var(--sun)}.dn.past{color:rgba(0,0,0,0.35)}
+.ccount{position:absolute;top:6px;right:7px;font-size:var(--v-cCountSz);color:rgba(0,0,0,.35);font-weight:600;font-variant-numeric:tabular-nums}
+.holp{font-size:var(--v-holSz);font-weight:700;color:var(--sun);white-space:nowrap}
+.ev{display:flex;align-items:center;gap:var(--v-evGap);padding:var(--v-evPadY) 0;font-size:var(--v-evSz);line-height:1.4;min-width:0;border-radius:4px}
+.ev:hover{background:rgba(74,77,231,var(--v-evHovA))}
+.ev-time{font-weight:700;flex-shrink:0;white-space:nowrap}
+.ev-plat{font-weight:600;flex-shrink:0;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis}
+.ev-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:var(--text);font-weight:600}
+.ev.done>*{text-decoration:line-through;text-decoration-color:#555;text-decoration-thickness:1.5px}
+.ev.pastv{opacity:var(--v-pastOp)}
+.mt{font-size:var(--v-evSz);color:#444;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt.done{text-decoration:line-through;opacity:.6}
+
+/* 레일 (.srail 실측) */
+.srl{display:flex;flex-direction:column;background:rgba(255,255,255,var(--v-rBgA));
+  backdrop-filter:blur(var(--v-rBlur)) saturate(var(--v-rSat));-webkit-backdrop-filter:blur(var(--v-rBlur)) saturate(var(--v-rSat));
+  border:var(--v-rBdW) solid rgba(255,255,255,var(--v-rBdA));border-radius:var(--v-rRad);
+  box-shadow:0 8px 32px rgba(74,77,231,var(--v-rSh1A)),0 2px 8px rgba(0,0,0,var(--v-rSh2A));overflow:hidden}
+.srl-hd{display:flex;align-items:center;gap:7px;padding:var(--v-hPadT) var(--v-hPadX) var(--v-hPadB);flex-shrink:0}
+.srl-hd.strip{background:rgba(255,255,255,var(--v-hBgA));backdrop-filter:blur(var(--v-hBlur));-webkit-backdrop-filter:blur(var(--v-hBlur));
+  border-bottom:1px solid rgba(0,0,0,var(--v-hBdBotA))}
+.srl-tt{font-size:var(--v-hTtSz);font-weight:var(--v-hTtW);letter-spacing:var(--v-hTtLs);color:var(--v-hTtColor)}
+.srl-tt .paren{font-weight:700;color:var(--dim)}
+.srl-cnt{font-size:var(--v-cntSz);font-weight:var(--v-cntW);color:var(--v-cntColor);background:rgba(74,77,231,var(--v-cntBgA));border:1px solid rgba(74,77,231,var(--v-cntBdA));border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.srl-cnt.txt{background:none;border:0;padding:0}
+.srl-asof{font-size:var(--v-asofSz);color:var(--v-asofColor);font-weight:600;white-space:nowrap}
+.srl-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.achip{padding:4px var(--v-anaPadX);border-radius:7px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-family:inherit;font-size:var(--v-anaSz);font-weight:600;cursor:pointer;transition:all .15s}
+.achip:hover{border-color:var(--accent);color:var(--accent)}
+.achip.txtlink{border:0;background:none;box-shadow:none;text-decoration:underline;text-underline-offset:3px;color:var(--dim)}
+.srl-sum{display:flex;gap:6px;align-items:center;padding:0 var(--v-hPadX) var(--v-sumPadB);font-size:var(--v-sumSz);color:var(--neutral-text);font-weight:600;flex-shrink:0}
+.srl-sum .val{color:var(--green)}
+.srl-sum.chip>span{background:rgba(26,107,60,var(--v-sumChipA));border-radius:999px;padding:2px 9px}
+.srl-sum.inhead{padding:0;margin-left:auto}
+.srl-body{flex:1;overflow-y:auto;padding:2px 12px 8px;min-height:0}
+.srl-car{display:flex;flex-direction:column;height:100%;min-height:0}
+.srl-vp{flex:1;min-height:0;overflow:hidden;position:relative}
+.srl-track{display:flex;height:100%;transition:transform var(--v-slideT) cubic-bezier(.55,0,.45,1)}
+.srl-slide{flex:0 0 100%;min-width:0;overflow-y:auto;padding:0 2px}
+.srl-cnav{display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 6px 2px;flex-shrink:0}
+.srl-cnav.inhead{padding:0;gap:6px}
+.cbtn{width:var(--v-carBtn);height:var(--v-carBtn);border-radius:999px;border:1px solid var(--glass-bd);background:rgba(255,255,255,var(--v-carBtnBgA));color:var(--accent);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:border-color .15s,background .15s}
+.cbtn:hover{border-color:var(--accent);background:var(--accent-light)}
+.dots{display:flex;gap:var(--v-carDotGap);align-items:center;justify-content:center}
+.dot{width:var(--v-carDot);height:var(--v-carDot);border-radius:999px;background:var(--muted);border:0;padding:0;cursor:pointer;transition:background .2s,width .2s}
+.dot.on{background:var(--v-carDotOnColor);width:var(--v-carDotOn)}
+.srl-ft{padding:var(--v-ftPadY) 16px 12px;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-shrink:0}
+.srl-ft .asoffoot{margin-right:auto;font-size:var(--v-asofSz);color:var(--v-asofColor);font-weight:600}
+/* 카드 */
+.scard{background:rgba(255,255,255,var(--v-cBgA));backdrop-filter:blur(var(--v-cBlur));-webkit-backdrop-filter:blur(var(--v-cBlur));
+  border:1px solid rgba(255,255,255,var(--v-cBdA));border-radius:var(--v-cRad);
+  box-shadow:0 8px 32px rgba(74,77,231,calc(.08*var(--v-cShM))),0 2px 8px rgba(0,0,0,calc(.04*var(--v-cShM)));
+  padding:var(--v-cPadY) var(--v-cPadX) calc(var(--v-cPadY) + 1px);margin-bottom:10px;cursor:pointer;transition:border-color var(--v-hovT),transform var(--v-hovT)}
+.scard:hover{border-color:var(--accent);transform:translateY(calc(var(--v-cLift)*-1))}
+.s-hd{display:flex;align-items:flex-start;gap:var(--v-r1Gap);min-width:0}
+.s-tt{flex:1;min-width:0}
+.s-name{font-size:var(--v-nameSz);font-weight:var(--v-nameW);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-meta{font-size:var(--v-metaSz);color:var(--v-metaColor);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-occcol{display:flex;flex-direction:column;align-items:flex-start;flex-shrink:0;padding:0 9px}
+.s-occcol.sep{border-left:1px solid var(--border)}
+.s-occ{font-size:var(--v-occSz);font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+.s-occ.ok2{color:var(--green)}
+.s-delta{font-size:var(--v-dSz);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.s-delta.up{color:var(--green)}
+.s-dday{font-size:var(--v-ddSz);font-weight:800;flex-shrink:0;font-variant-numeric:tabular-nums}
+.s-cardsum{font-size:calc(var(--v-sumSz) - 1px);color:var(--neutral-text);font-weight:600;white-space:nowrap;margin-top:3px}
+.s-cardsum .val{color:var(--green)}
+.s-spark{margin-top:var(--v-sparkGap)}
+.s-pre{font-size:var(--v-preSz);color:var(--muted);display:flex;gap:8px;align-items:baseline;justify-content:space-between}
+.s-bar{position:relative;height:var(--v-barH);border-radius:999px;background:var(--v-barTrack);margin-top:8px}
+.s-bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--v-barFill)}
+.s-bar>b{position:absolute;top:calc((var(--v-barMkH) - var(--v-barH))/-2);width:var(--v-barMkW);height:var(--v-barMkH);border-radius:1px;background:var(--v-barMkColor)}
+.s-r3{display:flex;justify-content:space-between;gap:8px;margin-top:7px;font-size:var(--v-r3Sz);color:var(--dim);font-variant-numeric:tabular-nums}
+.s-r3 .bad{color:var(--danger)}.s-r3 .ok{color:var(--green)}
+.s-fc{font-size:10px;color:var(--peach-text);font-weight:700;margin-top:7px;background:rgba(216,132,85,.08);border:1px solid rgba(216,132,85,.22);border-radius:9px;padding:5px 9px;line-height:1.5}
+.s-fc b{color:var(--peach-text)}
+/* 부유 요소 */
+.fab{position:absolute;right:22px;bottom:64px;background:linear-gradient(135deg,#FF7A59,var(--danger));color:#fff;border:0;border-radius:999px;padding:10px 16px;font-size:var(--v-fabSz);font-weight:800;font-family:inherit;box-shadow:0 10px 26px rgba(226,75,74,.35);cursor:pointer}
+.chatb{position:absolute;right:24px;bottom:12px;width:var(--v-chatSz);height:var(--v-chatSz);border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 10px 26px rgba(74,77,231,.35)}
+
+/* ── 콘솔 ── */
+.stagecap{font-size:11.5px;color:var(--dim);margin:6px 2px 12px}
+.demo-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.btn{border:0;border-radius:10px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .12s}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:0 5px 14px rgba(74,77,231,.28)}
+.btn.ghost{background:#eeedf5;color:#555}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.pill{border:1.5px solid var(--border);background:#fff;border-radius:999px;padding:7px 15px;font-size:12.5px;font-weight:700;color:#555;cursor:pointer;font-family:inherit}
+.pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pill .star{color:#f5b400}.pill.on .star{color:#ffe9a8}
+.pdesc{font-size:11.5px;color:var(--dim);min-height:18px}
+.sliders{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:9px 22px}
+.sl label{display:flex;justify-content:space-between;font-size:11.5px;font-weight:600;color:#555;margin-bottom:2px;gap:8px}
+.sl label .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl label .val{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:800;white-space:nowrap}
+.sl input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+.sl select{width:100%;font-family:inherit;font-size:11.5px;font-weight:600;color:#333;padding:4px 6px;border:1px solid var(--border);border-radius:7px;background:#fff}
+.sl .tog{display:flex;gap:6px}
+.sl .tog button{flex:1;border:1.5px solid var(--border);background:#fff;border-radius:7px;padding:4px 0;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit}
+.sl .tog button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.grp{font-size:11px;font-weight:800;color:var(--dim);letter-spacing:.4px;margin:10px 0 0;grid-column:1/-1;border-top:1px dashed var(--border);padding-top:8px}
+.grp:first-child{border-top:0;margin-top:0;padding-top:0}
+.warnb{color:#b06a2e;font-weight:800;cursor:help}
+.out{background:#1e1e2e;color:#e8e8f0;border-radius:12px;padding:14px 16px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:11px;line-height:1.7;overflow-x:auto;white-space:pre;margin-top:8px;max-height:480px;overflow-y:auto}
+.out .kp{color:#c3f0c8}.out .wn{color:#ffd28a}
+.foot{font-size:11.5px;color:var(--dim);line-height:1.75;background:#f7f7fb;border-radius:10px;padding:12px 14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>📊 판매현황(메인 화면) 개편 — 플레이그라운드</h1>
+<div class="sub">캘린더+판매현황 레일 실물 재현 · 조작 축 <b id="axcnt">…</b>개 · 운영자 스케치 반영 = <b>★개편 스케치</b> 프리셋(흰 헤더 스트립 + 「판매 현황 (2)」 + 기준/분석 정리 + 어제 델타 이동). 기존 작업 계승 = <b>10일 추이(#171)·캐러셀(#172)·높이 정렬(#182)</b>. 색은 <code>:root</code> 토큰 계승(raw 창작 0).</div>
+
+<div class="frame f-tuned">
+  <div class="frame-bar"><i></i><i></i><i></i><span>튜닝 (조작 대상)</span><span class="frame-tag neo" id="tunedtag">★ 여기가 바뀜</span></div>
+  <div class="stageclip" id="clipT"><div class="stage" id="stT"></div></div>
+</div>
+<div class="frame">
+  <div class="frame-bar"><i></i><i></i><i></i><span>현행 (고정 기준)</span><span class="frame-tag cur">지금</span></div>
+  <div class="stageclip" id="clipC"><div class="stage" id="stC"></div></div>
+</div>
+<div class="stagecap">위 = 튜닝(스크롤해도 상단 고정·PC) · 아래 = 현행 고정. 캐러셀 ‹ › 점 실동작(튜닝 프레임은 유휴 자동넘김도 재현). 카드 착지 상태 2종 = 슬라이드 1(수집 전 바) · 슬라이드 2(10일 추이 차트).</div>
+
+<div class="card">
+  <div class="demo-row">
+    <button class="btn primary" id="cmpBtn">👁 현행 겹쳐보기 (꾹 누르기)</button>
+    <button class="btn ghost" onclick="carGo(1)">▶ 다음 공연</button>
+    <button class="btn ghost" onclick="carGo(-1)">◀ 이전 공연</button>
+  </div>
+  <h2 style="margin-top:2px">프리셋 (4)</h2>
+  <div class="pills" id="pills"></div>
+  <div class="pdesc" id="pdesc"></div>
+</div>
+
+<div class="card">
+  <h2>미세조정 — <span id="axcnt2"></span>축 <span style="font-size:11px;color:var(--dim);font-weight:400">(<span class="warnb">⚠</span> = 기틀 토큰 축: 바꾸면 §🚨 승인 갱신 경로 · 「미리보기」 = 스펙 아님)</span></h2>
+  <div class="sliders" id="sliders"></div>
+</div>
+
+<div class="card">
+  <h2>선택값 — 현행 병기 + 계승/갱신 자동 판정 <button class="btn primary" style="float:right;padding:6px 14px;font-size:12px" onclick="copyVals()">📋 선택값 복사</button></h2>
+  <div class="out" id="out"></div>
+</div>
+
+<div class="foot">
+<b>⑤ 재현 한계</b> · 데이터 = 스크린샷 기준 <b>목업 2건 고정</b>(브런치 콘서트 Ⅲ = 수집 전 바 · 달 샤베트 = 10일 추이 차트) — 실데이터·전시 카드·개별 드릴(인라인 분석)·주차 접힘 동작은 미재현 · 캘린더 이벤트는 스크린샷 발췌 축약(채널색 근사: 문자=<code>--accent</code>·작가=<code>--c5</code>) · 자동넘김 유휴 감지는 이 페이지 안 상호작용만 반영 · 폰트 시스템 폴백 · 배경 그라데이션은 스테이지 스코프 재현(실물 body) · 부유 요소(불편사항 FAB·챗) 위치 근사 · 스테이지 배율은 미리보기 전용(스펙 아님).
+</div>
+</div>
+
+<script>
+/* ══════════ 튜닝 축 정의 (기본값 = index.html 실측) ══════════ */
+var DEF={
+  zoom:.78, railW:40, colGap:24, padTop:24, cellH:123, bgAngle:135, equalH:1,
+  rBgA:.43, rBlur:11, rSat:1, rBdA:.7, rBdW:1, rRad:24, rSh1A:.08, rSh2A:.04,
+  hMode:'plain', hBgA:.9, hBlur:11, hPadT:14, hPadB:9, hPadX:16, hBdBotA:0, hTtSz:14.5, hTtW:800, hTtLs:0, hTtColor:'text',
+  cntMode:'chip', cntSz:10.5, cntW:800, cntColor:'accent', cntBgA:.08, cntBdA:.18,
+  asofMode:'head', asofSz:10.5, asofColor:'dim', asofFmt:'기준',
+  anaMode:'head', anaSz:11, anaStyle:'chip', anaPadX:11,
+  sumMode:'below', sumSz:11, sumPadB:10, sumChip:0, sumChipA:.08, sumLabel:'공연 어제', sumArrow:'▲', sumValB:1,
+  cBgA:.78, cBlur:0, cBdA:.55, cRad:16, cPadY:11, cPadX:13, cShM:1, cLift:1,
+  nameSz:13, nameW:700, metaSz:10.5, metaColor:'dim', ddSz:10.5, ddMode:'right', sepLine:1, r1Gap:9,
+  occSz:18, occDec:1, dSz:11, occLayout:'col', occColor:'accent', sparkGap:10,
+  barH:5, barTrack:'neutral', barFill:'accent', barMk:1, barMkColor:'peach', barMkW:2, barMkH:10, r3Sz:10.5, preSz:10,
+  tH:177, tR:3.6, tLineW:2, tAreaA:.08, tPredN:3, tPredDash:4, tPin:1, tRing:1, tTodayLine:1, tSeatSz:9, tSeatTodaySz:11.5, tDeltaLbl:1, tAxisSz:7.5, tFc:1,
+  carPos:'bottom', carBtn:26, carBtnBgA:.78, carDot:6, carDotOn:16, carDotGap:5, carDotOnColor:'accent', carIdle:7, carHold:10,
+  ftMode:'bottom', ftSz:11, ftPadY:8, ftStyle:'chip',
+  dhBgA:.9, dhBlur:11, dhPadY:14, dhSz:14, dhW:700, dhTodayBar:3, dhTodayColor:'c2', dhBdBotA:.07,
+  dnSz:13, evSz:10, evGap:4, evPadY:1.5, cPad:8, todayBgA:.8, wkCntSz:11, pastOp:.33, cCountSz:9.5, holSz:11, evHovA:.06,
+  slideT:.4, hovT:.15, fabShow:1, fabSz:13, chatShow:1, chatSz:44
+};
+var COLORSEL={text:'var(--text)',accent:'var(--accent)',dim:'var(--dim)',muted:'var(--muted)',neutral:'var(--neutral-text)',c2:'var(--c2)',green:'var(--green)',peach:'var(--peach-text)',danger:'var(--danger)'};
+var SL=[
+ {grp:'전체 레이아웃'},
+ {k:'zoom',nm:'스테이지 배율 (미리보기)',min:.5,max:1,step:.01,dp:2,prev:1},
+ {k:'railW',nm:'레일 폭',min:28,max:50,step:1,dp:0,u:'%'},
+ {k:'colGap',nm:'캘린더·레일 간격',min:8,max:48,step:1,dp:0,u:'px'},
+ {k:'padTop',nm:'상단 여백',min:8,max:48,step:1,dp:0,u:'px'},
+ {k:'cellH',nm:'캘린더 셀 높이',min:80,max:160,step:1,dp:0,u:'px'},
+ {k:'bgAngle',nm:'배경 그라데이션 각도',min:90,max:180,step:1,dp:0,u:'°',warn:1},
+ {k:'equalH',nm:'레일 높이 = 캘린더 정렬(#182)',tog:1},
+ {grp:'레일 유리 컨테이너'},
+ {k:'rBgA',nm:'표면 흰 α',min:0,max:1,step:.01,dp:2},
+ {k:'rBlur',nm:'blur',min:0,max:30,step:1,dp:0,u:'px'},
+ {k:'rSat',nm:'saturate',min:.8,max:1.8,step:.05,dp:2,u:'×'},
+ {k:'rBdA',nm:'테두리 흰 α',min:0,max:1,step:.01,dp:2},
+ {k:'rBdW',nm:'테두리 두께',min:0,max:2,step:.5,dp:1,u:'px'},
+ {k:'rRad',nm:'레일 라디우스',min:12,max:32,step:1,dp:0,u:'px',warn:1,tok:'R'},
+ {k:'rSh1A',nm:'그림자1(인디고) α',min:0,max:.3,step:.01,dp:2,warn:1},
+ {k:'rSh2A',nm:'그림자2(잉크) α',min:0,max:.2,step:.01,dp:2,warn:1},
+ {grp:'헤더 스트립 ★개편 핵심'},
+ {k:'hMode',nm:'헤더 스타일',sel:[['plain','투명(현행)'],['strip','흰 스트립(요일바 매칭)']]},
+ {k:'hBgA',nm:'스트립 흰 α',min:.3,max:1,step:.01,dp:2},
+ {k:'hBlur',nm:'스트립 blur',min:0,max:24,step:1,dp:0,u:'px'},
+ {k:'hPadT',nm:'헤더 패딩 위',min:6,max:24,step:1,dp:0,u:'px'},
+ {k:'hPadB',nm:'헤더 패딩 아래',min:4,max:24,step:1,dp:0,u:'px'},
+ {k:'hPadX',nm:'헤더 패딩 좌우',min:8,max:28,step:1,dp:0,u:'px'},
+ {k:'hBdBotA',nm:'하단 보더 α',min:0,max:.2,step:.01,dp:2},
+ {k:'hTtSz',nm:'타이틀 크기',min:12,max:20,step:.5,dp:1,u:'px'},
+ {k:'hTtW',nm:'타이틀 굵기',min:600,max:900,step:100,dp:0},
+ {k:'hTtLs',nm:'타이틀 자간',min:0,max:2,step:.1,dp:1,u:'px'},
+ {k:'hTtColor',nm:'타이틀 색',sel:[['text','잉크(현행)'],['accent','인디고']]},
+ {grp:'개수 표기 ★'},
+ {k:'cntMode',nm:'표기 방식',sel:[['chip','파란 칩(현행)'],['paren','판매 현황 (2)'],['ntxt','2개 텍스트'],['hide','숨김']]},
+ {k:'cntSz',nm:'크기',min:9,max:14,step:.5,dp:1,u:'px'},
+ {k:'cntW',nm:'굵기',min:600,max:900,step:100,dp:0},
+ {k:'cntColor',nm:'색',sel:[['accent','인디고(현행)'],['dim','회색'],['text','잉크']]},
+ {k:'cntBgA',nm:'칩 배경 α',min:0,max:.3,step:.01,dp:2},
+ {k:'cntBdA',nm:'칩 테두리 α',min:0,max:.4,step:.01,dp:2},
+ {grp:'기준일 표기'},
+ {k:'asofMode',nm:'위치',sel:[['head','헤더 우측(현행)'],['foot','레일 하단'],['hide','숨김']]},
+ {k:'asofSz',nm:'크기',min:9,max:13,step:.5,dp:1,u:'px'},
+ {k:'asofColor',nm:'색',sel:[['dim','회색(현행)'],['muted','연회색']]},
+ {k:'asofFmt',nm:'형식',sel:[['기준','기준 7.9(현행)'],['후치','7.9 기준'],['업데이트','업데이트 7.9']]},
+ {grp:'분석 버튼'},
+ {k:'anaMode',nm:'위치',sel:[['head','헤더 우측(현행)'],['foot','레일 하단'],['hide','숨김']]},
+ {k:'anaSz',nm:'크기',min:9,max:13,step:.5,dp:1,u:'px'},
+ {k:'anaStyle',nm:'스타일',sel:[['chip','유리 칩(현행)'],['txt','텍스트 링크']]},
+ {k:'anaPadX',nm:'칩 좌우 패딩',min:6,max:16,step:1,dp:0,u:'px'},
+ {grp:'어제 델타 「공연 어제 +13석」 ★'},
+ {k:'sumMode',nm:'위치',sel:[['below','헤더 아래 줄(현행)'],['inhead','헤더 우측 인라인'],['cardTop','카드 안 우상단'],['trendRow','카드 추이 라벨 줄'],['hide','숨김']]},
+ {k:'sumSz',nm:'크기',min:9,max:14,step:.5,dp:1,u:'px'},
+ {k:'sumPadB',nm:'아래 여백',min:4,max:18,step:1,dp:0,u:'px'},
+ {k:'sumChip',nm:'초록 칩 배경',tog:1},
+ {k:'sumChipA',nm:'칩 배경 α',min:0,max:.25,step:.01,dp:2},
+ {k:'sumLabel',nm:'라벨',sel:[['공연 어제','공연 어제(현행)'],['어제','어제'],['어제 판매','어제 판매']]},
+ {k:'sumArrow',nm:'화살표',sel:[['▲','▲(현행)'],['↑','↑']]},
+ {k:'sumValB',nm:'수치 굵게',tog:1},
+ {grp:'공연 카드 컨테이너'},
+ {k:'cBgA',nm:'카드 표면 흰 α',min:.3,max:1,step:.01,dp:2,warn:1,tok:'W'},
+ {k:'cBlur',nm:'카드 blur',min:0,max:16,step:1,dp:0,u:'px'},
+ {k:'cBdA',nm:'테두리 흰 α',min:0,max:1,step:.01,dp:2,warn:1,tok:'W'},
+ {k:'cRad',nm:'카드 라디우스',min:8,max:24,step:1,dp:0,u:'px',warn:1,tok:'R'},
+ {k:'cPadY',nm:'패딩 세로',min:6,max:22,step:1,dp:0,u:'px'},
+ {k:'cPadX',nm:'패딩 가로',min:8,max:24,step:1,dp:0,u:'px'},
+ {k:'cShM',nm:'그림자 배율',min:0,max:2,step:.05,dp:2,u:'×',warn:1},
+ {k:'cLift',nm:'hover 리프트',min:0,max:4,step:.5,dp:1,u:'px'},
+ {grp:'카드 타이포'},
+ {k:'nameSz',nm:'공연명 크기',min:11,max:17,step:.5,dp:1,u:'px'},
+ {k:'nameW',nm:'공연명 굵기',min:600,max:900,step:100,dp:0},
+ {k:'metaSz',nm:'메타 크기',min:9,max:13,step:.5,dp:1,u:'px'},
+ {k:'metaColor',nm:'메타 색',sel:[['dim','회색(현행)'],['muted','연회색'],['neutral','뉴트럴']]},
+ {k:'ddSz',nm:'D-day 크기',min:9,max:14,step:.5,dp:1,u:'px'},
+ {k:'ddMode',nm:'D-day 위치',sel:[['right','우상단(현행)'],['name','공연명 옆'],['hide','숨김']]},
+ {k:'sepLine',nm:'점유율 좌측 구분선',tog:1},
+ {k:'r1Gap',nm:'상단 행 간격',min:4,max:16,step:1,dp:0,u:'px'},
+ {grp:'점유율 블록'},
+ {k:'occSz',nm:'퍼센트 크기',min:14,max:26,step:.5,dp:1,u:'px'},
+ {k:'occDec',nm:'소수 자리',sel:[[1,'1자리(현행)'],[0,'0자리']]},
+ {k:'dSz',nm:'증감 크기',min:9,max:14,step:.5,dp:1,u:'px'},
+ {k:'occLayout',nm:'배치',sel:[['col','우측 세로 칼럼(현행)'],['row','타이틀 아래 가로']]},
+ {k:'occColor',nm:'퍼센트 색',sel:[['accent','인디고 고정(현행)'],['ok','목표 달성 시 초록']]},
+ {k:'sparkGap',nm:'추이 위 간격',min:4,max:18,step:1,dp:0,u:'px'},
+ {grp:'수집 전 바 (슬라이드 1)'},
+ {k:'barH',nm:'바 높이',min:3,max:10,step:.5,dp:1,u:'px'},
+ {k:'barTrack',nm:'트랙 색',sel:[['neutral','뉴트럴(현행)'],['border','회색 보더']]},
+ {k:'barFill',nm:'채움 색',sel:[['accent','인디고(현행)'],['green','초록'],['c2','살몬']]},
+ {k:'barMk',nm:'목표 마커',tog:1},
+ {k:'barMkColor',nm:'마커 색',sel:[['peach','살몬(현행)'],['danger','레드']]},
+ {k:'barMkW',nm:'마커 폭',min:1,max:4,step:.5,dp:1,u:'px'},
+ {k:'barMkH',nm:'마커 높이',min:6,max:16,step:1,dp:0,u:'px'},
+ {k:'r3Sz',nm:'좌석·목표 줄 크기',min:9,max:13,step:.5,dp:1,u:'px'},
+ {k:'preSz',nm:'수집 전 라벨 크기',min:8,max:12,step:.5,dp:1,u:'px'},
+ {grp:'10일 추이 차트 (슬라이드 2 · #171 계승)'},
+ {k:'tH',nm:'차트 높이',min:110,max:230,step:1,dp:0,u:'px'},
+ {k:'tR',nm:'점 반지름',min:2,max:6,step:.1,dp:1,u:'px'},
+ {k:'tLineW',nm:'선 두께',min:1,max:4,step:.5,dp:1,u:'px'},
+ {k:'tAreaA',nm:'영역 채움 α',min:0,max:.25,step:.01,dp:2},
+ {k:'tPredN',nm:'예측 일수',min:0,max:3,step:1,dp:0,u:'일'},
+ {k:'tPredDash',nm:'예측 점선 간격',min:2,max:8,step:1,dp:0,u:'px'},
+ {k:'tPin',nm:'📌Today 핀',tog:1},
+ {k:'tRing',nm:'오늘 이중원',tog:1},
+ {k:'tTodayLine',nm:'오늘 세로 점선',tog:1},
+ {k:'tSeatSz',nm:'좌석 숫자 크기',min:7,max:12,step:.5,dp:1,u:'px'},
+ {k:'tSeatTodaySz',nm:'오늘 좌석 크기',min:9,max:15,step:.5,dp:1,u:'px'},
+ {k:'tDeltaLbl',nm:'증감(+n) 라벨(최근3)',tog:1},
+ {k:'tAxisSz',nm:'날짜 라벨 크기',min:6,max:10,step:.5,dp:1,u:'px'},
+ {k:'tFc',nm:'📈 예상 칩',tog:1},
+ {grp:'캐러셀 (#172 계승)'},
+ {k:'carPos',nm:'‹ 점 › 위치',sel:[['bottom','하단 중앙(현행)'],['head','헤더 우측'],['hide','숨김']]},
+ {k:'carBtn',nm:'버튼 크기',min:20,max:34,step:1,dp:0,u:'px'},
+ {k:'carBtnBgA',nm:'버튼 표면 α',min:.3,max:1,step:.01,dp:2},
+ {k:'carDot',nm:'점 크기',min:4,max:10,step:.5,dp:1,u:'px'},
+ {k:'carDotOn',nm:'활성 점 길이',min:8,max:26,step:1,dp:0,u:'px'},
+ {k:'carDotGap',nm:'점 간격',min:3,max:12,step:1,dp:0,u:'px'},
+ {k:'carDotOnColor',nm:'활성 점 색',sel:[['accent','인디고(현행)'],['c2','살몬']]},
+ {k:'carIdle',nm:'유휴 자동넘김',min:3,max:15,step:1,dp:0,u:'s'},
+ {k:'carHold',nm:'상호작용 후 유지',min:5,max:20,step:1,dp:0,u:'s'},
+ {grp:'레일 푸터'},
+ {k:'ftMode',nm:'새로고침 위치',sel:[['bottom','하단 우측(현행)'],['head','헤더 우측'],['hide','숨김']]},
+ {k:'ftSz',nm:'버튼 크기',min:9,max:13,step:.5,dp:1,u:'px'},
+ {k:'ftPadY',nm:'푸터 패딩',min:4,max:16,step:1,dp:0,u:'px'},
+ {k:'ftStyle',nm:'스타일',sel:[['chip','칩(현행)'],['icon','아이콘 ↻']]},
+ {grp:'캘린더 요일바 (매칭 기준)'},
+ {k:'dhBgA',nm:'요일바 흰 α',min:.4,max:1,step:.01,dp:2},
+ {k:'dhBlur',nm:'요일바 blur',min:0,max:24,step:1,dp:0,u:'px'},
+ {k:'dhPadY',nm:'요일바 패딩 세로',min:8,max:22,step:1,dp:0,u:'px'},
+ {k:'dhSz',nm:'요일 글자 크기',min:11,max:17,step:.5,dp:1,u:'px'},
+ {k:'dhW',nm:'요일 굵기',min:500,max:900,step:100,dp:0},
+ {k:'dhTodayBar',nm:'오늘 언더라인 두께',min:0,max:5,step:.5,dp:1,u:'px'},
+ {k:'dhTodayColor',nm:'언더라인 색',sel:[['c2','살몬(현행)'],['accent','인디고']]},
+ {k:'dhBdBotA',nm:'하단 보더 α',min:0,max:.2,step:.01,dp:2},
+ {grp:'캘린더 셀·이벤트'},
+ {k:'dnSz',nm:'날짜 숫자 크기',min:11,max:16,step:.5,dp:1,u:'px'},
+ {k:'evSz',nm:'이벤트 글자 크기',min:8,max:13,step:.5,dp:1,u:'px'},
+ {k:'evGap',nm:'시간·채널·제목 간격',min:2,max:8,step:.5,dp:1,u:'px'},
+ {k:'evPadY',nm:'이벤트 행 패딩',min:0,max:4,step:.5,dp:1,u:'px'},
+ {k:'cPad',nm:'셀 좌우 패딩',min:4,max:14,step:1,dp:0,u:'px'},
+ {k:'todayBgA',nm:'오늘 셀 배경 α',min:0,max:1,step:.05,dp:2,warn:1},
+ {k:'wkCntSz',nm:'주차 개수 크기',min:9,max:14,step:.5,dp:1,u:'px'},
+ {k:'pastOp',nm:'지난 이벤트 흐림',min:.15,max:.8,step:.01,dp:2},
+ {k:'cCountSz',nm:'셀 카운트(0/4) 크기',min:8,max:12,step:.5,dp:1,u:'px'},
+ {k:'holSz',nm:'공휴일 크기',min:9,max:14,step:.5,dp:1,u:'px'},
+ {k:'evHovA',nm:'이벤트 hover α',min:0,max:.15,step:.01,dp:2},
+ {grp:'모션·부유 요소'},
+ {k:'slideT',nm:'캐러셀 전환',min:.15,max:.8,step:.05,dp:2,u:'s'},
+ {k:'hovT',nm:'hover 전환',min:.05,max:.4,step:.05,dp:2,u:'s'},
+ {k:'fabShow',nm:'불편사항 FAB',tog:1},
+ {k:'fabSz',nm:'FAB 크기',min:11,max:16,step:.5,dp:1,u:'px'},
+ {k:'chatShow',nm:'챗 버블',tog:1},
+ {k:'chatSz',nm:'챗 버블 지름',min:34,max:56,step:1,dp:0,u:'px'}
+];
+var S=Object.assign({},DEF); var activePreset='p0';
+
+var PRESETS=[
+ {id:'p0',nm:'현행',desc:'지금 라이브와 동일. 모든 축의 비교 기준.',st:{}},
+ {id:'p1',nm:'개편 스케치',star:true,desc:'★ 운영자 스케치 반영 — 헤더 = 요일바와 같은 흰 스트립(높이·톤 매칭), 타이틀 「판매 현황 (2)」, 기준일·분석 버튼 제거, 어제 델타는 카드 안 우상단으로.',
+  st:{hMode:'strip',hBdBotA:.07,hPadT:14,hPadB:14,cntMode:'paren',asofMode:'hide',anaMode:'hide',sumMode:'cardTop'}},
+ {id:'p2',nm:'헤더 통합 미니멀',desc:'흰 스트립에 전부 흡수 — 어제 델타 인라인, 새로고침 ↻ 아이콘·캐러셀 ‹› 헤더 우측, 기준일·분석은 레일 하단으로.',
+  st:{hMode:'strip',hBdBotA:.07,hPadT:14,hPadB:14,cntMode:'paren',asofMode:'foot',anaMode:'foot',sumMode:'inhead',ftMode:'head',ftStyle:'icon',carPos:'head'}},
+ {id:'p3',nm:'데이터 집중',desc:'카드 정보를 키움 — 퍼센트 22px·차트 190px·카드 패딩 확대·어제 델타 = 추이 라벨 줄.',
+  st:{occSz:22,dSz:12,nameSz:14,tH:190,cPadY:14,cPadX:16,sumMode:'trendRow',barH:6}}
+];
+
+/* ══════════ 목업 데이터 (스크린샷 기준 고정) ══════════ */
+var SHOWS=[
+ {name:'브런치 콘서트 Ⅲ <현 위로 흐르는 계절>',meta:'기타 · 사업성 · 9.3(목)',dd:'D-56',occ:18.0,dpp:0.8,seats:167,tot:926,tgt:50,days:[]},
+ {name:'뮤지컬 <달 샤베트>',meta:'뮤지컬 · 예술성 · 8.15(토)',dd:'D-37',occ:42.3,dpp:1.4,seats:392,tot:926,tgt:50,
+  days:[{md:'7/3',occ:36.2},{md:'7/4',occ:37.1},{md:'7/5',occ:37.8},{md:'7/6',occ:38.9},{md:'7/7',occ:40.1},{md:'7/8',occ:40.9},{md:'7/9',occ:42.3}]}
+];
+var CH={문자:'var(--accent)',카카오:'var(--kakao)',인스타:'var(--insta)',블로그:'var(--blog)',작가:'var(--c5)'};
+function ev(t,ch,tt,cls){return {t:t,ch:ch,tt:tt,cls:cls||''};}
+var WEEKS=[
+ {band:null,days:[
+  {n:7,cnt:'0/1',past:1,evs:[ev('14:10','기타','공연 전시 보물 등록','pastv')]},
+  {n:8,cnt:'3/5',past:1,evs:[ev('15:00','문자','조지혜 피아노 리사이틀','done pastv'),ev('15:50','카카오','조지혜 리사이틀 T/O','done pastv'),ev('16:00','인스타','조지혜 리사이틀','done pastv')],mt:{t:'14:30 ~15:00 회의 황세웅',done:1}},
+  {n:9,today:1,evs:[]},
+  {n:10,cnt:'0/4',evs:[ev('15:00','문자','뮤지컬 <달 샤베트> T/O'),ev('15:50','카카오','뮤지컬 <달 샤베트> T/O'),ev('16:00','인스타','뮤지컬 <달 샤베트> T/O')]},
+  {n:11,cnt:'0/1',evs:[ev('17:00','블로그','9월 브런치 콘서트 홍보')]},
+  {split:[12,13]}]},
+ {band:null,days:[
+  {n:14,evs:[]},
+  {n:15,cnt:'0/4',evs:[ev('14:00','인스타','러커스더스쿨 T/O'),ev('15:00','문자','러커스더스쿨 T/O'),ev('15:50','카카오','러커스더스쿨 T/O')],mt:{t:'14:30 ~15:00 회의 황세웅'}},
+  {n:16,evs:[ev('14:00','작가','~16:00 작가 인터뷰 심회은')]},
+  {n:17,hol:'제헌절',evs:[]},
+  {n:18,evs:[]},
+  {split:[19,20]}]},
+ {band:null,days:[
+  {n:21,cnt:'0/3',evs:[ev('10:00','카카오','GS칼텍스 예울마루 기획전…'),ev('10:00','인스타','숨쉬는섬'),ev('10:00','인스타','숨: 쉬는 SUM')]},
+  {n:22,cnt:'0/3',evs:[ev('14:00','인스타','그날들 T/O'),ev('15:00','문자','그날들 티켓오픈'),ev('15:50','카카오','그날들 T/O')],mt:{t:'14:30 ~15:00 회의 황세웅'}},
+  {n:23,evs:[]},
+  {n:24,evs:[ev('10:00','작가','~12:00 작가 인터뷰 심회은')]},
+  {n:25,evs:[]},
+  {split:[26,27]}]}
+];
+
+/* ══════════ 렌더 ══════════ */
+function fmtN(v,dp){return Number(v).toFixed(dp);}
+function asofTxt(st){var f=st.asofFmt;return f==='기준'?'기준 7.9':(f==='후치'?'7.9 기준':'업데이트 7.9');}
+function cntHtml(st){
+  if(st.cntMode==='chip')return '<span class="srl-cnt">2</span>';
+  if(st.cntMode==='ntxt')return '<span class="srl-cnt txt">2개</span>';
+  return '';
+}
+function ttHtml(st){
+  var t='판매 현황';
+  if(st.cntMode==='paren')t+=' <span class="paren">(2)</span>';
+  return '<span class="srl-tt">'+t+'</span>';
+}
+function sumInner(st){
+  var arrow=st.sumArrow, v=(st.sumValB?'<b class="val">':'<span class="val">')+arrow+' +13석'+(st.sumValB?'</b>':'</span>');
+  return '<span>'+st.sumLabel+' '+v+'</span>';
+}
+function achip(st,label,extra){
+  return '<button class="achip'+(st.anaStyle==='txt'&&label==='분석'?' txtlink':'')+'" '+(extra||'')+'>'+label+'</button>';
+}
+function trendSvg(st,p){
+  var occ=p.days.map(function(d){return d.occ;});
+  var g=(occ.length>=3)?((occ[occ.length-1]-occ[occ.length-3])/2):(occ[occ.length-1]-occ[occ.length-2]);
+  var vals=occ.slice(); for(var k=1;k<=st.tPredN;k++)vals.push(Math.max(0,Math.min(100,occ[occ.length-1]+g*k)));
+  var N=occ.length,todayIdx=N-1,T=vals.length,tot=p.tot;
+  var labels=p.days.map(function(d){return d.md;}); for(var k2=1;k2<=st.tPredN;k2++)labels.push('7/'+(9+k2));
+  var W=280,H=st.tH,padX=9,padT=32,padB=28;
+  var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),span=mx-mn;if(span<0.6)span=0.6;mn-=span*.2;mx+=span*.34;
+  var pts=vals.map(function(v,i){var x=padX+(W-2*padX)*i/Math.max(1,T-1);var y=padT+(H-padT-padB)*(1-(v-mn)/(mx-mn));return [x,y,v];});
+  function seg(a,b){return pts.slice(a,b).map(function(q,i){return (i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1);}).join(' ');}
+  var solid=seg(0,N);
+  var area=solid+' L'+pts[todayIdx][0].toFixed(1)+' '+(H-padB)+' L'+pts[0][0].toFixed(1)+' '+(H-padB)+' Z';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:'+H+'px;width:100%;overflow:visible;display:block" aria-hidden="true">';
+  s+='<path d="'+area+'" fill="rgba(74,77,231,'+st.tAreaA+')"/>';
+  s+='<path d="'+solid+'" fill="none" stroke="var(--accent)" stroke-width="'+st.tLineW+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+  if(T>N){var dashed='M'+pts[todayIdx][0].toFixed(1)+' '+pts[todayIdx][1].toFixed(1)+' '+pts.slice(N).map(function(q){return 'L'+q[0].toFixed(1)+' '+q[1].toFixed(1);}).join(' ');
+    s+='<path d="'+dashed+'" fill="none" stroke="var(--peach-text)" stroke-width="'+st.tLineW+'" stroke-dasharray="'+st.tPredDash+' '+st.tPredDash+'" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';}
+  if(st.tTodayLine)s+='<line x1="'+pts[todayIdx][0].toFixed(1)+'" y1="'+padT+'" x2="'+pts[todayIdx][0].toFixed(1)+'" y2="'+(H-padB)+'" stroke="var(--accent)" stroke-opacity=".18" stroke-width="1" stroke-dasharray="2 2"/>';
+  if(st.tPin)s+='<text x="'+pts[todayIdx][0].toFixed(1)+'" y="'+(padT-14)+'" text-anchor="middle" font-size="8.5" font-weight="800" fill="var(--accent)">📌 Today</text>';
+  var R=st.tR;
+  pts.forEach(function(q,i){
+    var future=i>todayIdx,today=(i===todayIdx),recent=(i>=todayIdx-2);
+    var seat=Math.round(tot*q[2]/100),prev=(i>0)?Math.round(tot*vals[i-1]/100):null,dseat=(prev!=null)?(seat-prev):null,pct=(dseat!=null)?(dseat/tot*100):null;
+    if(today&&st.tRing)s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+(R+2.2)+'" fill="var(--peach-text)"/><circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+R+'" fill="var(--accent)"/>';
+    else s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+R+'" fill="var('+(future?'--peach-text':'--accent')+')"/>';
+    var col=today?'var(--accent)':(recent?'var(--text)':'var(--muted)'),sy=(q[1]-R-6).toFixed(1);
+    s+='<text x="'+q[0].toFixed(1)+'" y="'+sy+'" text-anchor="middle" font-size="'+(today?st.tSeatTodaySz:st.tSeatSz)+'" font-weight="'+(today?'800':'700')+'" fill="'+col+'">'+seat+'</text>';
+    if(st.tDeltaLbl&&dseat!=null&&recent&&!future)s+='<text x="'+q[0].toFixed(1)+'" y="'+(parseFloat(sy)-9.5).toFixed(1)+'" text-anchor="middle" font-size="7" font-weight="800" fill="var(--green)">+'+dseat+' (+'+pct.toFixed(1)+'%)</text>';
+    s+='<text x="'+q[0].toFixed(1)+'" y="'+(H-7)+'" text-anchor="middle" font-size="'+st.tAxisSz+'" font-weight="700" fill="'+(today?'var(--accent)':(future?'var(--peach-text)':'var(--dim)'))+'">'+labels[i]+'</text>';
+  });
+  return s+'</svg>';
+}
+function cardHtml(st,p){
+  var gap=p.occ-p.tgt, dStr=st.sumArrow==='↑'?'↑ +'+p.dpp.toFixed(1)+'%p':'▲ +'+p.dpp.toFixed(1)+'%p';
+  var occTxt=fmtN(p.occ,st.occDec)+'%';
+  var occCls='s-occ'+((st.occColor==='ok'&&gap>=0)?' ok2':'');
+  var dday=st.ddMode==='hide'?'':'<span class="s-dday" style="color:var(--green)">'+p.dd+'</span>';
+  var cardSum=(st.sumMode==='cardTop')?'<div class="s-cardsum">'+st.sumLabel+' <span class="val">'+st.sumArrow+' +13석</span></div>':'';
+  var h='<div class="scard">';
+  h+='<div class="s-hd"><div class="s-tt"><div class="s-name">'+p.name+(st.ddMode==='name'?' <span class="s-dday" style="color:var(--green)">'+p.dd+'</span>':'')+'</div><div class="s-meta">'+p.meta+'</div>'
+    +(st.occLayout==='row'?'<div style="display:flex;align-items:baseline;gap:8px;margin-top:6px"><span class="'+occCls+'">'+occTxt+'</span><span class="s-delta up">'+dStr+'</span></div>':'')+'</div>';
+  if(st.occLayout==='col')h+='<div class="s-occcol'+(st.sepLine?' sep':'')+'"><span class="'+occCls+'">'+occTxt+'</span><span class="s-delta up">'+dStr+'</span></div>';
+  if(st.ddMode==='right'||st.sumMode==='cardTop')h+='<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0">'+(st.ddMode==='right'?dday:'')+cardSum+'</div>';
+  h+='</div>';
+  var trendRowSum=(st.sumMode==='trendRow')?'<span style="font-size:'+(st.sumSz-1)+'px;color:var(--neutral-text);font-weight:600">'+st.sumLabel+' <b class="val" style="color:var(--green)">'+st.sumArrow+' +13석</b></span>':'';
+  if(p.days.length>=2){
+    h+='<div class="s-spark">'+(trendRowSum?'<div style="display:flex;justify-content:flex-end;margin-bottom:2px">'+trendRowSum+'</div>':'')+trendSvg(st,p)+'</div>';
+    if(st.tFc){var g=(p.days[6].occ-p.days[4].occ)/2,p3=Math.min(100,p.occ+g*3),s3=Math.round(p.tot*p3/100);
+      h+='<div class="s-fc">📈 예상 (이 추세면) 3일 뒤 <b>'+s3.toLocaleString()+'석</b> · 누적 +'+(s3-p.seats)+'</div>';}
+  }else{
+    h+='<div class="s-spark"><div class="s-pre"><span>추이 수집 전 (일일입력 2회부터)</span>'+trendRowSum+'</div></div>';
+  }
+  h+='<div class="s-bar"><i style="width:'+Math.min(p.occ,100)+'%"></i>'+(st.barMk?'<b style="left:'+p.tgt+'%"></b>':'')+'</div>';
+  h+='<div class="s-r3"><span>'+p.seats.toLocaleString()+' / '+p.tot.toLocaleString()+'석</span><span class="'+(gap>=0?'ok':'bad')+'">목표 '+p.tgt+'% '+(gap>=0?'+':'')+gap.toFixed(1)+'%p</span></div>';
+  return h+'</div>';
+}
+function cnavHtml(st,compact){
+  return '<button class="cbtn" data-car="-1" aria-label="이전 공연">‹</button><div class="dots">'
+    +SHOWS.map(function(x,i){return '<button class="dot'+(i===carIdx?' on':'')+'" data-cargo="'+i+'"></button>';}).join('')
+    +'</div><button class="cbtn" data-car="1" aria-label="다음 공연">›</button>';
+}
+function railHtml(st){
+  var right=[];
+  if(st.sumMode==='inhead')right.push('<span class="srl-sum inhead'+(st.sumChip?' chip':'')+'">'+sumInner(st)+'</span>');
+  if(st.asofMode==='head')right.push('<span class="srl-asof">'+asofTxt(st)+'</span>');
+  if(st.anaMode==='head')right.push(achip(st,'분석'));
+  if(st.ftMode==='head')right.push('<button class="achip" title="새로고침">'+(st.ftStyle==='icon'?'↻':'새로고침')+'</button>');
+  if(st.carPos==='head')right.push('<span class="srl-cnav inhead" style="display:flex;align-items:center;gap:6px">'+cnavHtml(st,1)+'</span>');
+  var h='<div class="srl" id="srl">';
+  h+='<div class="srl-hd'+(st.hMode==='strip'?' strip':'')+'">'+ttHtml(st)+cntHtml(st)+'<span class="srl-right">'+right.join('')+'</span></div>';
+  if(st.sumMode==='below')h+='<div class="srl-sum'+(st.sumChip?' chip':'')+'">'+sumInner(st)+'</div>';
+  h+='<div class="srl-body"><div class="srl-car"><div class="srl-vp"><div class="srl-track" data-track style="transform:translateX('+(-carIdx*100)+'%)">'
+    +SHOWS.map(function(p){return '<div class="srl-slide">'+cardHtml(st,p)+'</div>';}).join('')+'</div></div>';
+  if(st.carPos==='bottom')h+='<div class="srl-cnav">'+cnavHtml(st)+'</div>';
+  h+='</div></div>';
+  var ftBits=[];
+  if(st.asofMode==='foot')ftBits.push('<span class="asoffoot">'+asofTxt(st)+'</span>');
+  if(st.anaMode==='foot')ftBits.push(achip(st,'분석'));
+  if(st.ftMode==='bottom')ftBits.push('<button class="achip">'+(st.ftStyle==='icon'?'↻':'새로고침')+'</button>');
+  if(ftBits.length)h+='<div class="srl-ft">'+ftBits.join('')+'</div>';
+  return h+'</div>';
+}
+function calHtml(st){
+  var DH=['화','수','목','금','토'];
+  var h='<div class="chw"><div class="chead">';
+  DH.forEach(function(d,i){var cls='dh'+(i===4?' sat':'')+(d==='목'?' on':'');h+='<div class="'+cls+'">'+d+'</div>';});
+  h+='<div class="dh dh-split"><i class="p-sun">일</i><i class="p-mon">월</i></div></div></div>';
+  h+='<div class="cal">';
+  h+='<div class="wkband"><span>6/30 ~ 7/5</span><span class="wc">4개</span></div>';
+  WEEKS.forEach(function(w){
+    h+='<div class="wrow">';
+    w.days.forEach(function(d){
+      if(d.split){h+='<div class="c split"><div><div class="dn sun">'+d.split[0]+'</div></div><div><div class="dn" style="color:var(--dim)">'+d.split[1]+'</div></div></div>';return;}
+      var cls='c'+(d.today?' today':'');
+      h+='<div class="'+cls+'">'+(d.cnt?'<span class="ccount">'+d.cnt+'</span>':'');
+      h+='<div class="dn'+(d.past?' past':'')+'">'+d.n+(d.hol?' <span class="holp">'+d.hol+'</span>':'')+'</div>';
+      (d.evs||[]).forEach(function(e){
+        h+='<div class="ev '+e.cls+'"><span class="ev-time" style="color:'+CH[e.ch]+'">'+e.t+'</span><span class="ev-plat" style="color:'+CH[e.ch]+'">'+e.ch+'</span><span class="ev-title">'+e.tt+'</span></div>';
+      });
+      if(d.mt)h+='<div class="mt'+(d.mt.done?' done':'')+'">'+d.mt.t+'</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+function render(st,root){
+  var U={railW:'%',colGap:'px',padTop:'px',cellH:'px',bgAngle:'deg',rBlur:'px',rBdW:'px',rRad:'px',
+    hBlur:'px',hPadT:'px',hPadB:'px',hPadX:'px',hTtSz:'px',hTtLs:'px',cntSz:'px',asofSz:'px',anaSz:'px',anaPadX:'px',
+    sumSz:'px',sumPadB:'px',cBlur:'px',cRad:'px',cPadY:'px',cPadX:'px',cLift:'px',nameSz:'px',metaSz:'px',ddSz:'px',r1Gap:'px',
+    occSz:'px',dSz:'px',sparkGap:'px',barH:'px',barMkW:'px',barMkH:'px',r3Sz:'px',preSz:'px',
+    carBtn:'px',carDot:'px',carDotOn:'px',carDotGap:'px',ftSz:'px',ftPadY:'px',
+    dhBlur:'px',dhPadY:'px',dhSz:'px',dhTodayBar:'px',dhBdBotA:'',dnSz:'px',evSz:'px',evGap:'px',evPadY:'px',cPad:'px',
+    wkCntSz:'px',cCountSz:'px',holSz:'px',slideT:'s',hovT:'s',fabSz:'px',chatSz:'px'};
+  for(var k in st){ if(k==='zoom')continue; var v=st[k];
+    if(typeof v==='number')root.style.setProperty('--v-'+k,v+(U[k]||'')); }
+  root.style.setProperty('--v-hTtColor',COLORSEL[st.hTtColor]);
+  root.style.setProperty('--v-cntColor',COLORSEL[st.cntColor]);
+  root.style.setProperty('--v-asofColor',COLORSEL[st.asofColor]);
+  root.style.setProperty('--v-metaColor',COLORSEL[st.metaColor]);
+  root.style.setProperty('--v-barTrack',st.barTrack==='neutral'?'var(--neutral)':'rgba(0,0,0,.09)');
+  root.style.setProperty('--v-barFill',COLORSEL[st.barFill]);
+  root.style.setProperty('--v-barMkColor',COLORSEL[st.barMkColor]);
+  root.style.setProperty('--v-carDotOnColor',COLORSEL[st.carDotOnColor]);
+  root.style.setProperty('--v-dhTodayColor',COLORSEL[st.dhTodayColor]);
+  root.style.setProperty('--v-layRad',st.rRad+'px');
+  root.innerHTML='<div class="app"><div class="bw">'
+    +'<div class="calcol">'+calHtml(st)+'</div>'
+    +'<div class="railcol">'+railHtml(st)+'</div>'
+    +'</div>'
+    +(st.fabShow?'<button class="fab">🔊 불편사항 접수</button>':'')
+    +(st.chatShow?'<div class="chatb">💬</div>':'')
+    +'</div>';
+  if(st.equalH){ var cal=root.querySelector('.calcol'), srl=root.querySelector('.srl');
+    if(cal&&srl){ srl.style.maxHeight=cal.offsetHeight+'px'; } }
+  fitStage(root);
+}
+function fitStage(root){
+  var z=(root===stT?S.zoom:DEF.zoom);
+  root.style.transform='scale('+z+')';
+  root.style.width=(100/z)+'%';
+  var clip=root.parentElement;
+  clip.style.height=(root.querySelector('.app').offsetHeight*z)+'px';
+}
+
+/* ══════════ 캐러셀(튜닝 스테이지 실동작 · #172 로직 축약 이식) ══════════ */
+var carIdx=0,autoT=null,resumeT=null;
+var stT=document.getElementById('stT'), stC=document.getElementById('stC');
+function carApply(){
+  [stT,stC].forEach(function(r){
+    var tr=r.querySelector('[data-track]'); if(tr)tr.style.transform='translateX('+(-carIdx*100)+'%)';
+    r.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('on',i===carIdx%SHOWS.length);});
+  });
+}
+function carGo(d){carIdx=((carIdx+d)%SHOWS.length+SHOWS.length)%SHOWS.length;carApply();kick();}
+function startAuto(){ if(autoT)return; autoT=setInterval(function(){ if(document.hidden)return; carIdx=(carIdx+1)%SHOWS.length; carApply(); },S.carIdle*1000); }
+function stopAuto(){ if(autoT){clearInterval(autoT);autoT=null;} }
+function kick(){ stopAuto(); if(resumeT)clearTimeout(resumeT); resumeT=setTimeout(startAuto,S.carHold*1000); }
+document.addEventListener('pointerdown',function(e){ if(e.target.closest('.stage,.card,.frame'))kick(); },true);
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-car]'); if(b){carGo(parseInt(b.dataset.car,10));return;}
+  var g=e.target.closest('[data-cargo]'); if(g){carIdx=parseInt(g.dataset.cargo,10);carApply();kick();}
+});
+
+/* ══════════ 콘솔 ══════════ */
+function fmt(o,v){ if(o.sel){var f=o.sel.find(function(x){return String(x[0])===String(v);});return f?f[1]:String(v);}
+  if(o.tog)return v?'ON':'OFF';
+  var s=(o.dp!==undefined?Number(v).toFixed(o.dp):String(v));return o.u==='×'?'×'+s:s+(o.u||''); }
+function buildSliders(){
+  var box=document.getElementById('sliders');box.innerHTML='';
+  SL.forEach(function(o){
+    if(o.grp&&!o.k){var g=document.createElement('div');g.className='grp';g.textContent=o.grp;box.appendChild(g);return;}
+    var d=document.createElement('div');d.className='sl';
+    var warn=o.warn?' <span class="warnb" title="기틀 토큰 축 — 바꾸면 §🚨 승인 갱신">⚠</span>':'';
+    var prev=o.prev?' <span style="color:#9a9aa8;font-weight:500">(미리보기)</span>':'';
+    var head='<label><span class="nm">'+o.nm+warn+prev+'</span><span class="val" id="v-'+o.k+'">'+fmt(o,S[o.k])+'</span></label>';
+    if(o.sel){
+      d.innerHTML=head+'<select id="r-'+o.k+'">'+o.sel.map(function(x){return '<option value="'+x[0]+'"'+(String(S[o.k])===String(x[0])?' selected':'')+'>'+x[1]+'</option>';}).join('')+'</select>';
+      d.querySelector('select').addEventListener('change',function(e){var raw=e.target.value;S[o.k]=isNaN(Number(raw))||raw===''?raw:(o.k==='occDec'?Number(raw):raw);if(o.k==='occDec')S[o.k]=Number(raw);markCustom();applyAll();});
+    }else if(o.tog){
+      d.innerHTML=head+'<div class="tog"><button data-v="1"'+(S[o.k]?' class="on"':'')+'>ON</button><button data-v="0"'+(!S[o.k]?' class="on"':'')+'>OFF</button></div>';
+      d.querySelectorAll('.tog button').forEach(function(b){b.addEventListener('click',function(){S[o.k]=parseInt(b.dataset.v,10);markCustom();applyAll();});});
+    }else{
+      d.innerHTML=head+'<input type="range" id="r-'+o.k+'" min="'+o.min+'" max="'+o.max+'" step="'+o.step+'" value="'+S[o.k]+'">';
+      d.querySelector('input').addEventListener('input',function(e){S[o.k]=parseFloat(e.target.value);markCustom();applyAll(true);});
+    }
+    box.appendChild(d);
+  });
+  var n=SL.filter(function(o){return o.k;}).length;
+  document.getElementById('axcnt').textContent=n;
+  document.getElementById('axcnt2').textContent=n;
+}
+function syncSliderUI(){
+  SL.forEach(function(o){ if(!o.k)return;
+    var v=document.getElementById('v-'+o.k); if(v)v.textContent=fmt(o,S[o.k]);
+    var r=document.getElementById('r-'+o.k);
+    if(r&&r.tagName==='INPUT'&&parseFloat(r.value)!==S[o.k])r.value=S[o.k];
+    if(r&&r.tagName==='SELECT'&&String(r.value)!==String(S[o.k]))r.value=S[o.k];
+    if(o.tog){var d=r; var box=document.getElementById('v-'+o.k).closest('.sl');
+      if(box)box.querySelectorAll('.tog button').forEach(function(b){b.classList.toggle('on',String(S[o.k])===b.dataset.v);});}
+  });
+}
+function buildPills(){
+  var box=document.getElementById('pills');box.innerHTML='';
+  PRESETS.forEach(function(p){
+    var b=document.createElement('button');b.className='pill'+(activePreset===p.id?' on':'');b.id='pill-'+p.id;
+    b.innerHTML=(p.star?'<span class="star">★</span> ':'')+p.nm;
+    b.addEventListener('click',function(){activePreset=p.id;S=Object.assign({},DEF,p.st);buildPills();syncSliderUI();applyAll();
+      document.getElementById('pdesc').textContent=p.desc;});
+    box.appendChild(b);
+  });
+  var c=document.createElement('button');c.className='pill'+(activePreset==='custom'?' on':'');c.id='pill-custom';
+  c.textContent='커스텀';c.style.display=activePreset==='custom'?'':'none';box.appendChild(c);
+  var p=PRESETS.find(function(x){return x.id===activePreset;});
+  document.getElementById('pdesc').textContent=p?p.desc:'슬라이더 직접 조정 중 — 아래 선택값이 그대로 스펙.';
+}
+function markCustom(){ if(activePreset!=='custom'){activePreset='custom';buildPills();} }
+
+/* ══════════ 선택값 출력 ══════════ */
+var near=function(a,b,eps){return Math.abs(a-b)<(eps||.004);};
+function tokMatch(o,v){
+  if(o.tok==='R')return near(v,24)?'--radius-xl':near(v,20)?'--radius-lg':near(v,16)?'--radius':null;
+  if(o.tok==='W')return near(v,.55)?'--glass':near(v,.78)?'--glass-surface':near(v,.45)?'--glass-menu':null;
+  return null;
+}
+function tag(o,v){
+  var cur=DEF[o.k];
+  var same=o.sel||o.tog?String(v)===String(cur):near(Number(v),Number(cur));
+  if(same)return '현행';
+  var t=tokMatch(o,Number(v)); if(t)return '계승='+t;
+  return o.warn?'갱신 후보 ⚠기틀':(o.prev?'미리보기(스펙 아님)':'변경');
+}
+function pad(s,n){s=String(s);while(s.length<n)s+=' ';return s;}
+function buildOut(){
+  var L=['[판매현황 개편 — 선택값] 프리셋: '+(activePreset==='custom'?'커스텀':(PRESETS.find(function(p){return p.id===activePreset;})||{}).nm)];
+  SL.forEach(function(o){
+    if(o.grp&&!o.k){L.push('');L.push('· '+o.grp);return;}
+    L.push('  '+pad(o.nm,18)+': '+pad(fmt(o,S[o.k]),16)+' [현행 '+fmt(o,DEF[o.k])+']  '+tag(o,S[o.k]));
+  });
+  var diffs=SL.filter(function(o){return o.k&&!o.prev&&tag(o,S[o.k])!=='현행';});
+  L.push('');L.push('· 변경분 요약 ('+diffs.length+'축) — 배선 시 이 축만 손대면 됨');
+  diffs.forEach(function(o){L.push('  '+o.nm+' = '+fmt(o,S[o.k])+'  (현행 '+fmt(o,DEF[o.k])+')'+(o.warn?'  ⚠기틀':''));});
+  if(!diffs.length)L.push('  없음 = 현행 그대로');
+  document.getElementById('out').innerHTML=L.join('\n')
+    .replace(/(⚠기틀|갱신 후보)/g,'<span class="wn">$1</span>')
+    .replace(/(계승=[^\s]+|현행(?=\s|$))/g,'<span class="kp">$1</span>');
+}
+function copyVals(){
+  var txt=document.getElementById('out').innerText;
+  function done(b){var o=b.textContent;b.textContent='✓ 복사됨';setTimeout(function(){b.textContent=o;},1400);}
+  var b=event.target;
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done(b);}).catch(function(){fallbackCopy(txt);done(b);});}
+  else{fallbackCopy(txt);done(b);}
+}
+function fallbackCopy(t){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
+
+/* ══════════ 반영 ══════════ */
+function applyAll(light){
+  render(S,stT); buildOut();
+  if(!light)syncSliderUI(); else { SL.forEach(function(o){if(!o.k)return;var v=document.getElementById('v-'+o.k);if(v)v.textContent=fmt(o,S[o.k]);}); }
+  stopAuto(); startAuto();
+}
+/* 현행 겹쳐보기(꾹) */
+(function(){
+  var b=document.getElementById('cmpBtn'),held=false;
+  function down(e){e.preventDefault();if(held)return;held=true;render(DEF,stT);document.getElementById('tunedtag').textContent='= 현행 표시 중';}
+  function up(){if(!held)return;held=false;render(S,stT);document.getElementById('tunedtag').textContent='★ 여기가 바뀜';}
+  b.addEventListener('pointerdown',down);
+  ['pointerup','pointerleave','pointercancel'].forEach(function(ev){b.addEventListener(ev,up);});
+})();
+window.addEventListener('resize',function(){fitStage(stT);fitStage(stC);});
+
+/* 초기화 */
+buildSliders();buildPills();
+render(DEF,stC);
+render(S,stT);buildOut();
+startAuto();
+</script>
+</body>
+</html>
