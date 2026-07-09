@@ -1,10 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
-      "mcp__github__unsubscribe_pr_activity"
-    ]
-  },
   "hooks": {
     "SessionStart": [
       {
