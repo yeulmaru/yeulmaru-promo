@@ -675,6 +675,107 @@ async function handleMarkMessageRead(token, id) {
 }
 __name(handleMarkMessageRead, "handleMarkMessageRead");
 
+// === 예매 프로세스 도표 공유 — '도표' 시트 (공유범위: 비공개/팀/전체 · 소유자 = 로그인 담당자명) ===
+// 본문 JSON은 셀 32,767자 제한 때문에 청크 10개(28,000자 단위)로 분할 — 문서당 최대 ~280KB.
+// 삭제 = 행 클리어(handleDeleteSheetRow 방식) — ID 빈 행은 목록 필터에서 걸러진다.
+// 신원은 기존 앱 신뢰 모델 계승(클라이언트가 user/dept 전달 — 신청·메시지와 동일 위상). 갱신·삭제 = 소유자 또는 admin.
+var DGM_SHEET = "도표";
+var DGM_CHUNKS = 10;
+var DGM_CHUNK_SIZE = 28000;
+var DGM_HEADERS = ["ID", "이름", "소유자", "부서", "공유범위", "저장시각", "청크수", "본문1", "본문2", "본문3", "본문4", "본문5", "본문6", "본문7", "본문8", "본문9", "본문10"];
+function dgmScopeOk(s) { return s === "비공개" || s === "팀" || s === "전체"; }
+__name(dgmScopeOk, "dgmScopeOk");
+function dgmCanSee(r, user, dept) {
+  if (String(user || "") && String(r["소유자"] || "") === String(user || "")) return true;
+  const scope = String(r["공유범위"] || "비공개");
+  if (scope === "전체") return true;
+  if (scope === "팀") return !!String(dept || "") && String(r["부서"] || "") === String(dept || "");
+  return false;
+}
+__name(dgmCanSee, "dgmCanSee");
+function dgmMeta(r) {
+  return { id: String(r["ID"] || ""), name: String(r["이름"] || ""), owner: String(r["소유자"] || ""), dept: String(r["부서"] || ""), scope: dgmScopeOk(r["공유범위"]) ? String(r["공유범위"]) : "비공개", ts: String(r["저장시각"] || "") };
+}
+__name(dgmMeta, "dgmMeta");
+async function handleDgmList(token, user, dept) {
+  await ensureNamedSheet(token, DGM_SHEET, DGM_HEADERS, null);
+  const { rows } = await handleGetSheet(token, DGM_SHEET);
+  return rows.filter((r) => String(r["ID"] || "").trim() && dgmCanSee(r, user, dept)).map(dgmMeta);
+}
+__name(handleDgmList, "handleDgmList");
+async function handleDgmGet(token, id, user, dept) {
+  await ensureNamedSheet(token, DGM_SHEET, DGM_HEADERS, null);
+  const { rows } = await handleGetSheet(token, DGM_SHEET);
+  const r = rows.find((x) => String(x["ID"] || "").trim() === String(id).trim());
+  if (!r) return { ok: false, error: "not found", status: 404 };
+  if (!dgmCanSee(r, user, dept)) return { ok: false, error: "forbidden", status: 403 };
+  let body = "";
+  const n = Math.min(parseInt(r["청크수"] || "0") || 0, DGM_CHUNKS);
+  for (let i = 1; i <= n; i++) body += String(r["본문" + i] || "");
+  let doc = null;
+  try { doc = JSON.parse(body); } catch (e) { return { ok: false, error: "corrupt", status: 500 }; }
+  return { ok: true, meta: dgmMeta(r), doc };
+}
+__name(handleDgmGet, "handleDgmGet");
+async function handleDgmSave(token, body, isAdm) {
+  const id = String((body && body.id) || "").trim();
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) return { ok: false, error: "bad id", status: 400 };
+  const owner = String(body.owner || "").slice(0, 40).trim();
+  if (!owner) return { ok: false, error: "no owner", status: 400 };
+  const name = (String(body.name || "").trim() || "제목 없음").slice(0, 80);
+  const dept = String(body.dept || "").slice(0, 40);
+  const scope = dgmScopeOk(body.scope) ? body.scope : "비공개";
+  const jsonBody = JSON.stringify(body.doc || {});
+  if (jsonBody.length > DGM_CHUNKS * DGM_CHUNK_SIZE) return { ok: false, error: "too large", status: 413 };
+  const chunks = [];
+  for (let i = 0; i < DGM_CHUNKS; i++) chunks.push(jsonBody.slice(i * DGM_CHUNK_SIZE, (i + 1) * DGM_CHUNK_SIZE));
+  const values = [id, name, owner, dept, scope, kstNowText(), String(Math.max(1, Math.ceil(jsonBody.length / DGM_CHUNK_SIZE)))].concat(chunks);
+  const { driveId, itemId } = await ensureNamedSheet(token, DGM_SHEET, DGM_HEADERS, null);
+  const sheetPath = sheetPathFor(driveId, itemId, DGM_SHEET);
+  const lastCol = colLetter(values.length);
+  async function writeRow(row) {
+    const addr = `A${row}:${lastCol}${row}`;
+    await graphPatch(token, `${sheetPath}/range(address='${addr}')`, { numberFormat: [values.map(() => "@")] });
+    await graphPatch(token, `${sheetPath}/range(address='${addr}')`, { values: [values] });
+  }
+  __name(writeRow, "writeRow");
+  let row = 2;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { rows } = await handleGetSheet(token, DGM_SHEET);
+    const ex = rows.find((x) => String(x["ID"] || "").trim() === id);
+    if (ex) {
+      // upsert 갱신 — 소유자(또는 admin)만
+      if (String(ex["소유자"] || "") !== owner && !isAdm) return { ok: false, error: "forbidden", status: 403 };
+      await writeRow(ex._rowIndex);
+      return { ok: true, row: ex._rowIndex, ts: values[5], updated: true };
+    }
+    row = rows.length > 0 ? Math.max(...rows.map((x) => x._rowIndex)) + 1 : 2;
+    await writeRow(row);
+    // 비원자 append 경합 방어(handleAddMessage 패턴 계승) — 그 행 A열 read-back으로 내 id 확인
+    try {
+      const chk = await graphGet(token, `${sheetPath}/range(address='A${row}')`);
+      const got = chk && chk.values && chk.values[0] ? String(chk.values[0][0]) : "";
+      if (got === id) return { ok: true, row, ts: values[5] };
+    } catch (e) { return { ok: true, row, ts: values[5] }; }
+    await new Promise((r2) => setTimeout(r2, 250 * (attempt + 1)));
+  }
+  return { ok: true, row, ts: values[5] };
+}
+__name(handleDgmSave, "handleDgmSave");
+async function handleDgmDelete(token, id, user, isAdm) {
+  await ensureNamedSheet(token, DGM_SHEET, DGM_HEADERS, null);
+  const { driveId, itemId } = await findFile(token);
+  const { rows } = await handleGetSheet(token, DGM_SHEET);
+  const r = rows.find((x) => String(x["ID"] || "").trim() === String(id).trim());
+  if (!r) return { ok: false, error: "not found", status: 404 };
+  if (String(r["소유자"] || "") !== String(user || "") && !isAdm) return { ok: false, error: "forbidden", status: 403 };
+  const lastCol = colLetter(DGM_HEADERS.length);
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, DGM_SHEET)}/range(address='A${r._rowIndex}:${lastCol}${r._rowIndex}')`, { values: [Array(DGM_HEADERS.length).fill("")] });
+  return { ok: true };
+}
+__name(handleDgmDelete, "handleDgmDelete");
+
+
 // === [DB통합/이관] 운영 데이터를 프로모 엑셀(통합 문서1.xlsm)의 "운영_*" 시트에 저장 (source of truth, Workbook API 읽기·쓰기 OK 검증됨). dash 파일은 501이라 dash가 push만 함. ===
 function opsSheetName(s){ return "운영_" + String(s).replace(/[()（）]/g, ""); }
 async function ensureSheet(token, sheetName, headers){
@@ -1496,6 +1597,31 @@ var index_default = {
       if (url.pathname.startsWith("/api/messages/")) {
         const mid = decodeURIComponent(url.pathname.split("/").pop());
         if (request.method === "PATCH") return json(await handleMarkMessageRead(token, mid), env);
+      }
+
+      // === 예매 프로세스 도표 공유 — 로그인 사용자: 목록/단건(범위 필터) · 저장/삭제(소유자 또는 admin) ===
+      if (url.pathname === "/api/diagrams") {
+        if (request.method === "GET") {
+          return json({ diagrams: await handleDgmList(token, url.searchParams.get("user") || "", url.searchParams.get("dept") || "") }, env);
+        }
+        if (request.method === "POST") {
+          const dgBody = await request.json();
+          const dgAuth = await checkAdmin(request, env, token);
+          const dgRes = await handleDgmSave(token, dgBody, dgAuth.admin);
+          return json(dgRes, env, dgRes.status && !dgRes.ok ? dgRes.status : 200);
+        }
+      }
+      if (url.pathname.startsWith("/api/diagrams/")) {
+        const dgId = decodeURIComponent(url.pathname.split("/").pop());
+        if (request.method === "GET") {
+          const dgRes = await handleDgmGet(token, dgId, url.searchParams.get("user") || "", url.searchParams.get("dept") || "");
+          return json(dgRes, env, dgRes.status && !dgRes.ok ? dgRes.status : 200);
+        }
+        if (request.method === "DELETE") {
+          const dgAuth = await checkAdmin(request, env, token);
+          const dgRes = await handleDgmDelete(token, dgId, url.searchParams.get("user") || "", dgAuth.admin);
+          return json(dgRes, env, dgRes.status && !dgRes.ok ? dgRes.status : 200);
+        }
       }
 
       // === 챗봇 — FAQ 조회(시트 자동생성) + 질의 로그 누적. 로그인 사용자 허용 ===
