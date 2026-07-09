@@ -85,7 +85,8 @@ button{font-family:inherit;cursor:pointer}
 .login-welcome .lw-thin{font-weight:400}
 .login-welcome .lw-ac{color:var(--accent)}
 .login-sub{font-size:13px;color:var(--dim);opacity:.8;margin-bottom:30px}
-.pin-wrap{display:flex;gap:12px;justify-content:center}
+/* [260709] PIN 활성 영역 = 유리 패널 한 층(레이어 부각) — 카드(5% 유리) 위 55% 유리, 전 값 토큰 계승 */
+.pin-wrap{display:flex;gap:12px;justify-content:center;padding:14px 18px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--r-pop);box-shadow:var(--glass-shadow)}
 /* PIN = .pin-slot 안 원(::before, :has로 상태) + 투명 input(숫자 레이어) → 원/숫자 물리 분리로 겹침 소멸.
    nomute .pin-slot 모션 이식(색은 우리 토큰 계승): 빈원 var(--muted) / 채운원·숫자 var(--accent) / 에러 var(--danger). */
 .pin-slot{position:relative;width:42px;height:48px;display:grid;place-items:center}
@@ -106,9 +107,9 @@ button{font-family:inherit;cursor:pointer}
 .pin-wrap.success .pin-slot::before{animation:pinWin .5s ease calc(var(--i,0)*.1s)}
 @keyframes pinWin{0%,100%{transform:translate(-50%,-50%) scale(1)}45%{transform:translate(-50%,-50%) scale(1.2)}}
 @media (prefers-reduced-motion:reduce){.pin.lit{animation:none}.pin-wrap.success .dot-ring circle{animation:none;stroke-dashoffset:0}.pin-wrap.success .pin-slot::before{animation:none}}
-#login-msg{font-size:13px;height:18px;color:var(--danger);margin-top:4px}
+#login-msg{font-size:13px;height:18px;color:var(--danger);margin-top:10px}
 /* [260708] 메시지 영역 하나로 통합 — 평상시 안내(무채색 var(--muted)), 입력 시작하면 비움, 틀리면 같은 자리 danger 대체 */
-#login-msg.lm-hint{color:var(--muted);font-weight:600}
+#login-msg.lm-hint{color:var(--accent);font-weight:600}  /* [260709] 안내문구 강조색 계승(기존 muted는 유리 위에서 매몰) */
 #login-load{font-size:13px;height:18px;color:var(--accent);margin-top:4px}
 /* 진입 전환 = 카드 리프트 디졸브 — PIN 카드가 떠오르며 사라지고 셰이더가 body 그라데이션(var(--bg))으로 디졸브,
    앱 셸(nav→hdr→cal)이 순차 등장(_appEnterStagger). 색 = 흰색 alpha 변주(§3.5②)+기존 토큰만.
@@ -1723,7 +1724,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
       </div>
       <div id="login-msg"></div>
       <div id="login-load"></div>
-      <button type="button" onclick="backToAccountStep()" style="margin-top:16px;background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">← 계정 다시 선택</button>
+      <button type="button" onclick="backToAccountStep()" style="margin-top:16px;background:none;border:0;color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px">← 계정 다시 선택</button>
     </div>
   </div>
 </div>
@@ -18656,7 +18657,8 @@ function _btnBusy(btn,on,label){
 function showOverlayLoad(msg){
   msg=msg||'\uBCC0\uACBD \uC911';
   document.getElementById('overlay-load').classList.add('show');
-  _typeLoop('ol-text',msg,65);
+  _typingId++;   // \uD639\uC2DC \uB3CC\uB358 \uD0C0\uC774\uD551 \uB8E8\uD504 \uBB34\uD6A8\uD654(\uC794\uC7AC \uBC29\uC9C0). \uD0C0\uC790\uAE30 \uD3D0\uAE30 \u2192 \uBB38\uAD6C\uB294 \uD55C \uBC88\uC5D0 \uACE0\uC815 \uD45C\uC2DC(dots \uD53D\uD1A0\uADF8\uB7A8\uC740 \uC720\uC9C0)
+  var _t=document.getElementById('ol-text');if(_t)_t.textContent=msg;
 }
 function hideOverlayLoad(){
   document.getElementById('overlay-load').classList.remove('show');
