@@ -1619,7 +1619,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .bp-zbtn{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);color:var(--text);font-size:13px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit;padding:0}
 .bp-zbtn:hover{border-color:var(--accent);color:var(--accent)}
 .bp-zpct{font-variant-numeric:tabular-nums;min-width:42px;text-align:center;font-weight:700;color:var(--text)}
-.bp-fname{font-family:inherit;font-weight:800;font-size:13.5px;color:var(--text);border:1.5px solid transparent;border-radius:8px;padding:5px 9px;background:transparent;width:min(220px,30vw);min-width:80px}
+.bp-fname{font-family:inherit;font-weight:800;font-size:13.5px;color:var(--text);border:1.5px solid transparent;border-radius:8px;padding:5px 9px;background:transparent;width:min(220px,30vw);min-width:80px;cursor:text}
 .bp-fname:hover{border-color:var(--border2)}
 .bp-fname:focus{outline:none;border-color:var(--accent);background:var(--surface-solid)}
 .bp-home{flex:1;overflow-y:auto;padding:26px clamp(16px,4vw,48px);display:none}
@@ -17052,7 +17052,7 @@ function _bpFileOpen(id){
 }
 function _bpFileDup(id){
   var st=_bpStore(),f=_bpFileFind(st,id);if(!f)return;
-  var c={id:_bpFid(),name:String(f.name||'제목 없음').slice(0,74)+' 사본',ts:Date.now(),doc:JSON.parse(JSON.stringify(f.doc))};
+  var c={id:_bpFid(),name:String(f.name||'제목 없음').slice(0,74)+' 사본',ts:Date.now(),doc:f.doc?JSON.parse(JSON.stringify(f.doc)):_bpEmptyDoc()};
   st.files.splice(st.files.indexOf(f)+1,0,c);
   if(_bpStoreSave(st))_bpHomeRender();
 }
@@ -17562,7 +17562,7 @@ function _bpUp(e){
   if(vp){vp.classList.remove('panning');try{vp.releasePointerCapture(e.pointerId);}catch(err){}}
   var pt=_bpS2W(e.clientX,e.clientY);
   if(d.k==='pan'){_bpSyncCursor();return;}
-  if(d.k==='mv'){if(d.moved){_bpPushPre(d.pre);_bpDirty();}_bpRenderOvl();return;}
+  if(d.k==='mv'){if(d.moved&&JSON.stringify(_bpS.doc)!==d.pre){_bpPushPre(d.pre);_bpDirty();}_bpRenderOvl();return;}
   if(d.k==='rs'){
     if(JSON.stringify(_bpS.doc)!==d.pre){_bpPushPre(d.pre);_bpDirty();}   // 클릭만·제자리 복귀 = 죽은 undo 방지
     _bpRenderOvl();return;
@@ -17580,7 +17580,7 @@ function _bpUp(e){
     var nn=_bpMkNode(tool,px,py,pw,ph);
     _bpS.sel=[nn.id];_bpS.tool='select';
     _bpDirty();_bpRenderAll();_bpPropsSync();_bpToolsRender();_bpSyncCursor();
-    if(tool==='text')_bpTextEdit(nn.id);
+    if(tool!=='divider')_bpTextEdit(nn.id);   // 배치 직후 글자 입력 상태 — 더블클릭 몰라도 즉시 타이핑 가능
     return;
   }
   if(d.k==='ln'){
@@ -18015,6 +18015,7 @@ function openBookingProcess(){
   if(cur)_bpFileOpen(cur.id);else _bpShowHome();
 }
 function closeBookingProcess(){
+  if(_bpS&&_bpS._raf){cancelAnimationFrame(_bpS._raf);_bpS._raf=null;}
   if(_bpS&&_bpS.editingText)_bpTextCommit();
   if(_bpS&&_bpS.saveT){clearTimeout(_bpS.saveT);_bpAutoSave();}
   var el=document.getElementById('bp-board');if(el)el.remove();
