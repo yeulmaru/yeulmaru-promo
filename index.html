@@ -1551,6 +1551,53 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .ana-back{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--glass-bd);border-radius:9px;background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);font-family:inherit;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:14px}
 .ana-back:hover{border-color:var(--accent);color:var(--accent)}
 .ana-dl{padding:6px 13px;border:1.5px solid var(--accent);border-radius:9px;background:rgba(74,77,231,0.06);color:var(--accent);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+/* ===== 예매 프로세스 보드 — .bp-* 전용 네임스페이스 (색 전부 루트 토큰 계승, 새 색 0) ===== */
+.bp-bg{position:fixed;inset:0;background:var(--surface-solid);z-index:var(--z-modal);display:flex;flex-direction:column}
+.bp-hd{display:flex;align-items:center;gap:12px;padding:12px clamp(14px,3vw,26px);border-bottom:1px solid var(--border);flex:none}
+.bp-hd b{font-size:15px;letter-spacing:-.01em}
+.bp-hint{font-size:11.5px;color:var(--dim)}
+.bp-hd .sp{flex:1}
+.bp-x{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--glass-bd);background:var(--glass-surface);backdrop-filter:blur(8px);box-shadow:var(--glass-shadow);color:var(--text);font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.bp-x:hover{border-color:var(--accent);color:var(--accent)}
+.bp-scroll{flex:1;overflow:auto;padding:16px clamp(10px,2vw,24px);-webkit-overflow-scrolling:touch}
+.bp-canvas{position:relative;width:1240px;height:790px;margin:0 auto;background:var(--surface-solid);background-image:radial-gradient(rgba(26,26,46,.05) 1px,transparent 1px);background-size:16px 16px;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--glass-shadow)}
+.bp-edges{position:absolute;inset:0;pointer-events:none}
+.bp-edges path,.bp-edges line{fill:none;stroke:var(--dim);stroke-width:1.5}
+.bp-lane{position:absolute;height:28px;background:var(--neutral);color:var(--neutral-text);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.bpn{position:absolute;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:700;line-height:1.3;padding:4px 3px;border:1.5px solid transparent;word-break:keep-all}
+.bpn.a{background:var(--peach-light);border-color:rgba(216,132,85,.35);color:var(--text);font-size:10px}
+.bpn.y{background:var(--c6);color:var(--text);font-size:12.5px;box-shadow:0 2px 8px rgba(245,180,0,.3)}
+.bpn.g{background:var(--green);color:var(--surface-solid);font-size:12px}
+.bpn.w{background:var(--surface-solid);border-color:var(--border2);color:var(--text);font-size:10px}
+.bpn.k{background:var(--text);color:var(--surface-solid);font-size:9px}
+.bpn.b{background:var(--c5);color:var(--surface-solid);font-size:9px}
+.bpn .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:8px;font-weight:800;opacity:.72;display:block;margin-bottom:2px}
+.bp-area{position:absolute;background:var(--surface-solid);border:1px solid var(--border2);border-radius:14px}
+.bp-area .alab{position:absolute;top:12px;right:16px;font-size:13px;font-weight:800;color:var(--green);letter-spacing:.04em}
+.bp-dash{position:absolute;border:1.5px dashed var(--border2);border-radius:12px}
+.bp-dash .dlab{position:absolute;top:8px;right:14px;font-size:12px;font-weight:800;color:var(--text)}
+.bp-grp{position:absolute;border:1.6px dashed var(--green);border-radius:12px}
+.bp-grp .glab{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;color:var(--text)}
+.bp-step{position:absolute;font-size:11.5px;font-weight:800;color:var(--accent);line-height:1.35;z-index:2;display:flex;align-items:flex-start;gap:7px;white-space:nowrap;background:rgba(255,255,255,.9);padding:3px 8px;border-radius:8px}
+.bp-q{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--accent);background:var(--surface-solid);color:var(--accent);font-size:13px;font-weight:800;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;font-family:inherit;box-shadow:var(--glass-shadow);transition:transform .15s;margin-top:-3px}
+.bp-q:hover{transform:scale(1.12)}
+.bp-q.has{background:var(--accent);color:var(--surface-solid);border-color:var(--accent);font-size:11.5px}
+.bp-pop{position:absolute;width:min(320px,92vw);background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r-pop);box-shadow:var(--elev);padding:13px 14px;z-index:var(--z-dropdown);display:none;text-align:left}
+.bp-pop.on{display:block}
+.bp-pop .pt{font-size:13px;font-weight:800;margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.bp-pop .pt .cnt{font-size:10.5px;font-weight:700;color:var(--accent);background:rgba(74,77,231,0.08);border-radius:20px;padding:2px 8px}
+.bp-empty{font-size:12px;color:var(--dim);padding:10px 2px 12px}
+.bp-list{list-style:none;margin:0 0 10px;padding:0;max-height:240px;overflow-y:auto}
+.bp-item{padding:8px 2px;border-top:1px solid var(--border)}
+.bp-item:first-child{border-top:none}
+.bp-item .tx{font-size:12.5px;color:var(--text);line-height:1.5;word-break:break-word;white-space:pre-wrap}
+.bp-item .mt{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:10.5px;color:var(--muted)}
+.bp-item .del{margin-left:auto;border:0;background:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;padding:0 2px}
+.bp-item .del:hover{color:var(--danger)}
+.bp-form{display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--border2);padding-top:10px}
+.bp-ta{font-family:inherit;font-size:12.5px;color:var(--text);border:1.5px solid var(--border2);border-radius:9px;padding:8px 10px;resize:vertical;min-height:52px;background:var(--surface-solid)}
+.bp-ta:focus{outline:none;border-color:var(--accent)}
+@media(max-width:720px){.bp-pop{position:fixed;left:0;right:0;bottom:0;top:auto !important;width:auto;max-height:70vh;overflow-y:auto;border-radius:var(--r-pop) var(--r-pop) 0 0;padding-bottom:max(14px,env(safe-area-inset-bottom))}}
 .ana-dl:hover{background:rgba(74,77,231,0.12)}
 .ana-hm-cell{position:relative}
 .ana-hm-cell.clk{cursor:pointer}
@@ -1869,6 +1916,7 @@ const MENUS=[
   {label:'플랫폼 현황',id:'platform'},
   {label:'사업 현황',id:'business'},
   {label:'판매 현황',id:'sales'},
+  {label:'예매 관리',id:'booking'},
   {label:'연간 일정',id:'annual'},
   {label:'PLAY ZONE',id:'playzone'},
 ];
@@ -3646,10 +3694,11 @@ function buildNav(){
       if(m.id==='business'){openBusinessBoard();return;}
       if(m.id==='sales'){_ddOpen(b,_salesMenuBuild,210,'sales');return;}
       if(m.id==='playzone'){_ddOpen(b,_playzoneMenuBuild,210,'playzone');return;}
+      if(m.id==='booking'){_ddOpen(b,_bookingMenuBuild,210,'booking');return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
-    // 세부메뉴 보유 메뉴(콘텐츠 제작·일정 관리·PLAY ZONE) = 호버 즉시 드롭다운(운영자 260709 "바로" — 스침 오발 방지 가드 120ms만). 다른 팝업이 열려 있으면 안 뺏음.
-    var _sub=(m.id==='content')?_contentMenuBuild:(m.id==='schedule')?_scheduleMenuBuild:(m.id==='playzone')?_playzoneMenuBuild:(m.id==='sales')?_salesMenuBuild:null;
+    // 세부메뉴 보유 메뉴(콘텐츠 제작·일정 관리·판매 현황·예매 관리·PLAY ZONE) = 호버 즉시 드롭다운(운영자 260709 "바로" — 스침 오발 방지 가드 120ms만). 다른 팝업이 열려 있으면 안 뺏음.
+    var _sub=(m.id==='content')?_contentMenuBuild:(m.id==='schedule')?_scheduleMenuBuild:(m.id==='playzone')?_playzoneMenuBuild:(m.id==='sales')?_salesMenuBuild:(m.id==='booking')?_bookingMenuBuild:null;
     b.onmouseenter=()=>{ movePill(b,pill); clearTimeout(window._ddHovT2);   // 메뉴로 넘어오면 닫기 예약 취소
       if(_sub){ clearTimeout(b._hovT); b._hovT=setTimeout(function(){
         var _dd=document.getElementById('dd-pop');
@@ -16557,6 +16606,7 @@ function _bnavMore(){
   if(!isAdmin)add('📈','판매 현황','openAnalyticsBoard()');
   if(isAdmin)add('✏️','직접 등록','openAdminWizard()');
   if(isAdmin)add('⚙️','관리','openAdminPanel()');
+  add('🗺️','예매 프로세스','openBookingProcess()');
   add('💬','도우미 챗봇','_cbToggle()');
   add('🧭','에니어그램','openEnneagram()');
   add('🎫','티켓 셀러','openTicketSeller()');
@@ -16614,6 +16664,138 @@ function _contentMenuBuild(menu){
     +'<button type="button" onclick="_ddCloseAll();openNaverBlogTool()" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;background:none;text-align:left;font-size:13px;font-weight:600;color:#333;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">📝</span>네이버 블로그</button>'
     +'<div style="padding:7px 14px 4px;font-size:10.5px;color:#c4c4c4;line-height:1.5">인스타그램 등 다른 채널은 차차 추가할 예정이에요.</div>';
 }
+// ============================================================
+// 예매 관리 ▸ 예매 프로세스 — 위탁판매 흐름 순서도(운영 순서도 v2) + 라인별 문의 수집 보드
+//  문의는 프로세스 라인 5곳([1-1]·[2-1]·[2-2]·[2-3]·[3])의 ⊕ 배지로 등록·조회.
+//  저장 = localStorage(이 브라우저 한정, 초기 데이터 없음) — 팀 공유(시트·Worker 연동)는 후속 결정.
+// ============================================================
+function _bookingMenuBuild(menu){
+  var itemCss='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;text-align:left;font-size:13px;font-weight:600;color:var(--text);border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s';
+  menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:var(--dim);font-weight:700">예매 관리</div>'
+    +'<button type="button" onclick="_ddCloseAll();openBookingProcess()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'"><span style="font-size:16px">🗺️</span>예매 프로세스</button>';
+}
+var _BP_KEY='yw_bp_inq_v1';
+var _BP_LINES=[['l11','[1-1] 정보 취합'],['l21','[2-1] 프로그램 등록 운영·문의'],['l22','[2-2] 프로그램 변경'],['l23','[2-3] 정산'],['l3','[3] 상품 예매']];
+function _bpData(){try{var d=JSON.parse(localStorage.getItem(_BP_KEY)||'{}');return(d&&typeof d==='object'&&!Array.isArray(d))?d:{};}catch(e){return{};}}
+function _bpSaveData(d){try{localStorage.setItem(_BP_KEY,JSON.stringify(d));}catch(e){}}
+function _bpNode(cls,x,y,w,h,html){return '<div class="bpn '+cls+'" style="left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px">'+html+'</div>';}
+function openBookingProcess(){
+  if(document.getElementById('bp-board'))return;
+  var edges=['M45 538 V590','M109 538 V590','M173 538 V590','M237 538 V590',                    // 담당 4 → 등록 4
+    'M45 648 V676','M109 648 V676','M173 648 V676','M237 648 V676','M45 676 H262','M262 676 V511','M262 511 H278', // 등록 → 예울마루 취합
+    'M318 398 V428','M45 428 H318','M45 428 V480','M109 428 V480','M173 428 V480','M237 428 V480', // 여수 MBC ↔ 담당 버스(무화살)
+    'M354 361 H440 V461 H466',    // 여수 MBC → 티켓 셀러
+    'M986 664 V381 H358',         // 재무팀 → 여수 MBC (정산 입금)
+    'M354 511 H606',              // 예울마루 → 공연팀 [2-1]
+    'M566 511 V613 H606',         // → 발권팀 [2-2]
+    'M566 613 V689 H946',         // → 재무팀 [2-3]
+    'M646 488 V461 H552',         // 공연팀 → 티켓 셀러 (등록 반영)
+    'M509 434 V138 H756',         // 티켓 셀러 → 고객
+    'M795 164 V196'];             // 고객 → 구매처 [3]
+  var noAr={4:1,5:1,6:1,7:1,8:1,9:1,11:1,12:1,13:1,14:1,15:1,16:1};  // 취합·버스 세그먼트(인덱스)엔 화살촉 없음 — 종착 세그먼트에만 화살
+  var svg='<svg class="bp-edges" width="1240" height="790" viewBox="0 0 1240 790" aria-hidden="true"><defs><marker id="bpar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--dim)" stroke="none"/></marker></defs>'
+    +edges.map(function(d,i){return '<path d="'+d+'"'+(noAr[i]?'':' marker-end="url(#bpar)"')+'/>';}).join('')
+    +'<path d="M318 60 V770" stroke-dasharray="3 5" style="stroke:var(--border)"/><path d="M570 60 V770" stroke-dasharray="3 5" style="stroke:var(--border)"/><path d="M1037 60 V770" stroke-dasharray="3 5" style="stroke:var(--border)"/></svg>';
+  var ch=[['k','[C-1]','초대권·지정'],['b','[C-2]','전화 예매'],['k','[D-1]','예울마루<br>홈페이지'],['k','[D-2]','제휴채널B<br>(B2B 등)'],['k','[E-1]','제휴채널<br>(네이버 등)'],['k','[E-2]','티켓링크<br>홈페이지']];
+  var html='<div class="bp-hd"><b>예매 프로세스</b><span class="bp-hint">각 라인의 ⊕ 배지를 눌러 문의를 등록·확인하세요 (이 브라우저에 저장)</span><span class="sp" style="flex:1"></span><button type="button" class="bp-x" onclick="closeBookingProcess()" aria-label="닫기">×</button></div>'
+    +'<div class="bp-scroll"><div class="bp-canvas" id="bp-canvas">'
+    +'<div class="bp-area" style="left:365px;top:414px;width:855px;height:330px"><span class="alab">티켓 링크</span></div>'   /* 배경 상자는 SVG 아래층 — 선이 안 가려지게 */
+    +svg
+    +'<div class="bp-lane" style="left:12px;top:24px;width:296px">[1] 신청서 작성·취합</div>'
+    +'<div class="bp-lane" style="left:326px;top:24px;width:236px">[2] 프로그램 상품 등록·관리</div>'
+    +'<div class="bp-lane" style="left:578px;top:24px;width:450px">[3] 상품 판매</div>'
+    +'<div class="bp-lane" style="left:1045px;top:24px;width:183px">[4] 정산</div>'
+    +'<div class="bp-dash" style="left:350px;top:200px;width:680px;height:192px"><span class="dlab">구매처(고객 접점)</span></div>'
+    +'<div class="bp-grp" style="left:585px;top:226px;width:430px;height:144px"><span class="glab">예울마루 제휴(C, D)</span></div>'
+    +_bpNode('y',282,344,72,54,'여수<br>MBC')+_bpNode('y',282,484,72,54,'예울<br>마루')
+    +_bpNode('a',16,484,58,54,'대관<br>담당자')+_bpNode('a',80,484,58,54,'큐레이터')+_bpNode('a',144,484,58,54,'예술교육<br>기획')+_bpNode('a',208,484,58,54,'공연 기획')
+    +_bpNode('w',16,594,58,54,'대관 상품<br>등록')+_bpNode('w',80,594,58,54,'전시 등록')+_bpNode('w',144,594,58,54,'교육 등록')+_bpNode('w',208,594,58,54,'공연 등록')
+    +_bpNode('g',470,434,78,54,'티켓 셀러')+_bpNode('w',610,488,72,50,'공연팀')+_bpNode('g',610,588,72,50,'발권팀')+_bpNode('g',950,664,72,50,'재무팀')
+    +_bpNode('a',760,112,70,52,'고객')
+    +ch.map(function(c,i){return _bpNode(c[0],597+71*i,246,62,66,'<span class="code">'+c[1]+'</span>'+c[2]);}).join('')
+    +'<div class="bp-step" style="left:282px;top:550px"><span>[1-1] 정보 취합</span><button type="button" class="bp-q" data-line="l11">+</button></div>'
+    +'<div class="bp-step" style="left:426px;top:526px"><span>[2-1] 프로그램 등록<br>운영·문의</span><button type="button" class="bp-q" data-line="l21">+</button></div>'
+    +'<div class="bp-step" style="left:426px;top:622px"><span>[2-2] 프로그램 변경</span><button type="button" class="bp-q" data-line="l22">+</button></div>'
+    +'<div class="bp-step" style="left:560px;top:700px"><span>[2-3] 정산</span><button type="button" class="bp-q" data-line="l23">+</button></div>'
+    +'<div class="bp-step" style="left:628px;top:164px"><span>[3] 상품 예매</span><button type="button" class="bp-q" data-line="l3">+</button></div>'
+    +'<div class="bp-pop" id="bp-pop"></div>'
+    +'</div><p style="max-width:1240px;margin:12px auto 0;font-size:11.5px;color:var(--dim);line-height:1.7">※ 운영 순서도(v2) 구조를 디자인 토큰으로 재현(곡선·좌표 근사). 문의는 아직 이 브라우저에만 저장돼요 — 팀 공유 저장(시트 연동)은 후속.</p></div>';
+  var el=document.createElement('div');el.id='bp-board';el.className='bp-bg';el.innerHTML=html;document.body.appendChild(el);
+  document.body.style.overflow='hidden';
+  el.addEventListener('click',function(e){
+    if(!document.contains(e.target))return;   // 팝 내부 등록·삭제가 재렌더로 타깃을 분리시킨 클릭 = 바깥 클릭 오판 방지
+    var q=e.target.closest?e.target.closest('.bp-q'):null;
+    if(q){e.stopPropagation();_bpPopOpen(q.getAttribute('data-line'),q);return;}
+    var pop=document.getElementById('bp-pop');
+    if(pop&&pop.classList.contains('on')&&!pop.contains(e.target))_bpPopClose();
+  });
+  window._bpEsc=function(e){if(e.key!=='Escape')return;var pop=document.getElementById('bp-pop');if(pop&&pop.classList.contains('on'))_bpPopClose();else closeBookingProcess();};
+  document.addEventListener('keydown',window._bpEsc);
+  _bpBadgeSync();
+}
+function closeBookingProcess(){
+  var el=document.getElementById('bp-board');if(el)el.remove();
+  document.body.style.overflow='';
+  if(window._bpEsc){document.removeEventListener('keydown',window._bpEsc);window._bpEsc=null;}
+}
+function _bpBadgeSync(){
+  var d=_bpData();
+  _BP_LINES.forEach(function(L){
+    var b=document.querySelector('#bp-board .bp-q[data-line="'+L[0]+'"]');if(!b)return;
+    var n=(d[L[0]]||[]).length;
+    b.textContent=n>0?String(n):'+';
+    b.classList.toggle('has',n>0);
+    b.setAttribute('aria-label',L[1]+' 문의 '+n+'건');
+  });
+}
+function _bpLineName(id){var f=_BP_LINES.filter(function(L){return L[0]===id;});return f.length?f[0][1]:id;}
+function _bpPopClose(){var pop=document.getElementById('bp-pop');if(pop)pop.classList.remove('on');window._bpCur=null;}
+function _bpPopOpen(id,btn){
+  var pop=document.getElementById('bp-pop');if(!pop)return;
+  if(window._bpCur===id&&pop.classList.contains('on')){_bpPopClose();return;}
+  window._bpCur=id;
+  _bpPopRender(id);
+  pop.classList.add('on');
+  if(!window.matchMedia('(max-width:720px)').matches){
+    var cv=document.getElementById('bp-canvas');
+    var cr=cv.getBoundingClientRect(),br=btn.getBoundingClientRect();
+    var x=br.left-cr.left+br.width+8,y=br.top-cr.top-6;
+    var pw=pop.offsetWidth,ph=pop.offsetHeight;
+    if(x+pw>1234)x=br.left-cr.left-pw-8;
+    if(x<6)x=6;
+    if(y+ph>784)y=784-ph;
+    if(y<6)y=6;
+    pop.style.left=x+'px';pop.style.top=y+'px';
+  }else{pop.style.left='';pop.style.top='';}
+}
+function _bpPopRender(id){
+  var pop=document.getElementById('bp-pop');if(!pop)return;
+  var list=_bpData()[id]||[];
+  var h='<div class="pt">'+escapeHtml(_bpLineName(id))+'<span class="cnt">'+list.length+'건</span></div>';
+  if(!list.length)h+='<div class="bp-empty">아직 문의가 없어요 — 이 라인에서 궁금한 점을 남겨두면 배지 숫자로 쌓입니다.</div>';
+  else{h+='<ul class="bp-list">'+list.map(function(it,i){
+    var t=new Date(it.ts).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return '<li class="bp-item"><div class="tx">'+escapeHtml(it.t)+'</div><div class="mt"><span>'+t+'</span><button type="button" class="del" data-i="'+i+'">삭제</button></div></li>';
+  }).join('')+'</ul>';}
+  h+='<div class="bp-form"><textarea class="bp-ta" id="bp-ta" placeholder="문의 내용을 입력하세요"></textarea><div style="display:flex;justify-content:flex-end"><button type="button" class="btn btn--primary btn--sm" id="bp-add">문의 등록</button></div></div>';
+  pop.innerHTML=h;
+  var add=document.getElementById('bp-add');
+  if(add)add.onclick=function(){_bpAdd(id);};
+  pop.querySelectorAll('.del').forEach(function(db){db.onclick=function(){_bpDel(id,parseInt(db.getAttribute('data-i'),10));};});
+}
+function _bpAdd(id){
+  var ta=document.getElementById('bp-ta');if(!ta)return;
+  var v=(ta.value||'').trim();if(!v)return;
+  var d=_bpData();(d[id]=d[id]||[]).push({t:v,ts:Date.now()});_bpSaveData(d);
+  _bpBadgeSync();_bpPopRender(id);
+  var nt=document.getElementById('bp-ta');if(nt)nt.focus();
+}
+function _bpDel(id,i){
+  var d=_bpData();if(!d[id])return;
+  d[id].splice(i,1);if(!d[id].length)delete d[id];
+  _bpSaveData(d);_bpBadgeSync();_bpPopRender(id);
+}
+
 // PLAY ZONE 드롭다운 — 플레이그라운드 콘텐츠(에니어그램·티켓 셀러, playground/ 자체완결 페이지)를 새 탭으로 연다
 // (색은 기존 드롭다운의 raw 회색 대신 토큰 --text/--dim 계승 — 게이트 총량 유지)
 function _playzoneMenuBuild(menu){
