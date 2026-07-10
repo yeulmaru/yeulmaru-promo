@@ -8472,6 +8472,7 @@ async function _msgFetchAll(){
         refNo: m['참조번호'] || m.refNo || '',
         refSummary: m['참조요약'] || m.refSummary || '',
         kst: m.KST || m.kst || '',
+        title: m['제목'] || m.title || '',
         read: (m['읽음'] === 'TRUE' || m['읽음'] === true || m.read === true)
       };
     });
@@ -8501,6 +8502,7 @@ function pushMessage(opts){
     reason: opts.reason || '',
     refNo: opts.refNo || '',
     refSummary: opts.refSummary || '',
+    title: opts.title || '',
     kst: new Date().toISOString().slice(0,16).replace('T',' '),
     read: false
   };
@@ -8579,9 +8581,10 @@ function showMsgToast(m, extra){
   var el=document.getElementById('msg-toast'); if(!el || !m) return;
   _mtCur=m;
   var isImp=(m.type==='중요');
-  var title=(m.reason||'').toString().trim() || (m.trigger||'새 알림').toString();
-  var sub=(m.refSummary||'').toString().trim();
-  if(!sub && m.before && m.after) sub=m.before+' → '+m.after;
+  var _hasT=!!(m.title||'').toString().trim();
+  var title=(m.title||'').toString().trim() || (m.reason||'').toString().trim() || (m.trigger||'새 알림').toString();
+  var sub=_hasT ? (m.reason||'').toString().trim() : (m.refSummary||'').toString().trim();
+  if(!sub && !_hasT && m.before && m.after) sub=m.before+' → '+m.after;
   var tm=(m.kst||'').toString().slice(11,16); if(!tm) tm='방금';
   var more=(extra&&extra>1)?(' · 외 '+(extra-1)+'건'):'';
   var h='<div class="mt-main">';
@@ -8646,13 +8649,19 @@ async function openMsgBox(){
       }
       html += '<span style="font-size:10px;color:#aaa;font-variant-numeric:tabular-nums">'+escapeHtml(m.kst)+'</span>';
       html += '</div>';
+      if(m.title){
+        html += '<div style="font-size:'+(isImp?'14px':'13px')+';font-weight:700;color:'+(isImp?'var(--danger)':'var(--text)')+';margin-bottom:5px;line-height:1.35">'+escapeHtml(m.title)+'</div>';
+      }
       if(m.reason){
-        const reasonFs = isImp ? '14px' : '12px';
-        const reasonFw = isImp ? '700' : '600';
+        const _hasT = !!m.title;
+        const reasonFs = _hasT ? '12px' : (isImp ? '14px' : '12px');
+        const reasonFw = _hasT ? '500' : (isImp ? '700' : '600');
         const reasonCol = isImp ? '#C0392B' : '#333';
         html += '<div style="font-size:'+reasonFs+';font-weight:'+reasonFw+';color:'+reasonCol+';margin-bottom:6px;line-height:1.4">'+escapeHtml(m.reason)+'</div>';
       }
-      html += '<div style="font-size:11px;color:#666;margin-bottom:4px">'+escapeHtml(m.before)+' → <strong style="color:#333">'+escapeHtml(m.after)+'</strong></div>';
+      if(m.before && m.after){
+        html += '<div style="font-size:11px;color:#666;margin-bottom:4px">'+escapeHtml(m.before)+' → <strong style="color:#333">'+escapeHtml(m.after)+'</strong></div>';
+      }
       if(m.refSummary){
         html += '<div style="font-size:11px;color:#999;letter-spacing:0.2px">'+escapeHtml(m.refSummary)+'</div>';
       }
