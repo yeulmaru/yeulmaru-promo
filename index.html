@@ -19108,7 +19108,7 @@ function openTicketSeller(){window.open('playground/ticket-seller/','_blank','no
 //       zip 레벨 텍스트 패치를 쓴다(시트2 제목·기간·시간·장소·협찬·기타정보는 시트1 참조 수식 → 캐시만 갱신).
 // 데이터는 어디에도 저장 안 함(시트·서버 무관) — 순수 클라이언트 변환. 템플릿 = reference/ticketlink_template.xlsm
 //       260710 신템플릿(운영자 개선판 계승): 분류 접이식 그룹 · AH8 구분→G8 장소 드롭다운 연동 · 사이즈표 더블클릭 첨부 매크로(VBA).
-//       시트 파일 매핑 = 의뢰서 sheet2.xml · 공지문 sheet3.xml (sheet1.xml = veryHidden 'Claude Log' · 구판 시트4·5 없음) · 산출 = .xlsm
+//       시트 파일 매핑 = 의뢰서 sheet2.xml · 공지문 sheet3.xml · 사이즈표 sheet4.xml (시트 3장 — sheet1.xml 없음 · 구판 시트4·5 없음) · 산출 = .xlsm
 var _TKT_TEMPLATE_URL='reference/ticketlink_template.xlsm';
 var _TKT_GENRES=['뮤지컬','콘서트','연극','클래식/무용','가족&아동','전시/축제','레저/체험','e스포츠/게임'];
 var _TKT_GENRE_SEL={'뮤지컬':2,'콘서트':3,'연극':4,'클래식/무용':5,'가족&아동':6,'전시/축제':7,'레저/체험':8,'e스포츠/게임':9}; // 시트1 장르 드롭다운($AK$2:$AK$10) 1-base 인덱스
