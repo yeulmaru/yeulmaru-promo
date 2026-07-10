@@ -4778,6 +4778,7 @@ function _srailEditCfg(kind,key){
       // 매칭 축 = 전시ID 정확 일치(_anaExhibBuild byId와 동일 축)
       keyOf:function(r){ return String((_salesNorm(r)['전시ID'])||'').trim(); },
       cols:[{ed:'c1',k:'누계유료',label:'누계유료',w:'22%'},{ed:'c2',k:'누계총인원',label:'누계총인원',w:'22%'},{ed:'c3',k:'일일총인원',label:'일일총인원',w:'20%'}],
+      hint:'점유율(달성률)은 누계유료·목표관객으로 저장 시 자동 계산돼요',   // [델타 감사5 LOW] 파생 필드 오해 소거
       emptyMsg:'이 전시의 전시일일 행이 없어요 — [+ 행 추가]로 시작',
       sig:function(rows){ return rows.map(function(r){return [_salesNum(r['기준일자']),_salesNum(r['누계유료']),_salesNum(r['누계총인원']),_salesNum(r['일일총인원'])].join('|');}).sort().join(';'); },
       validateRow:function(r,i){
@@ -4825,7 +4826,7 @@ async function _srailEditOpen(kind,key){
   var wrap=document.createElement('div'); wrap.id='srail-edit-modal';
   wrap.innerHTML='<div class="modal-bg show" style="z-index:var(--z-confirm)" onclick="if(event.target===this)_srailEditClose()"><div class="modal" style="width:600px;max-width:94vw;position:relative;text-align:left"><button class="modal-x" onclick="_srailEditClose()" title="닫기" aria-label="닫기">✕</button>'
     +'<h3 style="margin:0 0 4px;padding-right:40px">실적 수정 — '+escapeHtml(cfg.dispName)+'</h3>'
-    +'<div style="font-size:11.5px;color:var(--dim);margin-bottom:12px">시트(운영_'+escapeHtml(cfg.sheet)+')에서 방금 불러온 값이에요. 저장하면 시트에 바로 반영됩니다.</div>'
+    +'<div style="font-size:11.5px;color:var(--dim);margin-bottom:12px">시트(운영_'+escapeHtml(cfg.sheet)+')에서 방금 불러온 값이에요. 저장하면 시트에 바로 반영됩니다.'+(cfg.hint?(' · '+escapeHtml(cfg.hint)):'')+'</div>'
     +'<div id="srail-edit-body" style="max-height:56vh;overflow-y:auto"><div style="padding:26px 0;text-align:center;color:var(--dim);font-size:12px">'+_ldHtml(13)+'시트에서 불러오는 중</div></div>'
     +'<div style="display:flex;gap:8px;margin-top:14px;justify-content:space-between;align-items:center"><button class="ana-chip" onclick="_srailEditAddRow()">+ 행 추가</button><span style="flex:1"></span><button class="m-btn cancel" onclick="_srailEditClose()">취소</button><button class="m-btn save" onclick="_srailEditSave()">저장</button></div>'
     +'</div></div>';
