@@ -8409,6 +8409,11 @@ function _msgHasTarget(m){
   const refNo = (m.refNo||'').toString().trim();
   if(!refNo) return true;
   if(_isQaMessage(m)) return true;
+  // 사유(reason)를 담은 종결 통보(반려 등)는 대상 레코드가 삭제돼도 메시지 자체가 정보다 → 표시 유지.
+  //   반려(rejectPromo)는 record 하드삭제 + 사유 필수(if(!reason)return) → refNo가 records에 영영 없지만
+  //   신청자에게 '왜 반려됐는지' 사유 전달이 목적이라 숨기면 안 됨. 숨김 대상 = 사유 없는 순수
+  //   상태알림(신청중→예정·예정→완료)이 신청 삭제로 고아된 것뿐(분신술 감사1·2 HIGH 반영).
+  if((m.reason||'').toString().trim()) return true;
   if(!Array.isArray(records) || records.length===0) return true;
   return records.some(function(r){ return (r['No']||r['NO']||'').toString().trim() === refNo; });
 }
@@ -15324,7 +15329,9 @@ async function loadData(){
   try{const d=await api('GET','/api/records');var _all=(d.records||[]).map(function(r,i){return Object.assign({},r,{_rowIndex:(r._rowIndex!==undefined?r._rowIndex:i+2)});});_DRAFTS=_all.filter(_isDraftRec);records=_all.filter(function(r){return !_isDraftRec(r);});}catch(e){console.error(e);_typingId++;if(cal)cal.innerHTML='<div style="text-align:center;padding:60px;color:var(--danger);font-size:14px">데이터 로드 실패</div>';return;}
   // 특별 일정 — 위에서 병렬 출발한 것 완료 대기 (실패해도 records 렌더는 진행)
   try{await _spP;}catch(e){}
-  _typingId++;render();_petEnter();if(typeof _refreshSeenMod==='function')_refreshSeenMod();}
+  _typingId++;render();_petEnter();if(typeof _refreshSeenMod==='function')_refreshSeenMod();
+  // records 로드 완료 → 메시지함 배지 즉시 재계산(대상 없는 고아 메시지 과다표시 flicker ~10초 제거, 분신술 감사4 권고)
+  try{ if(typeof refreshMsgBoxBadge==='function') refreshMsgBoxBadge(); }catch(_e){}}
 
 // SharePoint Graph API 일관성 지연 회피용 - 변경 후 row 수 검증 + 자동 재시도
 async function syncReload(expectedDelta){
