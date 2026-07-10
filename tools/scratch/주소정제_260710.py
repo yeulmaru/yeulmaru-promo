@@ -184,10 +184,13 @@ def dongify(df):
         if not a3 or _is_dongish(a3):
             new_a3.append(a3); new_a4.append(a4); src.append('')
             continue
-        dong = road_map.get((sgg, _a3_head(a3))) or zip_map.get(z)
+        # zip 우선(분신술 데이터 감사 F2) — zip 순도 99.9%+ 실측: 도로가 동 경계를 넘는 경우
+        # (상암로·여문2로·여천체육공원길 등) 행 자신의 우편번호가 도로명 최빈동보다 구체적 증거다
+        zd = zip_map.get(z)
+        dong = zd or road_map.get((sgg, _a3_head(a3)))
         if dong:
             new_a3.append(dong); new_a4.append((a3 + ' ' + a4).strip())
-            src.append('동복원(도로명)' if (sgg, _a3_head(a3)) in road_map else '동복원(우편번호)')
+            src.append('동복원(우편번호)' if zd else '동복원(도로명)')
         else:
             new_a3.append(a3); new_a4.append(a4); src.append('동미상(도로명유지)')
     return new_a3, new_a4, src
@@ -351,7 +354,8 @@ def main():
                         for f, d in zip(out['주소플래그'], dsrc)]
     piv = out[out['주소1']!=''].groupby(['주소1','주소2']).size().reset_index(name='회원수') \
             .sort_values(['회원수'], ascending=False)
-    piv3 = out[(out['주소1']!='')&(out['주소3']!='')].groupby(['주소1','주소2','주소3']).size() \
+    # 동별집계 = 진짜 동·읍면만(분신술 데이터 감사 F1 — 동미상 도로명이 가짜 동으로 집계 오염되는 것 차단)
+    piv3 = out[(out['주소1']!='')&(out['주소3'].map(_is_dongish))].groupby(['주소1','주소2','주소3']).size() \
             .reset_index(name='회원수').sort_values('회원수', ascending=False)
     need = out[out['주소플래그']!='']
     dups = out[out['휴대폰중복']!=''].sort_values(['휴대폰정규화','등록일'])

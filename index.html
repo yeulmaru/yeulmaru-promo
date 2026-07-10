@@ -19295,6 +19295,7 @@ async function _memLoad(force){
   if(rf){rf.disabled=true;rf.style.opacity='.5';}
   try{
     var d=await api('GET','/api/ops?sheet='+encodeURIComponent('회원')+(force?'&fresh=1':''));
+    if(!document.getElementById('member-lookup'))return;   // await 중 _memPurge(로그아웃·유휴잠금) = PII 재적재 금지(보안 재심사 잔여 LOW)
     if(!d||!d.rows||!d.rows.length){
       if(sub)sub.innerHTML='<span style="color:var(--danger)">시트가 비어 있거나 없어요 — 통합문서에 시트 이름을 정확히 「운영_회원」으로(복사 시 뒤에 「 (2)」 같은 접미사 없이) 두었는지 확인해 주세요'+(d&&d.note?' · '+_memEsc(d.note):'')+'</span>';
       _memState={rows:[]};return;
@@ -19303,10 +19304,9 @@ async function _memLoad(force){
     var hd=d.headers||[];
     var miss=['주소1','주소2','주소3','주소4','우편번호'].filter(function(k){return hd.indexOf(k)<0;});
     var noPhone=hd.indexOf('휴대폰정규화')<0&&hd.indexOf('휴대폰번호')<0;
-    _memState={rows:d.rows,ts:Date.now()};
+    _memState={rows:d.rows,ts:Date.now(),schemaWarn:(miss.length||noPhone)?'⚠ 시트 컬럼이 v2 정제본과 달라요(누락: '+(noPhone?['휴대폰정규화'].concat(miss):miss).join(', ')+') — 「회원DB_주소정제_v2」의 운영_회원 시트를 복사해 주세요':''};
     _memFillSel(1);_memFillSel(2);_memFillSel(3);
     _memRender();
-    if((miss.length||noPhone)&&sub)sub.innerHTML='<span style="color:var(--danger)">⚠ 시트 컬럼이 v2 정제본과 달라요(누락: '+_memEsc((noPhone?['휴대폰정규화'].concat(miss):miss).join(', '))+') — 「회원DB_주소정제_v2」의 운영_회원 시트를 복사해 주세요</span>';
   }catch(e){
     var msg=String(e.message||e);
     if(sub)sub.innerHTML='<span style="color:var(--danger)">'+(msg.indexOf('401')===0?'세션이 만료됐어요 — 다시 로그인해 주세요':(msg.indexOf('403')===0?'권한이 없어요 — 관리자 계정으로 로그인해 주세요':'로드 실패: '+_memEsc(msg.slice(0,120))))+'</span>';
@@ -19345,7 +19345,10 @@ function _memRender(){
     return name.indexOf(q)>=0||addr.indexOf(q)>=0||(qd.length>=3&&ph.indexOf(qd)>=0);
   });
   var LIM=200,shown=rows.slice(0,LIM);
-  if(sub)sub.textContent='총 '+_memState.rows.length.toLocaleString()+'명 · 필터 결과 '+rows.length.toLocaleString()+'명'+(rows.length>LIM?' (상위 '+LIM+'명 표시)':'');
+  if(sub){   // 스키마 경고는 렌더마다 유지(UX 재심사 — 검색 한 번에 경고가 덮여 사라지는 것 방지)
+    var cnt='총 '+_memState.rows.length.toLocaleString()+'명 · 필터 결과 '+rows.length.toLocaleString()+'명'+(rows.length>LIM?' (상위 '+LIM+'명 표시)':'');
+    sub.innerHTML=(_memState.schemaWarn?'<span style="color:var(--danger)">'+_memEsc(_memState.schemaWarn)+'</span> · ':'')+_memEsc(cnt);
+  }
   var th='padding:7px 10px;font-size:11.5px;color:var(--neutral-text);background:var(--neutral);text-align:left;position:sticky;top:0;white-space:nowrap';
   var td='padding:6px 10px;font-size:12px;border-top:1px solid var(--border);white-space:nowrap';
   body.innerHTML='<table style="border-collapse:collapse;width:100%;min-width:840px">'
