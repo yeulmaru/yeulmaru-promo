@@ -1754,8 +1754,8 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .srail-tt{flex:1;min-width:0}
 /* 점유율 = 헤더 아래 줄(운영자 260710 확정 — 우측 열 폐지). 좌 여백 16 = .srail-hd 좌패딩과 정렬 */
 .srail-occrow{display:flex;align-items:baseline;gap:8px;margin:6px 16px 0}
-.srail-seatsub{font-size:9.5px;color:var(--dim);font-weight:600}
-.srail-occcap{font-size:9px;color:var(--muted);font-weight:700}
+.srail-seatsub{font-size:11.5px;color:var(--dim);font-weight:600}   /* [260710 운영자] 카드 숫자 폰트 통일 — 기준 = 어제대비(.srail-delta) 11.5px */
+.srail-occcap{font-size:11.5px;color:var(--muted);font-weight:700}   /* [260710 운영자] 〃 (점유율/달성률 캡션) */
 .srail-fc{font-size:11.5px;color:var(--accent);font-weight:700;margin-top:7px;background:rgba(74,77,231,.04);border:1px solid rgba(74,77,231,.10);border-radius:9px;padding:5px 9px;line-height:1.5}
 .srail-fc b{color:var(--accent)}
 .srail-ft{padding:8px 16px 12px;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-shrink:0}
@@ -4557,7 +4557,8 @@ function _srailTrend(p){
   s+='<path d="'+solid+'" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
   if(T>N)s+='<path d="'+dashed+'" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="3 3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
   s+='<line x1="'+pts[todayIdx][0].toFixed(1)+'" y1="'+padT+'" x2="'+pts[todayIdx][0].toFixed(1)+'" y2="'+(H-padB)+'" stroke="var(--accent)" stroke-opacity=".18" stroke-width="1" stroke-dasharray="2 2"/>';
-  s+='<text x="'+pts[todayIdx][0].toFixed(1)+'" y="'+(padT-14)+'" text-anchor="middle" font-size="8.5" font-weight="800" fill="var(--accent)">📌 Today</text>';
+  // [260710 운영자] 차트 글자 크기 = 어제대비(11.5px)로 전부 통일(점 위 좌석·증감·날짜·Today·종료 예상 — "증감이 중요")
+  s+='<text x="'+pts[todayIdx][0].toFixed(1)+'" y="'+(padT-14)+'" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--accent)">📌 Today</text>';
   var R=3.6;
   pts.forEach(function(q,i){
     var future=i>todayIdx,today=(i===todayIdx),recent=(i>=todayIdx-2);
@@ -4565,9 +4566,9 @@ function _srailTrend(p){
     if(today)s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+(R+2.2)+'" fill="var(--muted)"/><circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+R+'" fill="var(--accent)"/>';
     else s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+R+'" fill="var('+(future?'--muted':'--accent')+')"/>';
     var col=today?'var(--accent)':(recent?'var(--text)':'var(--dim)'),sy=(q[1]-R-6).toFixed(1);
-    s+='<text x="'+q[0].toFixed(1)+'" y="'+sy+'" text-anchor="middle" font-size="'+(today?'13.5':'11')+'" font-weight="'+(today?'800':'700')+'" fill="'+col+'">'+seat+'</text>';
-    if(dseat!=null&&recent)s+='<text x="'+q[0].toFixed(1)+'" y="'+(parseFloat(sy)-19).toFixed(1)+'" text-anchor="middle" font-size="7" font-weight="800" fill="var(--green)">'+(dseat>=0?'+':'')+dseat+'</text>';
-    if((T-1-i)%2===0)s+='<text x="'+q[0].toFixed(1)+'" y="'+(H-7)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="'+(today?'var(--accent)':(future?'var(--muted)':'var(--dim)'))+'">'+labels[i]+'</text>';
+    s+='<text x="'+q[0].toFixed(1)+'" y="'+sy+'" text-anchor="middle" font-size="11.5" font-weight="'+(today?'800':'700')+'" fill="'+col+'">'+seat+'</text>';
+    if(dseat!=null&&recent)s+='<text x="'+q[0].toFixed(1)+'" y="'+(parseFloat(sy)-19).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--green)">'+(dseat>=0?'+':'')+dseat+'</text>';
+    if((T-1-i)%2===0)s+='<text x="'+q[0].toFixed(1)+'" y="'+(H-7)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="'+(today?'var(--accent)':(future?'var(--muted)':'var(--dim)'))+'">'+labels[i]+'</text>';
   });
   if(showEnd){
     var lastQ=pts[pts.length-1], ex=W-padX-6, ey=yOf(occEnd), seatEnd=seatOf(occEnd);
@@ -4580,9 +4581,9 @@ function _srailTrend(p){
     s+='<line x1="'+(bx-4).toFixed(1)+'" y1="'+(by+5).toFixed(1)+'" x2="'+bx.toFixed(1)+'" y2="'+(by-5).toFixed(1)+'" stroke="var(--c2)" stroke-width="1.6" stroke-linecap="round"/>';
     s+='<line x1="'+bx.toFixed(1)+'" y1="'+(by+5).toFixed(1)+'" x2="'+(bx+4).toFixed(1)+'" y2="'+(by-5).toFixed(1)+'" stroke="var(--c2)" stroke-width="1.6" stroke-linecap="round"/>';
     s+='<circle cx="'+ex.toFixed(1)+'" cy="'+ey.toFixed(1)+'" r="'+R+'" fill="var(--c2)"/>';
-    s+='<text x="'+ex.toFixed(1)+'" y="'+(ey-R-6).toFixed(1)+'" text-anchor="end" font-size="11" font-weight="800" fill="var(--c2)">'+seatEnd.toLocaleString()+'</text>';
-    s+='<text x="'+ex.toFixed(1)+'" y="'+(ey-R-19).toFixed(1)+'" text-anchor="end" font-size="7" font-weight="800" fill="var(--c2)">종료 예상</text>';
-    s+='<text x="'+ex.toFixed(1)+'" y="'+(H-7)+'" text-anchor="end" font-size="9.5" font-weight="700" fill="var(--c2)">'+((endD.getMonth()+1)+'/'+endD.getDate())+'</text>';
+    s+='<text x="'+ex.toFixed(1)+'" y="'+(ey-R-6).toFixed(1)+'" text-anchor="end" font-size="11.5" font-weight="800" fill="var(--c2)">'+seatEnd.toLocaleString()+'</text>';
+    s+='<text x="'+ex.toFixed(1)+'" y="'+(ey-R-19).toFixed(1)+'" text-anchor="end" font-size="11.5" font-weight="800" fill="var(--c2)">종료 예상</text>';
+    s+='<text x="'+ex.toFixed(1)+'" y="'+(H-7)+'" text-anchor="end" font-size="11.5" font-weight="700" fill="var(--c2)">'+((endD.getMonth()+1)+'/'+endD.getDate())+'</text>';
   }
   return s+'</svg>';
 }
