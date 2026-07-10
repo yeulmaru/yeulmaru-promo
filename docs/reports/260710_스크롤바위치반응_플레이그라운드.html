@@ -1,0 +1,236 @@
+<meta charset="utf-8">
+<title>스크롤바 위치·이동 반응 — 플레이그라운드 (260710)</title>
+<style>
+/* ── index.html :root 토큰 사본(발췌 — 재현 기준) ── */
+:root{
+  --accent:#4A4DE7; --c2:#D88455; --text:#1A1A2E; --dim:#888; --muted:#bbb;
+  --neutral:#EEEDF3; --neutral-text:#6B6B7B;
+  --glass-surface:rgba(255,255,255,.78); --glass-bd:rgba(255,255,255,.55);
+  --glass-shadow:0 8px 32px rgba(74,77,231,0.08),0 2px 8px rgba(0,0,0,0.04);
+  --bg:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);
+  --radius:16px; --radius-xl:24px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;-webkit-font-smoothing:antialiased;padding:26px 22px 60px}
+.wrap{max-width:min(1120px,96vw);margin:0 auto}
+h1{font-size:20px;font-weight:800;margin:0 0 4px}
+.sub{font-size:12.5px;color:var(--neutral-text);line-height:1.6;margin:0 0 18px}
+.card{background:var(--glass-surface);backdrop-filter:blur(8px);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:16px 18px;margin-bottom:16px}
+.card h2{font-size:13.5px;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:7px}
+.card h2::before{content:'';width:4px;height:14px;border-radius:2px;background:var(--accent)}
+.spec{font-size:12px;color:var(--text);line-height:1.7;margin:0}
+.spec b{color:var(--c2)}
+.spec code{background:rgba(0,0,0,.05);border-radius:5px;padding:1px 6px;font-size:11.5px;font-variant-numeric:tabular-nums}
+
+/* ── 미리보기 2패널 ── */
+.stage{display:flex;gap:18px;flex-wrap:wrap}
+.pan-col{flex:1;min-width:300px}
+.pan-lab{font-size:12px;font-weight:700;margin:0 0 7px;display:flex;align-items:center;gap:8px}
+.pan-lab .badge{font-size:10.5px;font-weight:800;padding:1px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.badge.top,.badge.bottom{background:rgba(216,132,85,.14);color:var(--c2);border:1px solid rgba(216,132,85,.4)}
+.badge.mid{background:rgba(0,0,0,.05);color:var(--neutral-text);border:1px solid rgba(0,0,0,.12)}
+.badge.mv{background:var(--neutral);color:var(--neutral-text);border:1px solid rgba(0,0,0,.12)}
+.panel{height:340px;overflow-y:scroll;background:rgba(255,255,255,.20);backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.30);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);padding:14px}
+.srow{background:rgba(255,255,255,.85);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:11px 13px;margin-bottom:10px}
+.srow .n{font-size:14px;font-weight:800}
+.srow .m{font-size:11px;color:var(--neutral-text);margin-top:2px}
+.srow .o{font-size:20px;font-weight:800;color:var(--accent);margin-top:5px;font-variant-numeric:tabular-nums}
+
+/* ── 현행(살몬 상시) — index.html L1783~ 사본 ── */
+.cur::-webkit-scrollbar{width:13px}
+.cur::-webkit-scrollbar-track{background:transparent;border:1px solid rgba(216,132,85,.5);border-radius:999px}
+.cur::-webkit-scrollbar-thumb{background:var(--c2);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+.cur::-webkit-scrollbar-button{display:block;width:13px;height:13px;background:transparent;border:0}
+.cur::-webkit-scrollbar-button:vertical:decrement{border-left:6.5px solid transparent;border-right:6.5px solid transparent;border-bottom:8px solid var(--c2);border-top:0}
+.cur::-webkit-scrollbar-button:vertical:increment{border-left:6.5px solid transparent;border-right:6.5px solid transparent;border-top:8px solid var(--c2);border-bottom:0}
+.cur::-webkit-scrollbar-button:vertical:start:increment,.cur::-webkit-scrollbar-button:vertical:end:decrement{display:none}
+
+/* ── 제안(위치·이동 반응) — 색은 JS가 --sb-col/--tb-col 인라인 세팅 ── */
+.prop{--sb-col:var(--c2);--tb-col:rgba(216,132,85,.5);--sbw:13px}
+.prop::-webkit-scrollbar{width:var(--sbw)}
+.prop::-webkit-scrollbar-track{background:transparent;border:1px solid var(--tb-col);border-radius:999px}
+.prop::-webkit-scrollbar-thumb{background:var(--sb-col);border-radius:999px;border:2px solid transparent;background-clip:padding-box;transition:background .18s}
+.prop::-webkit-scrollbar-button{display:block;width:var(--sbw);height:var(--sbw);background:transparent;border:0}
+.prop::-webkit-scrollbar-button:vertical:decrement{border-left:6.5px solid transparent;border-right:6.5px solid transparent;border-bottom:8px solid var(--sb-col);border-top:0}
+.prop::-webkit-scrollbar-button:vertical:increment{border-left:6.5px solid transparent;border-right:6.5px solid transparent;border-top:8px solid var(--sb-col);border-bottom:0}
+.prop::-webkit-scrollbar-button:vertical:start:increment,.prop::-webkit-scrollbar-button:vertical:end:decrement{display:none}
+
+/* ── 프리셋·슬라이더 ── */
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.preset{padding:7px 13px;border-radius:9px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s}
+.preset:hover{border-color:var(--accent);color:var(--accent)}
+.preset.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 22px;margin-top:12px}
+.sl label{display:block;font-size:11.5px;font-weight:700;margin-bottom:5px;color:var(--text)}
+.sl .v{color:var(--accent);font-variant-numeric:tabular-nums}
+.sl input[type=range]{width:100%;accent-color:var(--accent)}
+.grp{font-size:11px;font-weight:800;color:var(--neutral-text);margin:6px 0 2px;grid-column:1/-1;letter-spacing:.02em}
+
+/* ── 출력 ── */
+.out{background:#1A1A2E;color:#EDECF6;border-radius:12px;padding:14px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.65;white-space:pre;overflow-x:auto}
+.copy{margin-top:10px;padding:8px 15px;border-radius:9px;border:0;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.copy:active{transform:translateY(1px)}
+.vals{width:100%;border-collapse:collapse;margin-top:12px;font-size:11.5px}
+.vals th,.vals td{text-align:left;padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.08);vertical-align:top}
+.vals th{color:var(--neutral-text);font-weight:700}
+.vals .tag{font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;white-space:nowrap}
+.tag.keep{background:rgba(26,107,60,.1);color:#1A6B3C;border:1px solid rgba(26,107,60,.3)}
+.tag.px{background:rgba(0,0,0,.05);color:var(--neutral-text);border:1px solid rgba(0,0,0,.14)}
+.note{font-size:11.5px;color:var(--neutral-text);line-height:1.7;margin:0}
+.note b{color:var(--text)}
+.hint{font-size:11px;color:var(--dim);margin:8px 0 0}
+kbd{background:rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.14);border-radius:5px;padding:1px 6px;font-size:11px;font-family:inherit}
+</style>
+
+<div class="wrap">
+  <h1>스크롤바 위치·이동 반응 — 플레이그라운드</h1>
+  <p class="sub">판매현황(모달 <code>#ana-body</code> · 우측 레일 · 메인 창)에 뜨는 살몬 스크롤바를, <b>위치·이동에 반응</b>하도록. 아래 패널을 직접 스크롤해 상태 전환을 확인 →. <span style="color:var(--c2);font-weight:700">신규 토큰·hex 0</span>(2강조색=<code>var(--c2)</code> 계승 · 무채색=흑알파, 캘린더 스크롤바 <code>rgba(0,0,0,.15)</code>와 동일 계승).</p>
+
+  <div class="card">
+    <h2>동작 규칙 (해석 — 틀리면 알려줘)</h2>
+    <p class="spec">
+      ① <b>최상단·최하단</b>에 있을 때 → <b>2강조색(살몬)</b>, 지금처럼.<br>
+      ② <b>중간·정지</b> 상태(기본) → 무채색 글래스, 투명도 높임(<code>불투명도 ≈ 13%</code>) — 유령처럼 은은.<br>
+      ③ <b>중간·이동중</b>(스크롤/드래그) → 무채색, 조금 더 진하게(<code>불투명도 ≈ 30%</code>).<br>
+      <span style="color:var(--dim)">즉 위치가 색을 정하고(끝=살몬 / 중간=무채), 이동은 중간 무채의 진하기만 올린다. 끝단은 이동 여부와 무관하게 살몬.</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>① 실물 재현 미리보기 — 현행 vs 제안</h2>
+    <div class="stage">
+      <div class="pan-col">
+        <p class="pan-lab">현행 (살몬 상시)</p>
+        <div class="panel cur" id="panCur"></div>
+      </div>
+      <div class="pan-col">
+        <p class="pan-lab">제안 (위치·이동 반응) <span class="badge mid" id="badge">중간</span></p>
+        <div class="panel prop" id="panProp"></div>
+      </div>
+    </div>
+    <p class="hint">↑ 제안 패널을 스크롤해봐 — 맨 위/맨 아래에서 살몬, 중간에서 무채(이동 중엔 진하게, 멈추면 은은). 뱃지가 현재 상태 표시.</p>
+  </div>
+
+  <div class="card">
+    <h2>② 프리셋 · ③ 미세조정</h2>
+    <div class="presets" id="presets"></div>
+    <div class="sliders">
+      <div class="grp">무채색 진하기 (흑알파 — 캘린더 스크롤바 계승)</div>
+      <div class="sl"><label>중간·정지 불투명도 <span class="v" id="vIdle"></span></label><input type="range" id="sIdle" min="4" max="40" step="1"></div>
+      <div class="sl"><label>중간·이동중 불투명도 <span class="v" id="vMove"></span></label><input type="range" id="sMove" min="10" max="60" step="1"></div>
+      <div class="sl"><label>중간 트랙 테두리 불투명도 <span class="v" id="vTb"></span></label><input type="range" id="sTb" min="0" max="30" step="1"></div>
+      <div class="grp">형태</div>
+      <div class="sl"><label>최상·하단 판정 여유 <span class="v" id="vEps"></span></label><input type="range" id="sEps" min="0" max="12" step="1"></div>
+      <div class="sl"><label>스크롤바 너비 <span class="v" id="vW"></span></label><input type="range" id="sW" min="6" max="15" step="1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>④ 선택값 — 배선 스니펫 + 복사</h2>
+    <div class="out" id="out"></div>
+    <button class="copy" id="copyBtn">📋 선택값 복사</button>
+    <table class="vals">
+      <thead><tr><th>값</th><th>현재 선택</th><th>성격</th></tr></thead>
+      <tbody id="valsBody"></tbody>
+    </table>
+    <p class="hint">복사 → 채팅에 붙여주면 <code>index.html</code>에 배선(전역 스크롤바 or 판매현황만 — 범위는 버튼으로 물어봄) + <kbd>check_design.py</kbd> 통과까지.</p>
+  </div>
+
+  <div class="card">
+    <h2>⑤ 재현 한계 각주</h2>
+    <p class="note">
+      · <b>글래스모피즘 근사</b>: <code>::-webkit-scrollbar-thumb</code>엔 <code>backdrop-filter</code>(실제 블러)가 안 먹는다 → "글래스"는 <b>반투명 흑알파</b>로 근사. 뒤 배경이 비쳐 유리 느낌만 냄(진짜 블러 아님).<br>
+      · <b>webkit 전용</b>: Chrome·Edge·Safari에서 위 모양대로. Firefox는 <code>scrollbar-color</code>만 지원 → 썸/트랙 2색만 반영(화살표·상태전환 무).<br>
+      · <b>이동중 판정</b>: 휠·드래그·키보드 스크롤 모두 <code>scroll</code> 이벤트로 잡고, 멈춘 뒤 <code>~420ms</code>에 정지로 복귀(디바운스).<br>
+      · <b>끝단 우선</b>: 이동 중 끝단 도달 시 = 살몬(끝단이 이동보다 우선). 규칙 ①대로.
+    </p>
+  </div>
+</div>
+
+<script>
+var STATE={idleA:13,moveA:30,tbA:12,eps:2,w:13};
+var PRESETS=[
+  {k:'현행 (살몬 상시)', cur:true},
+  {k:'무채 글래스 ★추천', idleA:13,moveA:30,tbA:12,eps:2,w:13},
+  {k:'대비 강함', idleA:18,moveA:38,tbA:16,eps:2,w:13},
+  {k:'미니멀 (얇게)', idleA:10,moveA:26,tbA:8,eps:2,w:9}
+];
+var panels=[document.getElementById('panProp')];
+var badge=document.getElementById('badge');
+
+// 카드 채우기
+var demo=['브런치 콘서트 III','조재혁 피아노 리사이틀','뮤지컬 〈달 샤베트〉','정오의 음악회','우리동네 예술텃밭','가족음악극','재즈 나잇','실내악 시리즈'];
+function fill(el){var h='';for(var i=0;i<demo.length;i++){h+='<div class="srow"><div class="n">'+demo[i]+'</div><div class="m">기타 · 예술성 · D-'+(55-i*6)+'</div><div class="o">'+(18-i*1.4).toFixed(1)+'%</div></div>';}el.innerHTML=h;}
+fill(document.getElementById('panCur'));fill(document.getElementById('panProp'));
+
+function paint(el){
+  var eps=STATE.eps;
+  var atTop=el.scrollTop<=eps;
+  var atBot=el.scrollTop+el.clientHeight>=el.scrollHeight-eps;
+  var moving=el.classList.contains('sb-move');
+  var pos,col,tb;
+  if(atTop||atBot){pos=atTop?'top':'bottom';col='var(--c2)';tb='rgba(216,132,85,.5)';}
+  else{pos='mid';var a=(moving?STATE.moveA:STATE.idleA)/100;col='rgba(0,0,0,'+a+')';tb='rgba(0,0,0,'+(STATE.tbA/100)+')';}
+  el.style.setProperty('--sb-col',col);
+  el.style.setProperty('--tb-col',tb);
+  el.style.setProperty('--sbw',STATE.w+'px');
+  if(el===panels[0]){
+    var lab=pos==='top'?'최상단 · 살몬':pos==='bottom'?'최하단 · 살몬':(moving?'중간 · 이동중':'중간 · 정지');
+    badge.textContent=lab;
+    badge.className='badge '+(pos==='mid'?(moving?'mv':'mid'):pos);
+  }
+}
+function wire(el){
+  var t;
+  el.addEventListener('scroll',function(){
+    el.classList.add('sb-move');paint(el);
+    clearTimeout(t);t=setTimeout(function(){el.classList.remove('sb-move');paint(el);},420);
+  });
+  paint(el);
+}
+panels.forEach(wire);
+
+// 슬라이더
+var map=[['sIdle','idleA','vIdle','%'],['sMove','moveA','vMove','%'],['sTb','tbA','vTb','%'],['sEps','eps','vEps','px'],['sW','w','vW','px']];
+function syncUI(){map.forEach(function(m){document.getElementById(m[0]).value=STATE[m[1]];document.getElementById(m[2]).textContent=STATE[m[1]]+m[3];});panels.forEach(paint);render();markPreset();}
+map.forEach(function(m){document.getElementById(m[0]).addEventListener('input',function(){STATE[m[1]]=+this.value;document.getElementById(m[2]).textContent=this.value+m[3];panels.forEach(paint);render();markPreset();});});
+
+// 프리셋
+var pc=document.getElementById('presets');
+PRESETS.forEach(function(p,i){var b=document.createElement('button');b.className='preset';b.textContent=p.k;b.onclick=function(){applyPreset(i);};pc.appendChild(b);});
+function applyPreset(i){var p=PRESETS[i];if(!p.cur){STATE={idleA:p.idleA,moveA:p.moveA,tbA:p.tbA,eps:p.eps,w:p.w};}else{STATE={idleA:0,moveA:0,tbA:50,eps:99999,w:13};}syncUI();}
+function markPreset(){var btns=pc.children;for(var i=0;i<btns.length;i++){var p=PRESETS[i];var on=p.cur?(STATE.eps>=99999):(STATE.idleA===p.idleA&&STATE.moveA===p.moveA&&STATE.tbA===p.tbA&&STATE.eps===p.eps&&STATE.w===p.w);btns[i].className='preset'+(on?' on':'');}}
+
+// 출력
+function render(){
+  var s=STATE;
+  var css=
+'/* 판매현황 스크롤바 — 위치·이동 반응 (신규 토큰·hex 0) */\n'+
+'.sb-react::-webkit-scrollbar{width:'+s.w+'px}\n'+
+'.sb-react::-webkit-scrollbar-track{background:transparent;border:1px solid var(--tb-col);border-radius:999px}\n'+
+'.sb-react::-webkit-scrollbar-thumb{background:var(--sb-col);border-radius:999px;\n'+
+'  border:2px solid transparent;background-clip:padding-box;transition:background .18s}\n'+
+'/* 화살표도 --sb-col 계승 */\n'+
+'\n'+
+'/* JS: scroll 시 상태 계산해 인라인 --sb-col/--tb-col 세팅 */\n'+
+'// 끝단(≤'+s.eps+'px): --sb-col=var(--c2), --tb-col=rgba(216,132,85,.5)\n'+
+'// 중간·정지 : --sb-col=rgba(0,0,0,'+(s.idleA/100).toFixed(2)+'), --tb-col=rgba(0,0,0,'+(s.tbA/100).toFixed(2)+')\n'+
+'// 중간·이동 : --sb-col=rgba(0,0,0,'+(s.moveA/100).toFixed(2)+')  (멈춤 후 420ms 복귀)';
+  document.getElementById('out').textContent=css;
+  var rows=[
+    ['끝단 색','var(--c2) (살몬)','<span class="tag keep">계승</span>'],
+    ['중간·정지 무채','rgba(0,0,0,'+(s.idleA/100).toFixed(2)+')','<span class="tag keep">계승·흑알파</span>'],
+    ['중간·이동 무채','rgba(0,0,0,'+(s.moveA/100).toFixed(2)+')','<span class="tag keep">계승·흑알파</span>'],
+    ['중간 트랙테두리','rgba(0,0,0,'+(s.tbA/100).toFixed(2)+')','<span class="tag keep">계승·흑알파</span>'],
+    ['끝단 판정 여유',s.eps+'px','<span class="tag px">레이아웃 px</span>'],
+    ['스크롤바 너비',s.w+'px (현행 13)','<span class="tag px">레이아웃 px</span>']
+  ];
+  document.getElementById('valsBody').innerHTML=rows.map(function(r){return '<tr><td>'+r[0]+'</td><td><code style="font-size:11px">'+r[1]+'</code></td><td>'+r[2]+'</td></tr>';}).join('');
+}
+document.getElementById('copyBtn').onclick=function(){var t=document.getElementById('out').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);this.textContent='✓ 복사됨';var b=this;setTimeout(function(){b.textContent='📋 선택값 복사';},1400);};
+
+// 초기: 추천 프리셋
+applyPreset(1);
+// 제안 패널 중간으로 살짝 스크롤(중간 상태 시연)
+document.getElementById('panProp').scrollTop=120;paint(document.getElementById('panProp'));
+</script>
