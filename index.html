@@ -1794,7 +1794,6 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .srail .ana-kpi{min-width:calc(50% - 4px);padding:9px 11px}
 .srail .ana-kpi .val{font-size:17px}
 .srail .ana-line{font-size:11.5px;margin:4px 0}
-.srail .ana-next{font-size:11.5px;padding:6px 12px;margin-top:6px}
 @media(max-width:1200px){#sales-rail{display:none}}
 /* ===== 전앱 커스텀 스크롤바 (운영자 260710: 보더 불투명도 50% · 썸/삼각 버튼 = 2강조색 --c2) =====
    색 = --c2(서브코어 살몬) 단일 + 동일 토큰 alpha 변주 rgba(216,132,85,.5)(기틀 §3.5② 정상) — 신규 색 0.
@@ -4697,6 +4696,7 @@ function _srailRender(){
   _srailAlignTop();
   try{ _srailRenderInner(els); }catch(e){   // 렌더 전체 방어 — 예외 시 공백 대신 재시도 UI(분신술 5호 LOW)
     console.warn('[srail render]',e);
+    _srailNavSlot('');   // 드릴 렌더 도중 예외 시 nav 우측 [← 목록] 잔존 방지(제외검증3 LOW)
     els.body.innerHTML='<div class="u-empty" style="padding:26px 8px"><div class="ico">📡</div><div class="msg">판매 현황을 그리지 못했어요</div><button class="ana-chip" onclick="_srailInit(true)">다시 시도</button></div>';
   }
 }
@@ -4845,7 +4845,7 @@ function _srailRenderDrillEx(els,e,activeCount){
   h+='</div>';
   els.body.innerHTML=h;
 }
-// [크게 보기](전시) → 분석 보드 전시 드릴. 캐시 없으면 openAnalyticsBoard 로드 완료 콜백이 그림.
+// [자세히 보기](전시) → 분석 보드 전시 드릴. 캐시 없으면 openAnalyticsBoard 로드 완료 콜백이 그림.
 function _srailOpenBoardEx(id){
   openAnalyticsBoard();
   if(_anaState){
@@ -4908,7 +4908,7 @@ function _srailDrillSvg(p){
   svg+='</svg>';
   return svg;
 }
-// [크게 보기] → 분석 보드(개선판) 해당 공연 드릴. 캐시 없으면 openAnalyticsBoard 로드 완료 콜백이 드릴을 그림.
+// [자세히 보기] → 분석 보드(개선판) 해당 공연 드릴. 캐시 없으면 openAnalyticsBoard 로드 완료 콜백이 드릴을 그림.
 function _srailOpenBoard(name){
   openAnalyticsBoard();
   if(_anaState){
