@@ -4497,7 +4497,7 @@ function _srailCard(p){
     +'<div class="srail-hd"><div class="srail-tt"><div class="srail-name">'+escapeHtml(p.name)+'</div><div class="srail-meta">'+escapeHtml(meta)+'</div></div>'
     +(dd?'<span class="srail-dday" style="color:'+_srailDdayColor(p.dday)+'">'+dd+'</span>':'')+'</div>'
     +(p.noData?'':'<div class="srail-occrow"><span class="srail-occ">'+p.occ.toFixed(1)+'%</span><span class="srail-delta '+dCls+'">'+dStr+'</span><span class="srail-seatsub">'+p.seats.toLocaleString()+'석</span><span class="srail-occcap">점유율</span></div>')
-    +(p.noData?'<div class="srail-r2"><span style="font-size:13px;color:var(--dim);font-weight:600">집계 전입니다.</span></div>':'')
+    +(p.noData?'<div class="srail-r2"><span style="font-size:13px;color:var(--dim);font-weight:600;margin-left:16px">집계 전입니다.</span></div>':'')
     +(p.noData?'':'<div class="srail-spark" style="margin-top:10px">'+_srailTrend(p)+'</div>')
     +fc
     +'<div class="srail-bar"><i style="width:'+Math.min(p.occ,100).toFixed(1)+'%"></i><b style="left:'+Math.min(tgt,100)+'%"></b></div>'
