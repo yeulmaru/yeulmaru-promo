@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>의뢰서 생성기 신템플릿 승격 — 개선판 계승·구분/장소 연동·매크로 탑재 (260710)</title>
+<style>
+  :root { --accent:#4A4DE7; --peach:#D88455; --green:#1A6B3C; --danger:#E24B4A; --text:#1A1A2E; --dim:#888; --border:rgba(0,0,0,0.09); }
+  * { box-sizing:border-box; }
+  body { font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:var(--text); margin:0; background:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%); line-height:1.65; }
+  .wrap { max-width:900px; margin:0 auto; padding:36px 20px 80px; }
+  h1 { font-size:22px; margin:0 0 6px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:28px; }
+  h2 { font-size:16px; margin:34px 0 12px; padding-left:10px; border-left:4px solid var(--accent); }
+  .card { background:rgba(255,255,255,0.78); border:1px solid var(--border); border-radius:16px; padding:18px 20px; margin:12px 0; box-shadow:0 8px 32px rgba(74,77,231,0.08),0 2px 8px rgba(0,0,0,0.04); }
+  .card h3 { margin:0 0 8px; font-size:14.5px; color:var(--accent); }
+  table { border-collapse:collapse; width:100%; font-size:13px; background:#fff; border-radius:10px; overflow:hidden; }
+  th,td { border:1px solid var(--border); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#F3F2FB; font-weight:700; white-space:nowrap; }
+  code { background:rgba(74,77,231,0.08); border-radius:5px; padding:1px 6px; font-size:12px; font-family:Consolas,'D2Coding',monospace; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; border-radius:20px; padding:2px 10px; margin-right:6px; }
+  .ok { background:rgba(26,107,60,0.1); color:var(--green); }
+  .warn { background:rgba(216,132,85,0.14); color:var(--peach); }
+  .bad { background:rgba(226,75,74,0.12); color:var(--danger); }
+  ul { margin:8px 0; padding-left:20px; }
+  li { margin:4px 0; }
+  .flow { font-size:13px; background:#fff; border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>의뢰서 생성기 신템플릿 승격</h1>
+  <div class="sub">2026-07-10 · 운영자 지시 "그쪽에 하나 박아볼래? 아까우니까" — 오전 개선판 xlsm을 앱 티켓 등록 신청 기능의 템플릿으로 승격 · §분신술 5인 2라운드</div>
+
+  <h2>요약 — 이제 앱에서 뽑는 의뢰서에 개선분이 전부 실린다</h2>
+  <div class="card">
+    <h3>바뀐 것 (사용자 관점)</h3>
+    <ul>
+      <li><b>티켓 등록 신청 모달의 장소</b>: 자유 입력 → <b>구분(공연/전시/예술교육) 연동 드롭다운</b> + 목록 밖 장소는 「직접 입력…」. PPT에서 「예울마루 대극장」처럼 읽혀도 정식 명칭·구분으로 자동 스냅.</li>
+      <li><b>생성 파일 = .xlsm</b>: 분류별 접이식 그룹([1][2][3]·±) · <code>AH8</code> 구분→<code>G8</code> 장소 드롭다운 · 사이즈표 더블클릭 첨부 매크로(폴더 복사+링크)까지 탑재된 채로 다운로드. 열 때 [콘텐츠 사용] 필요.</li>
+      <li><b>공지문 장르 칸 버그 해소</b>: 구판은 <code>G9</code>(장르 텍스트)를 안 채워 공지문 장르가 공란이었음 — 이제 기입.</li>
+    </ul>
+  </div>
+
+  <h2>전/후 비교</h2>
+  <table>
+    <tr><th>축</th><th>구판 (ticketlink_template.xlsx)</th><th>신판 (ticketlink_template.xlsm)</th></tr>
+    <tr><td>시트</td><td>의뢰서·공지문·사이즈표·등급권종·현장지원 (5장)</td><td>의뢰서·공지문·이미지 사이즈표 (3장 — 4·5는 운영자 삭제분 계승)</td></tr>
+    <tr><td>의뢰서 구조</td><td>평면 폼</td><td>대분류/소분류 2단 접이식 그룹 + 구분→장소 드롭다운(<code>INDIRECT</code>+정의이름)</td></tr>
+    <tr><td>첨부</td><td>없음 (별도 전달)</td><td>사이즈표 G열 더블클릭 = [첨부파일] 폴더 복사+순차 링크 (VBA)</td></tr>
+    <tr><td>산출 확장자</td><td>.xlsx</td><td>.xlsm (macroEnabled MIME)</td></tr>
+    <tr><td>공지문 값 배선</td><td>기간·시간·장소 = D열 수식 캐시</td><td>기간·시간·장소·가격 = <code>L8~L11</code> 직접 기입 · 기타정보 <code>D15</code>·협찬 <code>D20</code>·내용 <code>D22</code></td></tr>
+  </table>
+
+  <h2>개인정보 스크럽 (공개 레포 안전)</h2>
+  <div class="card">
+    운영자 개선판(실데이터 포함)에서 <code>tools/scratch/make_template.py</code>로 재현 가능하게 제거:
+    담당자 <b>휴대폰·이메일·티켓링크 계정</b>(셀+공유문자열 원본+mailto 링크), 로컬 저장 경로(<code>C:\Users\…</code>), 문서 속성 작성자,
+    공연 실데이터(제목·기간·좌석표·할인·체크 상태), <b>Claude Log 시트 완전 제거</b>(공개 레포+NHN 제출물에 작업 이력 동봉 차단 —
+    대응 VBA 모듈까지 정리), 미참조 문자열 63개 GC. 잔존 = 구 공개 템플릿에 이미 있던 수준(기관 정보·담당자 성명)만.
+  </div>
+
+  <h2>§분신술 5인 READ-ONLY 검증 — 2라운드 만장일치</h2>
+  <table>
+    <tr><th>앵글</th><th>1차</th><th>핵심 지적 → 조치</th><th>재평결</th></tr>
+    <tr><td>① 회귀·소비자</td><td><span class="tag ok">APPROVE</span></td><td>MED 문서 미갱신 → 본 보고서+작업이력 append · LOW D18 주최 공란 주장 → PDF 실측 반박(정상 렌더)</td><td id="re1"><span class="tag ok">APPROVE</span></td></tr>
+    <tr><td>② 개인정보·보안</td><td><span class="tag ok">APPROVE</span></td><td>권고: Claude Log 제거 → 반영</td><td><span class="tag ok">APPROVE</span> (신규 누수 0 재검증)</td></tr>
+    <tr><td>③ OOXML/CFB 무결성</td><td><span class="tag ok">APPROVE</span></td><td>LOW calcChain 잔존 엔트리 → calcChain 제거로 해소</td><td><span class="tag ok">APPROVE</span> (시트 제거 후 전 계층 정합)</td></tr>
+    <tr><td>④ UX·의미론</td><td><span class="tag bad">REJECT</span></td><td><b>HIGH</b> 공지문 D12/D13 잔재 가격수식 = 「0원」 오출력 → 수식 제거(가격 정본 <code>L11</code>) · MED PPT 장소 표기 유실 → <code>_tktVenueSnap</code> 신설</td><td><span class="tag ok">APPROVE</span></td></tr>
+    <tr><td>⑤ 품질·계약 준수</td><td><span class="tag bad">REJECT</span></td><td><b>HIGH</b> Claude Log 시트 동봉 → 완전 제거 · UI 검증 파일화(e2e_ui.py) · VBA 양성성 → olevba 소스 전량 복원 증빙</td><td><span class="tag ok">APPROVE</span> (조건 = 수정분 머지 커밋 포함 — 충족)</td></tr>
+  </table>
+
+  <h2>기계 검증</h2>
+  <table>
+    <tr><th>항목</th><th>결과</th></tr>
+    <tr><td>생성 E2E (<code>tools/scratch/e2e_tkt.py</code>)</td><td><span class="tag ok">통과</span>index.html의 실제 <code>_tkt</code> 코드를 추출해 크로미움에서 공연·전시 2케이스 생성 — 의뢰서/공지문 셀 30여 곳·드롭다운 Sel·체크박스 5종·D12/D13 부재·VBA·시트 구성 전수 어서션</td></tr>
+    <tr><td>UI E2E (<code>tools/scratch/e2e_ui.py</code>)</td><td><span class="tag ok">통과</span>실DOM에서 구분↔장소 연동·직접 입력 폴백·PPT 스냅 3케이스 — PAGEERROR 0</td></tr>
+    <tr><td>렌더</td><td><span class="tag ok">통과</span>LibreOffice 헤드리스 — 템플릿·생성물 정상, 생성물 PDF에서 「0원」 오출력 0·주최/협찬/가격 정상 표기</td></tr>
+    <tr><td>게이트</td><td><span class="tag ok">통과</span><code>node --check</code> 3블록 · <code>check_design</code> 1635/1635 · <code>check_refs</code></td></tr>
+    <tr><td>실기 Excel</td><td><span class="tag warn">대기</span>환경에 Excel 없음 — 구조는 감사③이 「복구 대화상자 유발 요소 0」 판정. 첫 생성 파일 열람 확인 요청</td></tr>
+  </table>
+
+  <h2>한계·수용 (운영자 인지용)</h2>
+  <ul>
+    <li>구분↔장르 교차검증 없음(전시 구분+뮤지컬 장르 생성 가능 — 비강제) · 시간 필드는 전시에도 필수: 운영자 결정(「행 동일, 목록만 전환」) 범위로 수용.</li>
+    <li>다운로드 .xlsm 첫 열기 시 매크로 차단 배너 가능(MOTW) — [콘텐츠 사용] 또는 파일 속성→차단 해제 1회.</li>
+    <li>PPT 파싱이 <code>예울마루</code> 없는 외부 장소명에 「GS칼텍스 예울마루 」 접두를 붙이는 선존 동작(감사④ LOW) — 직접 입력창에서 수정 가능, 정리는 후속(우선사항 등재).</li>
+  </ul>
+
+  <h2>산출</h2>
+  <ul>
+    <li><code>reference/ticketlink_template.xlsm</code> (신템플릿 · 구 .xlsx 삭제) · <code>index.html</code> <code>_tkt</code> 절 재배선</li>
+    <li><code>tools/scratch/make_template.py</code>(템플릿 재현) · <code>e2e_tkt.py</code> · <code>e2e_ui.py</code>(회귀 그물)</li>
+    <li>선행 작업 보고서: <code>260710_판매대행의뢰서_분류구분_첨부개선.html</code></li>
+  </ul>
+</div>
+</body>
+</html>
