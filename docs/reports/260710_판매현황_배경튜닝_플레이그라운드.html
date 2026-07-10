@@ -1,0 +1,235 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>판매현황 레일 배경·영역 튜닝 플레이그라운드 (260710)</title>
+<style>
+:root{
+--accent:#4A4DE7;--accent-light:#E8E8FD;--peach-text:#D88455;--green:#1A6B3C;--danger-btn:#E24B4A;--danger:var(--danger-btn);
+--text:#1A1A2E;--dim:#888;--muted:#bbb;--neutral-text:#6B6B7B;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.12);
+--surface-solid:#fff;--radius:16px;--radius-lg:20px;--radius-xl:24px;--c2:#D88455;--past-bg:rgba(0,0,0,0.02);--r-btn:10px;
+--bg:linear-gradient(135deg,#FDF6F3 0%,#F0EBF5 50%,#EBF0F8 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Pretendard','Noto Sans KR',system-ui,sans-serif;color:var(--text);background:var(--bg);padding:22px 16px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:21px;margin:0 0 2px}
+.sub{color:var(--neutral-text);font-size:12.5px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 396px;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:0 8px 32px rgba(74,77,231,.06)}
+.panel h2{font-size:13px;margin:0 0 10px;color:var(--accent)}
+/* ── 실물 프레임: 좌 캘린더 조각(비교 기준) + 우 레일 재현 ── */
+.frame{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px;display:flex;gap:14px}
+.pg-cal{width:150px;flex:none}
+.pg-cal .ch{background:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(0,0,0,.07);border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:11px 8px;text-align:center;font-size:12px;font-weight:700;color:#666}
+.pg-cal .cbody{background:rgba(255,255,255,.43);backdrop-filter:blur(11px);border:1px solid rgba(255,255,255,.7);border-top:none;border-radius:0 0 var(--radius-xl) var(--radius-xl);min-height:220px;padding:8px}
+.pg-cal .cc{height:30px;border-bottom:1px solid rgba(0,0,0,.05);font-size:10px;color:#999;padding:3px 4px}
+.pg-cal-cap{font-size:10.5px;color:var(--neutral-text);text-align:center;margin-top:6px}
+/* ── 레일 재현(튜닝 대상) — 변수 기본값 = 현행 실측 ── */
+.pg-rail{flex:1;min-width:0;display:flex;flex-direction:column;
+ --srailBgA:.43;--srailBlur:11px;--srailBdA:.7;--srailRad:24px;--srailShA:.08;
+ --headBgA:.9;--headBlur:11px;--headLineA:.07;--headH:47px;
+ --bodyPadX:14px;--bodyPadT:4px;
+ --cardBgA:.85;--cardBdA:.55;--cardRad:16px;--cardShA:.08;--cardPadY:11px;--cardPadX:13px;--cardGap:10px;--cardLift:-2px;
+ --nameFs:15px;--metaFs:11.5px;--occFs:22px;--ddayFs:10.5px;
+ --fcBgA:.04;--fcBdA:.1;--fcRad:9px;--fcPadY:5px;--fcPadX:9px;
+ --barH:3px;--cntBgA:.08;--sumFs:11px;}
+.r-head{flex-shrink:0;min-height:var(--headH);display:flex;align-items:center;gap:10px;padding:0 16px;background:rgba(255,255,255,var(--headBgA));backdrop-filter:blur(var(--headBlur));border-bottom:1px solid rgba(0,0,0,var(--headLineA));border-radius:var(--srailRad) var(--srailRad) 0 0}
+.r-httl{font-size:14.5px;font-weight:800;color:var(--text)}
+.r-cnt{font-size:10.5px;font-weight:800;color:var(--accent);background:rgba(74,77,231,var(--cntBgA));border:1px solid rgba(74,77,231,.18);border-radius:999px;padding:1px 8px}
+.r-sum{font-size:var(--sumFs);color:var(--neutral-text);font-weight:600;margin-left:2px}
+.r-box{flex:1;display:flex;flex-direction:column;margin-top:-1px;background:rgba(255,255,255,var(--srailBgA));backdrop-filter:blur(var(--srailBlur));border:1px solid rgba(255,255,255,var(--srailBdA));border-radius:var(--srailRad);box-shadow:0 8px 32px rgba(74,77,231,var(--srailShA)),0 2px 8px rgba(0,0,0,.04);overflow:hidden}
+.r-body{flex:1;overflow-y:auto;padding:var(--bodyPadT) var(--bodyPadX) 0;max-height:430px}
+.r-card{background:rgba(255,255,255,var(--cardBgA));border:1px solid rgba(255,255,255,var(--cardBdA));border-radius:var(--cardRad);box-shadow:0 8px 32px rgba(74,77,231,var(--cardShA)),0 2px 8px rgba(0,0,0,.04);padding:var(--cardPadY) var(--cardPadX);margin-bottom:var(--cardGap);transition:transform .15s,border-color .15s}
+.r-card:hover{transform:translateY(var(--cardLift));border-color:var(--accent)}
+.r-hd{display:flex;align-items:flex-start;gap:13px}
+.r-name{flex:1;min-width:0;font-size:var(--nameFs);font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-dday{font-size:var(--ddayFs);font-weight:800;color:var(--peach-text);flex:none}
+.r-meta{font-size:var(--metaFs);color:var(--neutral-text);font-weight:500;margin-top:1px}
+.r-occrow{display:flex;align-items:baseline;gap:8px;margin:6px 3px 0}
+.r-occ{font-size:var(--occFs);font-weight:800;color:var(--accent);line-height:1}
+.r-occ .pp{font-size:11.5px;font-weight:700;color:var(--peach-text)}
+.r-occ .sub{font-size:11.5px;color:var(--dim);font-weight:600}
+.r-chart{margin-top:7px;height:74px;position:relative}
+.r-chart .cbadge{position:absolute;right:4px;top:2px;font-size:9px;color:var(--muted);background:rgba(0,0,0,.03);border-radius:6px;padding:1px 6px}
+.r-fc{font-size:11.5px;color:var(--accent);font-weight:700;margin-top:8px;background:rgba(74,77,231,var(--fcBgA));border:1px solid rgba(74,77,231,var(--fcBdA));border-radius:var(--fcRad);padding:var(--fcPadY) var(--fcPadX);line-height:1.5}
+.r-bar{position:relative;height:var(--barH);border-radius:999px;background:var(--past-bg);margin-top:9px}
+.r-bar>i{position:absolute;left:0;top:0;bottom:0;width:44%;border-radius:999px;background:var(--green)}
+.r-bar>b{position:absolute;top:-3.5px;left:50%;width:2px;height:calc(var(--barH) + 7px);border-radius:1px;background:var(--danger)}
+.r-r3{display:flex;justify-content:space-between;margin-top:7px;font-size:10.5px;color:var(--dim)}
+.r-r3 .tgt{color:var(--danger)}
+/* ── 컨트롤 ── */
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pbtn{font:inherit;font-size:11.5px;font-weight:700;padding:6px 10px;border-radius:var(--r-btn);border:1px solid var(--border2);background:#fff;color:var(--text);cursor:pointer}
+.pbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pbtn .star{color:#FFD24A}.pbtn.on .star{color:#fff}
+.axgrp{margin-bottom:12px}
+.axgrp>.gl{font-size:11px;font-weight:800;color:var(--accent);margin:0 0 5px;text-transform:none}
+.ax{display:grid;grid-template-columns:96px 1fr 52px;align-items:center;gap:8px;margin:4px 0;font-size:11px}
+.ax label{color:var(--neutral-text)}
+.ax input[type=range]{width:100%;accent-color:var(--accent)}
+.ax .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
+.ax .v.chg{color:var(--peach-text)}
+.out{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0f1020;color:#e8e8fd;border-radius:10px;padding:11px;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow:auto}
+.copybtn{margin-top:8px;font:inherit;font-size:12px;font-weight:700;padding:8px 12px;border:0;border-radius:var(--r-btn);background:var(--accent);color:#fff;cursor:pointer}
+.note{font-size:11.5px;color:var(--neutral-text);background:#F7F5FB;border-radius:10px;padding:10px 12px;margin-top:10px}
+.note b{color:var(--peach-text)}
+</style></head><body><div class="wrap">
+<h1>판매현황(우측 레일) 배경·영역 튜닝 — 30축 플레이그라운드</h1>
+<div class="sub">§🎛 제안 · 좌측 캘린더 조각(비교 기준)과 나란히 재현 · <b>차트 제외</b> 비-차트 영역만 튜닝 · 색은 흰색/강조색의 <b>알파 변주 + 구조값</b>만(팔레트 폐쇄형 계승, 새 색 0)</div>
+<div class="grid">
+  <div class="panel" style="order:2">
+    <h2>튜닝 (30축)</h2>
+    <div class="presets" id="presets"></div>
+    <div id="axes"></div>
+    <h2 style="margin-top:14px">선택값 (→ index.html .srail* 배선)</h2>
+    <div class="out" id="out"></div>
+    <button class="copybtn" onclick="copyOut()">📋 선택값 복사</button>
+    <div class="note"><b>차트는 조절 대상 아님</b> — 카드 안 회색 자리는 실제 추이 차트가 들어갈 위치(정적 표시). Today 빨강·범례 등 차트 요소는 이 튜닝과 무관. · 슬라이더 기본값 = 현행 실측값 · 값이 현행과 다르면 주황(<span style="color:var(--peach-text);font-weight:700">갱신</span>)으로 표시.</div>
+  </div>
+  <div class="panel" style="order:1">
+    <h2>실물 미리보기 (좌 캘린더 = 고정 비교 · 우 레일 = 튜닝)</h2>
+    <div class="frame">
+      <div class="pg-cal">
+        <div class="ch">화 · 수 · 목</div>
+        <div class="cbody"><div class="cc">7 · 일정…</div><div class="cc">8 · 일정…</div><div class="cc">9 · 일정…</div><div class="cc">10 · 일정…</div><div class="cc">11 · 일정…</div><div class="cc" style="border:none">12 · 일정…</div></div>
+        <div class="pg-cal-cap">좌측 캘린더 톤(고정)</div>
+      </div>
+      <div class="pg-rail" id="rail">
+        <div class="r-head"><span class="r-httl">판매 현황</span><span class="r-cnt">3</span><span class="r-sum">전일 대비 공연 ▼ -9석</span></div>
+        <div class="r-box"><div class="r-body" id="rbody"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var CARDS=[
+ {name:'브런치 콘서트 III <현 위로 흐르는 계절>',dday:'D-55',meta:'기타 · 사업성 · 9.3(목) · 판매 8일차',occ:'22.0',pp:'-0.4%p',sub:'204석 점유율',fc:'📈 예상 (이 추세면) 3일 뒤 <b>234석</b> · 누적 +30',r3l:'204 / 926석',r3r:'목표 50% -28.0%p'},
+ {name:'조재혁 피아노 리사이틀',dday:'D-64',meta:'기타 · 예술성 · 9.12(토) · 판매 3일차',occ:'7.1',pp:'-0.5%p',sub:'66석 점유율',fc:'📈 예상 (이 추세면) 3일 뒤 <b>92석</b> · 누적 +26',r3l:'66 / 926석',r3r:'목표 50% -42.9%p'}
+];
+// 정적 미니 차트(조절 대상 아님) — 플랫 라인 + Today 빨강 점
+function chartSVG(){
+ return '<svg viewBox="0 0 300 74" preserveAspectRatio="none" style="width:100%;height:74px;overflow:visible">'
+ +'<path d="M10 48 L55 46 L100 44 L145 45 L190 40 L235 30" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>'
+ +'<circle cx="10" cy="48" r="3.4" fill="var(--accent)"/><circle cx="55" cy="46" r="3.4" fill="var(--accent)"/><circle cx="100" cy="44" r="3.4" fill="var(--accent)"/><circle cx="145" cy="45" r="3.4" fill="var(--accent)"/><circle cx="190" cy="40" r="3.4" fill="var(--accent)"/>'
+ +'<circle cx="235" cy="30" r="5.6" fill="var(--muted)"/><circle cx="235" cy="30" r="3.4" fill="var(--danger)"/>'
+ +'<text x="235" y="16" text-anchor="middle" font-size="8.5" font-weight="800" fill="var(--danger)">📌 Today</text>'
+ +'</svg><div class="cbadge">차트(조절 X)</div>';
+}
+function cardHTML(c){
+ return '<div class="r-card"><div class="r-hd"><div style="flex:1;min-width:0"><div class="r-name">'+c.name+'</div><div class="r-meta">'+c.meta+'</div></div><div class="r-dday">'+c.dday+'</div></div>'
+ +'<div class="r-occrow"><span class="r-occ">'+c.occ+'%</span><span class="pp">'+c.pp+'</span><span class="sub">'+c.sub+'</span></div>'
+ +'<div class="r-chart">'+chartSVG()+'</div>'
+ +'<div class="r-fc">'+c.fc+'</div>'
+ +'<div class="r-bar"><i></i><b></b></div>'
+ +'<div class="r-r3"><span>'+c.r3l+'</span><span class="tgt">'+c.r3r+'</span></div></div>';
+}
+document.getElementById('rbody').innerHTML=CARDS.map(cardHTML).join('');
+
+// ── 30축 정의: [id, 라벨, 그룹, min, max, step, 기본(현행), 단위, cssVar] ──
+var AX=[
+ ['srailBgA','박스 배경 불투명','레일 유리박스',0,1,.01,.43,'','--srailBgA'],
+ ['srailBlur','박스 blur','레일 유리박스',0,30,1,11,'px','--srailBlur'],
+ ['srailBdA','박스 테두리 불투명','레일 유리박스',0,1,.05,.7,'','--srailBdA'],
+ ['srailRad','박스 모서리','레일 유리박스',0,32,1,24,'px','--srailRad'],
+ ['srailShA','박스 그림자','레일 유리박스',0,.3,.01,.08,'','--srailShA'],
+ ['headBgA','헤더 배경 불투명','헤더 행',0,1,.02,.9,'','--headBgA'],
+ ['headBlur','헤더 blur','헤더 행',0,30,1,11,'px','--headBlur'],
+ ['headLineA','헤더 하단선','헤더 행',0,.3,.01,.07,'','--headLineA'],
+ ['headH','헤더 높이','헤더 행',36,64,1,47,'px','--headH'],
+ ['bodyPadX','바디 좌우여백','바디',0,28,1,14,'px','--bodyPadX'],
+ ['bodyPadT','바디 상단여백','바디',0,24,1,4,'px','--bodyPadT'],
+ ['cardBgA','카드 배경 불투명','카드',0,1,.02,.85,'','--cardBgA'],
+ ['cardBdA','카드 테두리 불투명','카드',0,1,.05,.55,'','--cardBdA'],
+ ['cardRad','카드 모서리','카드',0,28,1,16,'px','--cardRad'],
+ ['cardShA','카드 그림자','카드',0,.3,.01,.08,'','--cardShA'],
+ ['cardPadY','카드 상하패딩','카드',4,24,1,11,'px','--cardPadY'],
+ ['cardPadX','카드 좌우패딩','카드',4,24,1,13,'px','--cardPadX'],
+ ['cardGap','카드 간격','카드',0,24,1,10,'px','--cardGap'],
+ ['cardLift','카드 hover 뜸','카드',-8,0,1,-2,'px','--cardLift'],
+ ['nameFs','공연명 크기','텍스트',12,20,.5,15,'px','--nameFs'],
+ ['metaFs','메타 크기','텍스트',9,14,.5,11.5,'px','--metaFs'],
+ ['occFs','점유율% 크기','텍스트',16,28,1,22,'px','--occFs'],
+ ['ddayFs','D-day 크기','텍스트',8,14,.5,10.5,'px','--ddayFs'],
+ ['fcBgA','예상박스 배경','예상 박스',0,.2,.01,.04,'','--fcBgA'],
+ ['fcBdA','예상박스 테두리','예상 박스',0,.4,.02,.1,'','--fcBdA'],
+ ['fcRad','예상박스 모서리','예상 박스',0,16,1,9,'px','--fcRad'],
+ ['fcPadY','예상박스 상하패딩','예상 박스',2,12,1,5,'px','--fcPadY'],
+ ['fcPadX','예상박스 좌우패딩','예상 박스',2,16,1,9,'px','--fcPadX'],
+ ['barH','목표바 두께','목표바',2,8,1,3,'px','--barH'],
+ ['cntBgA','건수배지 배경','밴드',0,.3,.01,.08,'','--cntBgA'],
+ ['sumFs','요약문 크기','밴드',9,14,.5,11,'px','--sumFs']
+];
+var DEF={}; AX.forEach(function(a){DEF[a[0]]=a[6];});
+var state=Object.assign({},DEF);
+
+var PRESETS={
+ cur:{name:'현행',v:{}},
+ cal:{name:'캘린더 톤 맞춤 ★',star:1,v:{cardBgA:.55,srailBgA:.35,cardBdA:.7,cardShA:.04,srailShA:.05}},
+ solid:{name:'선명(불투명↑)',v:{cardBgA:.95,srailBgA:.6,headBgA:.96}},
+ minimal:{name:'미니멀(테두리·그림자↓)',v:{cardShA:.03,srailShA:.03,cardBdA:.3,srailBdA:.5}}
+};
+var preset='cur';
+
+function fmt(a,val){ return (a[5]<1)?(+val).toFixed(2):(''+ (+val)); }
+function apply(){
+ var rail=document.getElementById('rail');
+ AX.forEach(function(a){ rail.style.setProperty(a[8], state[a[0]]+(a[7]||'')); });
+}
+function renderAxes(){
+ var host=document.getElementById('axes'); host.innerHTML='';
+ var groups={}; AX.forEach(function(a){ (groups[a[2]]=groups[a[2]]||[]).push(a); });
+ Object.keys(groups).forEach(function(g){
+  var box=document.createElement('div'); box.className='axgrp';
+  box.innerHTML='<div class="gl">'+g+'</div>';
+  groups[g].forEach(function(a){
+   var chg=(+state[a[0]]!==+DEF[a[0]]);
+   var row=document.createElement('div'); row.className='ax';
+   row.innerHTML='<label>'+a[1]+'</label><input type="range" min="'+a[3]+'" max="'+a[4]+'" step="'+a[5]+'" value="'+state[a[0]]+'" data-id="'+a[0]+'"><span class="v'+(chg?' chg':'')+'" id="v_'+a[0]+'">'+fmt(a,state[a[0]])+(a[7]||'')+'</span>';
+   box.appendChild(row);
+  });
+  host.appendChild(box);
+ });
+ host.querySelectorAll('input[type=range]').forEach(function(el){
+  el.addEventListener('input',function(){ var id=el.dataset.id; state[id]=parseFloat(el.value);
+   var a=AX.filter(function(x){return x[0]===id;})[0];
+   var v=document.getElementById('v_'+id); v.textContent=fmt(a,state[id])+(a[7]||''); v.className='v'+((+state[id]!==+DEF[id])?' chg':'');
+   apply(); renderOut(); });
+ });
+}
+function renderPresets(){
+ var host=document.getElementById('presets'); host.innerHTML='';
+ Object.keys(PRESETS).forEach(function(k){ var P=PRESETS[k]; var b=document.createElement('button');
+  b.className='pbtn'+(preset===k?' on':''); b.innerHTML=(P.star?'<span class="star">★</span> ':'')+P.name;
+  b.onclick=function(){ preset=k; state=Object.assign({},DEF,P.v); renderPresets(); renderAxes(); apply(); renderOut(); };
+  host.appendChild(b); });
+}
+// 현행값 → 실제 CSS 표현(배선 참고용)
+function cssVal(a){
+ var v=state[a[0]], id=a[0];
+ if(/BgA$|BdA$/.test(id)&&/head|srail|card/.test(id)&&!/cnt|fc/.test(id)) return 'rgba(255,255,255,'+(+v).toFixed(2)+')';
+ if(id==='headLineA') return 'rgba(0,0,0,'+(+v).toFixed(2)+')';
+ if(id==='cntBgA'||id==='fcBgA') return 'rgba(74,77,231,'+(+v).toFixed(2)+')';
+ if(id==='fcBdA') return 'rgba(74,77,231,'+(+v).toFixed(2)+')';
+ if(id==='srailShA'||id==='cardShA') return '0 8px 32px rgba(74,77,231,'+(+v).toFixed(2)+')…';
+ return v+(a[7]||'');
+}
+var MAP={srailBgA:'.srail background',srailBlur:'.srail blur',srailBdA:'.srail border',srailRad:'.srail border-radius',srailShA:'.srail box-shadow',
+ headBgA:'.srail-head background',headBlur:'.srail-head blur',headLineA:'.srail-head border-bottom',headH:'.srail-head min-height',
+ bodyPadX:'.srail-body padding(좌우)',bodyPadT:'.srail-body padding(상단)',
+ cardBgA:'.srail-card background',cardBdA:'.srail-card border',cardRad:'.srail-card radius',cardShA:'.srail-card shadow',cardPadY:'.srail-card pad-y',cardPadX:'.srail-card pad-x',cardGap:'.srail-card margin-bottom',cardLift:'.srail-card:hover translateY',
+ nameFs:'.srail-name',metaFs:'.srail-meta',occFs:'.srail-occ',ddayFs:'.srail-dday',
+ fcBgA:'.srail-fc bg',fcBdA:'.srail-fc border',fcRad:'.srail-fc radius',fcPadY:'.srail-fc pad-y',fcPadX:'.srail-fc pad-x',
+ barH:'.srail-bar height',cntBgA:'.srail-cnt bg',sumFs:'.srail-sum'};
+function renderOut(){
+ var lines=['{ 프리셋:"'+PRESETS[preset].name+'", 변경축:'];
+ var changed=AX.filter(function(a){return +state[a[0]]!==+DEF[a[0]];});
+ if(!changed.length){ lines.push('  (없음 — 전부 현행)'); }
+ changed.forEach(function(a){ lines.push('  '+MAP[a[0]]+' : '+cssVal(a)+'   (현행 '+cssVal2(a)+')'); });
+ lines.push('}  · 변경 '+changed.length+'/'+AX.length+'축 · 색=흰/강조 알파변주(계승)');
+ document.getElementById('out').textContent=lines.join('\n');
+}
+function cssVal2(a){ var s=Object.assign({},state); var cur=state[a[0]]; state[a[0]]=DEF[a[0]]; var r=cssVal(a); state[a[0]]=cur; return r; }
+function copyOut(){ navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('out').textContent); var b=event.target; var t=b.textContent; b.textContent='✓ 복사됨'; setTimeout(function(){b.textContent=t;},1200); }
+renderPresets(); renderAxes(); apply(); renderOut();
+</script>
+</body></html>
