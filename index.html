@@ -19248,8 +19248,95 @@ function _salesMenuBuild(menu){
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:var(--dim);font-weight:700">사업 실적</div>'
     +(userRole==='admin'?'<button type="button" onclick="_ddCloseAll();openDailyInput()" style="'+itemCss+';background:rgba(74,77,231,0.06)" onmouseenter="this.style.background=\'rgba(74,77,231,0.12)\'" onmouseleave="this.style.background=\'rgba(74,77,231,0.06)\'"><span style="flex:1">일일 실적 입력</span></button>':'')
     +'<button type="button" onclick="_ddCloseAll();openAnalyticsBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">판매 실적 조회</button>'
-    +'<button type="button" onclick="_ddCloseAll();openBusinessBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">연간 실적 분석</button>';   // [260710 운영자] 1 일일 실적 입력(관리자) · 2 판매 실적 조회 · 3 연간 실적 분석
+    +'<button type="button" onclick="_ddCloseAll();openBusinessBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">연간 실적 분석</button>'   // [260710 운영자] 1 일일 실적 입력(관리자) · 2 판매 실적 조회 · 3 연간 실적 분석
+    +(userRole==='admin'?'<button type="button" onclick="_ddCloseAll();openMemberLookup()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">회원 조회</button>':'');   // 회원 DB(운영_회원 시트) read-only 조회 — 개인정보라 관리자 전용
 }
+// === [260710] 회원 조회 — 통합문서 '운영_회원' 시트 read-only (admin 전용) ===
+// 데이터 = 회원DB 주소정제 v2(주소1 시도·주소2 시군구·주소3 동/읍면·주소4 상세·우편번호·휴대폰정규화).
+// 로드 = /api/ops?sheet=회원 1회 → 메모리 캐시(_memState) · 새로고침 버튼만 재요청. 쓰기 없음(원천 = 홈페이지 회원 DB).
+var _memState=null;
+function closeMemberLookup(){var bg=document.getElementById('member-lookup');if(bg)bg.classList.remove('show');}
+async function openMemberLookup(){
+  if(userRole!=='admin'){showToast('회원 조회는 관리자 전용이에요','error');return;}
+  var bg=document.getElementById('member-lookup');
+  if(!bg){
+    var el=document.createElement('div');
+    el.className='modal-bg';el.id='member-lookup';el.style.zIndex='var(--z-modal)';
+    el.onclick=function(ev){if(ev.target===el)closeMemberLookup();};
+    el.innerHTML='<div class="modal" style="position:relative;width:940px;max-width:94vw">'
+      +'<button class="modal-x" onclick="closeMemberLookup()" title="닫기" aria-label="닫기">✕</button>'
+      +'<h3 style="margin:0 0 3px;font-size:16px;font-weight:800">회원 조회</h3>'
+      +'<div id="mem-sub" style="font-size:11.5px;color:var(--dim);margin-bottom:12px">불러오는 중…</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">'
+      +'<input id="mem-q" placeholder="이름 · 휴대폰 · 주소 검색" oninput="_memRender()" style="flex:1;width:auto;min-width:180px;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r-btn);font-size:13px;font-family:inherit;background:var(--surface-solid);color:var(--text)">'
+      +'<select id="mem-f1" onchange="_memFillSel(2);_memRender()" style="width:auto;max-width:190px;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--r-btn);font-size:12.5px;font-family:inherit;background:var(--surface-solid);color:var(--text)"><option value="">시도 전체</option></select>'
+      +'<select id="mem-f2" onchange="_memFillSel(3);_memRender()" style="width:auto;max-width:160px;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--r-btn);font-size:12.5px;font-family:inherit;background:var(--surface-solid);color:var(--text)"><option value="">시군구 전체</option></select>'
+      +'<select id="mem-f3" onchange="_memRender()" style="width:auto;max-width:150px;padding:9px 10px;border:1px solid var(--border2);border-radius:var(--r-btn);font-size:12.5px;font-family:inherit;background:var(--surface-solid);color:var(--text)"><option value="">동·읍면 전체</option></select>'
+      +'<button type="button" onclick="_memLoad(true)" title="시트에서 다시 불러오기" style="padding:9px 13px;border:1.5px solid var(--accent);background:var(--accent-glow);color:var(--accent);border-radius:var(--r-btn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">새로고침</button>'
+      +'</div>'
+      +'<div id="mem-body" style="max-height:56vh;overflow:auto;border:1px solid var(--border);border-radius:var(--r-btn)"></div>'
+      +'</div>';
+    document.body.appendChild(el);
+    bg=el;
+  }
+  bg.classList.add('show');
+  if(!_memState)await _memLoad(false);else _memRender();
+}
+async function _memLoad(force){
+  var sub=document.getElementById('mem-sub'),body=document.getElementById('mem-body');
+  if(sub)sub.textContent='불러오는 중… (첫 로드는 수 초 걸릴 수 있어요)';
+  if(body)body.innerHTML='';
+  try{
+    var d=await api('GET','/api/ops?sheet='+encodeURIComponent('회원')+(force?'&fresh=1':''));
+    if(!d||!d.rows||!d.rows.length){
+      if(sub)sub.innerHTML='<span style="color:var(--danger)">시트가 비어 있거나 없어요 — 통합문서에 「운영_회원」 시트가 있는지 확인해 주세요'+(d&&d.note?' ('+d.note+')':'')+'</span>';
+      _memState={rows:[]};return;
+    }
+    _memState={rows:d.rows,ts:Date.now()};
+    _memFillSel(1);_memFillSel(2);_memFillSel(3);
+    _memRender();
+  }catch(e){
+    if(sub)sub.innerHTML='<span style="color:var(--danger)">로드 실패: '+String(e.message||e).slice(0,120)+'</span>';
+    _memState=null;
+  }
+}
+// 지역 셀렉트 채우기 — lv1 시도 / lv2 시군구(시도 종속) / lv3 동·읍면(시군구 종속)
+function _memFillSel(lv){
+  if(!_memState||!_memState.rows.length)return;
+  var f1=document.getElementById('mem-f1'),f2=document.getElementById('mem-f2'),f3=document.getElementById('mem-f3');
+  if(!f1)return;
+  var rows=_memState.rows,uniq=function(key,fil){var s={};rows.forEach(function(r){if(fil&&!fil(r))return;var v=String(r[key]||'').trim();if(v)s[v]=(s[v]||0)+1;});return Object.keys(s).sort(function(a,b){return s[b]-s[a];});};
+  if(lv===1){var v1=f1.value;f1.innerHTML='<option value="">시도 전체</option>'+uniq('주소1').map(function(v){return '<option'+(v===v1?' selected':'')+'>'+v+'</option>';}).join('');}
+  if(lv<=2){var p1=f1.value,v2=f2.value;f2.innerHTML='<option value="">시군구 전체</option>'+uniq('주소2',function(r){return !p1||r['주소1']===p1;}).map(function(v){return '<option'+(v===v2?' selected':'')+'>'+v+'</option>';}).join('');}
+  var p1b=f1.value,p2=f2.value,v3=f3.value;
+  f3.innerHTML='<option value="">동·읍면 전체</option>'+uniq('주소3',function(r){return (!p1b||r['주소1']===p1b)&&(!p2||r['주소2']===p2);}).map(function(v){return '<option'+(v===v3?' selected':'')+'>'+v+'</option>';}).join('');
+}
+function _memEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _memRender(){
+  var body=document.getElementById('mem-body'),sub=document.getElementById('mem-sub');
+  if(!body||!_memState)return;
+  var q=(document.getElementById('mem-q').value||'').trim().toLowerCase();
+  var qd=q.replace(/\D/g,'');   // 전화 검색 = 숫자만 비교(하이픈 무시)
+  var f1=document.getElementById('mem-f1').value,f2=document.getElementById('mem-f2').value,f3=document.getElementById('mem-f3').value;
+  var rows=_memState.rows.filter(function(r){
+    if(f1&&String(r['주소1']||'')!==f1)return false;
+    if(f2&&String(r['주소2']||'')!==f2)return false;
+    if(f3&&String(r['주소3']||'')!==f3)return false;
+    if(!q)return true;
+    var name=String(r['이름']||'').toLowerCase(),addr=(String(r['주소1']||'')+' '+String(r['주소2']||'')+' '+String(r['주소3']||'')+' '+String(r['주소4']||'')).toLowerCase();
+    var ph=String(r['휴대폰정규화']||r['휴대폰번호']||'').replace(/\D/g,'');
+    return name.indexOf(q)>=0||addr.indexOf(q)>=0||(qd.length>=3&&ph.indexOf(qd)>=0);
+  });
+  var LIM=200,shown=rows.slice(0,LIM);
+  if(sub)sub.textContent='총 '+_memState.rows.length.toLocaleString()+'명 · 필터 결과 '+rows.length.toLocaleString()+'명'+(rows.length>LIM?' (상위 '+LIM+'명 표시)':'');
+  var th='padding:7px 10px;font-size:11.5px;color:var(--neutral-text);background:var(--neutral);text-align:left;position:sticky;top:0;white-space:nowrap';
+  var td='padding:6px 10px;font-size:12px;border-top:1px solid var(--border);white-space:nowrap';
+  body.innerHTML='<table style="border-collapse:collapse;width:100%;min-width:840px">'
+    +'<tr><th style="'+th+'">이름</th><th style="'+th+'">휴대폰</th><th style="'+th+'">시도</th><th style="'+th+'">시군구</th><th style="'+th+'">동·읍면</th><th style="'+th+'">상세</th><th style="'+th+'">우편번호</th></tr>'
+    +shown.map(function(r){return '<tr><td style="'+td+';font-weight:700">'+_memEsc(r['이름'])+'</td><td style="'+td+';font-variant-numeric:tabular-nums">'+_memEsc(r['휴대폰정규화']||r['휴대폰번호'])+'</td><td style="'+td+'">'+_memEsc(r['주소1'])+'</td><td style="'+td+'">'+_memEsc(r['주소2'])+'</td><td style="'+td+'">'+_memEsc(r['주소3'])+'</td><td style="'+td+';max-width:250px;overflow:hidden;text-overflow:ellipsis">'+_memEsc(r['주소4'])+'</td><td style="'+td+';font-variant-numeric:tabular-nums">'+_memEsc(r['우편번호'])+'</td></tr>';}).join('')
+    +'</table>'+(shown.length?'':'<div style="padding:22px;text-align:center;font-size:12.5px;color:var(--dim)">결과가 없어요</div>');
+}
+
 // 루트 enneagram_all.html은 playground/enneagram/ 이사(플레이그라운드 정리분)로 소멸 — 이사 후 경로로 교정
 function openEnneagram(){window.open('playground/enneagram/','_blank','noopener');}
 function openTicketSeller(){window.open('playground/ticket-seller/','_blank','noopener');}
