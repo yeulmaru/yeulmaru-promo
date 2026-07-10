@@ -2097,7 +2097,6 @@ const MENUS=[
   {label:'콘텐츠 제작',id:'content'},
   {label:'플랫폼 현황',id:'platform'},
   {label:'사업현황',id:'sales'},
-  {label:'예매 관리',id:'booking'},
   {label:'연간 일정',id:'annual'},
   {label:'PLAY ZONE',id:'playzone'},
 ];
@@ -3947,11 +3946,10 @@ function buildNav(){
       if(m.id==='platform'){openPlatformBoard();return;}
       if(m.id==='sales'){_ddOpen(b,_salesMenuBuild,210,'sales');return;}
       if(m.id==='playzone'){_ddOpen(b,_playzoneMenuBuild,210,'playzone');return;}
-      if(m.id==='booking'){_ddOpen(b,_bookingMenuBuild,210,'booking');return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
-    // 세부메뉴 보유 메뉴(콘텐츠 제작·일정 관리·판매 현황·예매 관리·PLAY ZONE) = 호버 즉시 드롭다운(운영자 260709 "바로" — 스침 오발 방지 가드 120ms만). 다른 팝업이 열려 있으면 안 뺏음.
-    var _sub=(m.id==='content')?_contentMenuBuild:(m.id==='schedule')?_scheduleMenuBuild:(m.id==='playzone')?_playzoneMenuBuild:(m.id==='sales')?_salesMenuBuild:(m.id==='booking')?_bookingMenuBuild:null;
+    // 세부메뉴 보유 메뉴(콘텐츠 제작·일정 관리·판매 현황·PLAY ZONE) = 호버 즉시 드롭다운(운영자 260709 "바로" — 스침 오발 방지 가드 120ms만). 다른 팝업이 열려 있으면 안 뺏음.
+    var _sub=(m.id==='content')?_contentMenuBuild:(m.id==='schedule')?_scheduleMenuBuild:(m.id==='playzone')?_playzoneMenuBuild:(m.id==='sales')?_salesMenuBuild:null;
     b.onmouseenter=()=>{ movePill(b,pill); clearTimeout(window._ddHovT2);   // 메뉴로 넘어오면 닫기 예약 취소
       if(_sub){ clearTimeout(b._hovT); b._hovT=setTimeout(function(){
         var _dd=document.getElementById('dd-pop');
@@ -17522,8 +17520,8 @@ function _bnavMore(){
   if(!isAdmin)add('📈','판매 현황','openAnalyticsBoard()');
   if(isAdmin)add('✏️','직접 등록','openAdminWizard()');
   if(isAdmin)add('⚙️','관리','openAdminPanel()');
-  add('🗺️','예매 프로세스','openBookingProcess()');
   add('💬','도우미 챗봇','_cbToggle()');
+  add('🎨','도화지','openBookingProcess()');
   add('🧭','에니어그램','openEnneagram()');
   add('🎫','티켓 셀러','openTicketSeller()');
   h+='</div>';
@@ -17581,7 +17579,7 @@ function _contentMenuBuild(menu){
     +'<div style="padding:7px 14px 4px;font-size:10.5px;color:#c4c4c4;line-height:1.5">인스타그램 등 다른 채널은 차차 추가할 예정이에요.</div>';
 }
 // ============================================================
-// 예매 관리 ▸ 예매 프로세스 — 다이어그램 에디터 v2 (피그마식 편집 + 파일 시스템 + 라인별 문의 수집)
+// PLAY ZONE ▸ 도화지 — 다이어그램 에디터 v2 (피그마식 편집 + 파일 시스템 + 라인별 문의 수집)
 //  진입 = 홈(파일 목록: 새 도화지·기본 순서도·JSON 가져오기·저장된 도표) — 모든 문서는 항상 자동 저장(임시저장 = 자동저장).
 //  기존 운영 순서도(v2)는 시드 템플릿(_bpSeed) — 캔버스는 보기(팬·줌·문의 배지)/편집(도형·프로세스·화살표) 모드.
 //  화살표 = 노드 앵커 연결 기반 자동 라우팅(orth/직선/곡선) — 노드를 옮기면 자동 추적.
@@ -17589,11 +17587,6 @@ function _contentMenuBuild(menu){
 //  외부 유입 문서(스토어·가져오기)는 전부 _bpSanitizeDoc 관문 통과 — XSS(속성 탈출)·렌더 크래시 원천 차단(분신술 5인 감사 반영).
 //  색·형태 = 전부 :root 토큰 계승(팔레트 폐쇄형) — 신규 raw hex 0. 오버레이(핸들·앵커)는 스크린 좌표라 줌 무관 크기.
 // ============================================================
-function _bookingMenuBuild(menu){
-  var itemCss='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;text-align:left;font-size:13px;font-weight:600;color:var(--text);border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s';
-  menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:var(--dim);font-weight:700">예매 관리</div>'
-    +'<button type="button" onclick="_ddCloseAll();openBookingProcess()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">예매 프로세스</button>';
-}
 var _BP_STORE_KEY='yw_bp_store_v1';
 var _bpS=null;   // 에디터 상태 — 보드 열릴 때 생성, 닫으면 파기
 // 채움 팔레트(폐쇄형) — 전부 기존 :root 토큰·기존 alpha 변주만. 칩 밖 색 반입 금지(§🚨).
@@ -18899,7 +18892,7 @@ function openBookingProcess(){
   _bpMigrate();
   _bpS={file:null,doc:_bpEmptyDoc(),home:true,sel:[],view:{x:0,y:0,z:1},tool:'select',edit:false,undo:[],redo:[],drag:null,hover:null,guides:null,clip:null,editingText:null,space:false,_raf:null,saveT:null,ro:false,srvList:null,srvT:null,srvBusy:false,srvFail:false};
   var el=document.createElement('div');el.id='bp-board';el.className='bp-bg';
-  el.innerHTML='<div class="bp-hd"><b>예매 프로세스</b>'
+  el.innerHTML='<div class="bp-hd"><b>도화지</b>'
     +'<span id="bp-file-wrap" style="display:none;align-items:center;gap:6px;min-width:0">'
       +'<button type="button" class="bp-tbtn" onclick="_bpGoHome()">목록</button>'
       +'<input type="text" class="bp-fname" id="bp-fname" maxlength="80" aria-label="도표 이름" onchange="_bpRename(this.value)">'
@@ -19020,11 +19013,12 @@ function _bpInqDel(id,i){
   _bpDirty();_bpRenderNodes();_bpPopRender(id);
 }
 
-// PLAY ZONE 드롭다운 — 플레이그라운드 콘텐츠(에니어그램·티켓 셀러, playground/ 자체완결 페이지)를 새 탭으로 연다
+// PLAY ZONE 드롭다운 — 도화지(다이어그램 에디터, 인앱) + 플레이그라운드 콘텐츠(에니어그램·티켓 셀러, playground/ 자체완결 페이지 새 탭)
 // (색은 기존 드롭다운의 raw 회색 대신 토큰 --text/--dim 계승 — 게이트 총량 유지)
 function _playzoneMenuBuild(menu){
   var itemCss='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;text-align:left;font-size:13px;font-weight:600;color:var(--text);border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s';
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:var(--dim);font-weight:700">PLAY ZONE</div>'
+    +'<button type="button" onclick="_ddCloseAll();openBookingProcess()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">도화지</button>'
     +'<button type="button" onclick="_ddCloseAll();openEnneagram()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">에니어그램</button>'
     +'<button type="button" onclick="_ddCloseAll();openTicketSeller()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">티켓 셀러</button>';
 }
