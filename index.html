@@ -4581,7 +4581,7 @@ function _srailDdayColor(d){ return (d!==null&&d!==undefined&&(d<0||d<=14))?_sal
 function _srailCard(p){
   var _d=_srailDelta(p.deltaPP), dCls=_d.c, dStr=_d.s;
   var tgt=p.목표||50, gap=p.occ-tgt;
-  var meta=(p.genre||'기타')+' · '+_anaProfitAxis(p['수익성'])+(p.dateStr?' · '+p.dateStr:'')+(p._saleN?' · 판매 '+p._saleN+'일차':'');   // [260710 운영자] 판매 N일차(당일=1일차) — 티켓오픈→판매시작일 소스, 모든 프로그램 공통
+  var meta=(p.genre||'기타')+' · '+_anaProfitAxis(p['수익성'])+(p.dateStr?' · '+p.dateStr:'')+((!p.noData&&p._saleN)?' · 판매 '+p._saleN+'일차':'');   // [260710 운영자] 판매 N일차(당일=1일차) — 티켓오픈→판매시작일 소스. noData 카드는 「집계 전입니다.」 옆 1곳만(분신술 N일차 감사 MED — 이중 표기 방지)
   var dd=_salesDdayStr(p.dday);
   // title=순수 HTML 속성 → escapeHtml / onclick=JS 문자열 → _anaEsc (컨텍스트별 이스케이프 분리, 분신술 5호 MED)
   var fc='';
@@ -4607,7 +4607,7 @@ function _srailNumTxt(v){ return (v===null||v===undefined||isNaN(v))?'—':Math.
 // 전시 카드 — 분석 보드 전시 목록(달성률·어제대비·누적유료) 계승. ⚠️ 달성률 = 누계유료/목표관객(좌석 점유 아님, 100%↑=초과달성)
 function _srailCardEx(e){
   var _d=_srailDelta(e.deltaPP), dCls=_d.c, dStr=_d.s;
-  var meta='전시'+(e.profit?' · '+e.profit:'')+((e.시작일||e.종료일)?(' · '+_srailMD(e.시작일)+'~'+_srailMD(e.종료일)):'')+(e._saleN?' · 판매 '+e._saleN+'일차':'');   // [260710 운영자] 판매 N일차 = 전 프로그램 공통
+  var meta='전시'+(e.profit?' · '+e.profit:'')+((e.시작일||e.종료일)?(' · '+_srailMD(e.시작일)+'~'+_srailMD(e.종료일)):'')+((!e.noData&&e._saleN)?' · 판매 '+e._saleN+'일차':'');   // [260710 운영자] 판매 N일차 = 전 프로그램 공통. noData는 「집계 전입니다.」 옆 1곳만(분신술 N일차 감사 MED — 이중 표기 방지)
   // [260710 운영자] 전시 「집계 전」 카드 — 공연 noData 카드와 동형(시작 D-day·집계 전입니다.·판매 N일차). 드릴 미연결(전시일일 0건 = 열 내용 없음)
   if(e.noData){
     var ddPre=(e._dday===null||e._dday===undefined)?'':_salesDdayStr(e._dday);
