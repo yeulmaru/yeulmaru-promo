@@ -1815,8 +1815,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .srail-leg-i .d{flex:none;width:9px;height:9px;border-radius:50%;display:inline-block}
 .srail-leg-i .n{color:var(--green);font-weight:800;font-size:11.5px}
 .srail-bar{position:relative;height:5px;border-radius:999px;background:var(--past-bg);margin-top:8px}   /* [260710 운영자 선택값] 3→5 */
-.srail-bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--green)}
-.srail-bar>b{position:absolute;top:-3.5px;width:2px;height:12px;border-radius:1px;background:var(--danger)}   /* 바 5px 중심(2.5) 정렬: (12-5)/2=3.5 */
+.srail-bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--green)}   /* [260710 운영자] 목표 눈금(.srail-bar>b) 삭제 — 렌더부(_srailCard)와 세트 */
 .srail-r3{display:flex;justify-content:space-between;gap:8px;margin-top:7px;font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums}
 .srail-r3 .tgt.ok{color:var(--green)}
 .srail-r3 .tgt.bad{color:var(--danger)}
@@ -4719,7 +4718,7 @@ function _srailCard(p){
     +(p.noData?'<div class="srail-ro">집계 전입니다.'+(p._saleN?' · 판매 '+p._saleN+'일차':'')+'</div>':'')
     +(p.noData?'':'<div class="srail-spark" style="margin-top:10px">'+_srailTrend(p)+'</div>')
     +fc
-    +'<div class="srail-bar"><i style="width:'+Math.min(p.occ,100).toFixed(1)+'%"></i><b style="left:'+Math.min(tgt,100)+'%"></b></div>'
+    +'<div class="srail-bar"><i style="width:'+Math.min(p.occ,100).toFixed(1)+'%"></i></div>'   // [260710 운영자] 바 중앙 목표 눈금(<b>) 삭제 — 목표치 표기는 우측 .tgt 텍스트만
     +'<div class="srail-r3"><span>'+p.seats.toLocaleString()+' / '+p.totalOpen.toLocaleString()+'석</span>'+(p.noData?'<span class="tgt">목표 '+tgt+'%</span>':'<span class="tgt '+(gap>=0?'ok':'bad')+'">목표 '+tgt+'% '+(gap>=0?'+':'')+gap.toFixed(1)+'%p</span>')+'</div>'
     +'</div>';
 }
