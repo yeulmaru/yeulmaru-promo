@@ -8580,6 +8580,12 @@ async function _msgPurgeGhosts(){
     if(!_msgApiAvailable) return;  // Worker 다운/봉인 확정 시 스킵(재조회·삭제 모두 아낌 — 미배포 버스트 억제, 감사3)
     const myAppl = _msgMyAppl();
     if(!myAppl) return;
+    // 저비용 프리체크(감사3 부하 최적화) — 삭제 후보(내 수신·refNo 있음·reason 없음·비QA)가 하나도 없으면
+    //   fresh 재조회(무캐시 전량 GET) 자체를 스킵. 정상상태(유령 0)에서 매 open Graph read 낭비 방지.
+    const cands = _msgGet().filter(function(m){
+      return m && m.id && m.recipient===myAppl && (m.refNo||'').toString().trim() && !(m.reason||'').toString().trim() && !_isQaMessage(m);
+    });
+    if(!cands.length) return;
     let fresh=null;
     try{
       const d = await api('GET','/api/records');
@@ -8588,8 +8594,8 @@ async function _msgPurgeGhosts(){
     if(!Array.isArray(fresh) || fresh.length===0) return;  // 빈 결과 = 판정 불가 = 스킵
     const pw = (typeof password!=='undefined'?password:'')||'';
     let pin=''; try{ pin=sessionStorage.getItem('subAdminPin')||''; }catch(e){}
-    _msgGet().forEach(function(m){
-      if(!m || !m.id || m.recipient!==myAppl || _msgHasTarget(m, fresh)) return;
+    cands.forEach(function(m){
+      if(_msgHasTarget(m, fresh)) return;  // fresh에 대상 있으면 유령 아님(살아있음/초안) — 최종 판정
       const h={'X-App-Password':pw}; if(pin)h['X-Sub-Admin-PIN']=pin;
       try{ fetch(_MSG_API_BASE+'/api/messages/'+encodeURIComponent(m.id),{method:'DELETE',headers:h}).catch(function(){}); }catch(e){}
     });
