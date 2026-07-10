@@ -1825,7 +1825,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .srail-occrow{display:flex;align-items:baseline;gap:8px;margin:8px 0 0}   /* [260710 운영자] 메타↔수치줄 1.3배(6→8) — 22.0% 라인박스로 붙어 보임 해소 */
 .srail-seatsub{font-size:11.5px;color:var(--dim);font-weight:600}   /* [260710 운영자] 카드 숫자 폰트 통일 — 기준 = 어제대비(.srail-delta) 11.5px */
 .srail-occcap{font-size:11.5px;color:var(--dim);font-weight:700}   /* [260710 운영자] 〃 (점유율/달성률 캡션) */
-.srail-fc{font-size:11.5px;color:var(--accent);font-weight:700;margin-top:7px;background:rgba(74,77,231,.03);border:1px solid rgba(74,77,231,.04);border-radius:9px;padding:10px 11px;line-height:1.5}   /* [260710 운영자 선택값] bg .04→.03 · bd .10→.04 · pad 5/9→10/11 */
+.srail-fc{font-size:11.5px;color:var(--text);font-weight:700;margin-top:7px;background:rgba(74,77,231,.03);border:1px solid rgba(74,77,231,.04);border-radius:9px;padding:10px 11px;line-height:1.5}   /* [260710 운영자 선택값] bg .04→.03 · bd .10→.04 · pad 5/9→10/11 · [260711] 기본 글자=--text(검정), 강조만 --accent(.srail-fc b) */
 .srail-fc b{color:var(--accent)}
 .srail-ft{padding:8px 16px 12px;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-shrink:0}
 .srail-note{font-size:10px;color:var(--muted);line-height:1.4;flex:1}
@@ -4714,8 +4714,11 @@ function _srailCard(p){
     var _o=_fd.map(function(d){return d.occ;});
     // [260710 운영자] 예상 기울기 = 전 기간 일평균 fcRate(첫 실측 기준선 제외) %p/일 — 「3일 뒤」가 달력 3일 의미로 정확해짐(구 최근점 스텝당 폴백 유지)
     var _g=(p.fcRate!=null&&(p.totalOpen||926)>0)?(p.fcRate/(p.totalOpen||926)*100):((_o.length>=3)?((_o[_o.length-1]-_o[_o.length-3])/2):(_o[_o.length-1]-_o[_o.length-2]));
-    var _p3=Math.max(0,Math.min(100,_o[_o.length-1]+_g*3)), _s3=Math.round((p.totalOpen||926)*_p3/100), _cum=_s3-p.seats;
-    fc='<div class="srail-fc">📈 예상 (이 추세면) 3일 뒤 <b>'+_s3.toLocaleString()+'석</b> · 누적 '+(_cum>=0?'+':'')+_cum+'</div>';
+    // [260711 운영자] 7일·2주 두 지점 예상. 기본 글자=검정(--text), 강조(기간·석수·증분·라벨)만 --accent(.srail-fc b). 앞 픽토=AI 반짝임(currentColor→강조색 상속).
+    var _last=_o[_o.length-1], _fcAt=function(_dy){var _pf=Math.max(0,Math.min(100,_last+_g*_dy)),_s=Math.round((p.totalOpen||926)*_pf/100);return {s:_s,cum:_s-p.seats};};
+    var _f7=_fcAt(7), _f14=_fcAt(14);
+    var _aiIco='<svg width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px;margin-right:3px"><path d="M12 3l1.7 5.4L19 10l-5.3 1.6L12 17l-1.7-5.4L5 10l5.3-1.6z"/><path d="M18.5 14.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg>';
+    fc='<div class="srail-fc"><b>'+_aiIco+'[AI 예상]</b> 이 추세면, <b>7일</b> 뒤 예상 누적 <b>'+_f7.s.toLocaleString()+'</b>석 ( <b>'+(_f7.cum>=0?'+':'')+_f7.cum+'</b> ), <b>2주</b> 뒤 예상 누적 <b>'+_f14.s.toLocaleString()+'</b>석 ( <b>'+(_f14.cum>=0?'+':'')+_f14.cum+'</b> )</div>';
   }
   return '<div class="srail-card'+(p.noData?' ro':'')+'" role="button" tabindex="0" onclick="_srailDrill(\'perf\',\''+_anaEsc(p.name)+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}" title="'+escapeHtml(p.name)+' — 개별 분석 (레일 안에서 열려요)">'
     +'<div class="srail-r1"><div class="srail-name">'+escapeHtml(p.name)+'</div>'+(dd?'<span class="srail-dday" style="color:'+_srailDdayColor(p.dday)+'">'+dd+'</span>':'')+'</div>'
