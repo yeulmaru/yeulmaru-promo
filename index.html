@@ -4194,7 +4194,9 @@ function _salesBuild(){
     var ops=null;
     if(!m){ ops=(rid?_opsLookupById(rid):null)||_opsLookup(name,salesYear); }
     var base=m?m.기본석:(ops&&ops.base?ops.base:_SALES_FALLBACK_SEAT);
-    var genre=ops?ops.genre:'';
+    // [수정] 장르 = 마스터 공연도 운영대장에서 조인 — 공연마스터엔 장르 컬럼이 없어, 옛 코드(마스터면 ops=null → genre='')는 마스터 등록 공연을 판매현황에서 무조건 '기타'로 표시했음(opsForDates와 동일 조회 계승).
+    var _gOps=ops||(rid?_opsLookupById(rid):null)||_opsLookup(name,salesYear);
+    var genre=_gOps?_gOps.genre:'';
     var totalOpen=(m&&m.총오픈석)?m.총오픈석:(ops?base*(ops.count||1):base*((m&&m.총회차)||1));
     var occ=totalOpen>0?Math.min(seats/totalOpen*100,100):0;
     var startDate=m?m.시작:(ops&&ops.first?ops.first:null);
