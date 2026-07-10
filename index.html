@@ -4467,7 +4467,7 @@ function _srailExhibsPre(pgIdx,exActives){
   try{
     if(_anaState&&_anaState._exMaster){
       _anaExhibBuild().forEach(function(e){
-        if(e.profit==='무료'||e.status==='ended')return;
+        if(e.profit==='무료'||e.status==='ended'){ seen[_uName(e.name)]=1; return; }   // 노출 제외라도 dedup 명단엔 등재 — 프로그램 시트(t='e') 경로로 무료·종료 전시가 되살아나는 누수 차단(분신술 품질 감사 LOW)
         if(e.daily&&e.daily.length)return;
         push(e.name,e.id,e.profit,_salesDate(e.시작일),_salesDate(e.종료일),_salesNum(e.목표관객),_srailPgOf(pgIdx,null,e.name));
       });
