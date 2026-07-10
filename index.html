@@ -1608,7 +1608,7 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 .enn-frame{flex:1;width:100%;border:0;display:block;background:var(--surface-solid)}
 .enn-btns{position:absolute;top:9px;right:12px;display:inline-flex;gap:8px;z-index:30}
 .modal-bg.enn.full{background:var(--surface-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
-.modal-bg.enn.full .enn-modal{width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;box-shadow:none}
+.modal-bg.enn.full .enn-modal{width:100vw;height:100vh;max-width:none;max-height:none;border:0;border-radius:0;box-shadow:none}
 .bp-hd{display:flex;align-items:center;gap:10px;padding:9px clamp(14px,3vw,26px);border-bottom:1px solid var(--border);flex:none;flex-wrap:wrap}
 .bp-hd b{font-size:15px;letter-spacing:-.01em;color:var(--accent)}
 .bp-hd .sp{flex:1}
@@ -19183,7 +19183,7 @@ function closeBookingProcess(){
   if(_bpS&&_bpS.saveT){clearTimeout(_bpS.saveT);_bpAutoSave();}
   if(_bpS&&_bpS.srvT){clearTimeout(_bpS.srvT);_bpS.srvT=null;try{_bpSrvSave().catch(function(){});}catch(e){}}
   var el=document.getElementById('bp-board');if(el)el.remove();
-  document.body.style.overflow='';
+  if(!document.getElementById('enn-bg'))document.body.style.overflow='';   // 에니어그램 등 다른 모달이 열려 있으면 스크롤락 유지(분신술 D 하드닝)
   if(window._bpKey1){document.removeEventListener('keydown',window._bpKey1);window._bpKey1=null;}
   if(window._bpKey2){document.removeEventListener('keyup',window._bpKey2);window._bpKey2=null;}
   if(window._bpUp1){window.removeEventListener('pointerup',window._bpUp1);window._bpUp1=null;}
@@ -19289,7 +19289,7 @@ function openEnneagram(){
       +'<button type="button" class="bp-x enn-full" onclick="_ennToggleFull()" title="전체화면" aria-label="전체화면">'+_BP_ICO.expand+'</button>'
       +'<button type="button" class="bp-x" onclick="closeEnneagram()" title="닫기" aria-label="닫기">×</button>'
     +'</div>'
-    +'<iframe class="enn-frame" src="playground/enneagram/" title="에니어그램 툴킷"></iframe>'
+    +'<iframe class="enn-frame" src="playground/enneagram/enneagram_all.html" title="에니어그램 툴킷" onload="_ennBindEsc(this)"></iframe>'
     +'</div>';
   document.body.appendChild(bg);
   document.body.style.overflow='hidden';
@@ -19304,9 +19304,11 @@ function _ennToggleFull(){
 }
 function closeEnneagram(){
   var bg=document.getElementById('enn-bg');if(bg)bg.remove();
-  document.body.style.overflow='';
+  if(!document.getElementById('bp-board'))document.body.style.overflow='';   // 도화지 등 다른 모달이 열려 있으면 스크롤락 유지(분신술 D 하드닝)
   if(window._ennEsc){document.removeEventListener('keydown',window._ennEsc,true);window._ennEsc=null;}
 }
+// iframe 안에 포커스가 있을 때의 Esc — 자식 keydown은 부모 document로 안 넘어와 못 닫히던 걸(분신술 접근성/누수 LOW), 동일 출처라 iframe 문서에도 같은 핸들러 바인딩. iframe 제거 시 함께 GC.
+function _ennBindEsc(fr){ try{ if(window._ennEsc&&fr&&fr.contentDocument) fr.contentDocument.addEventListener('keydown',window._ennEsc,true); }catch(e){} }
 function openTicketSeller(){window.open('playground/ticket-seller/','_blank','noopener');}
 
 // === [260707] 티켓 등록 신청 — 운영계획(안) PPT → 티켓링크 판매대행의뢰서 xlsx 자동 생성 ===
