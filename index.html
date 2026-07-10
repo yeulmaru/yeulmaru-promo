@@ -4571,7 +4571,8 @@ function _srailTrend(p){
   // [260710 운영자] 차트 글자 크기 = 어제대비(11.5px)로 전부 통일(점 위 좌석·증감·날짜·Today·종료 예상 — "증감이 중요")
   var R=3.6;
   // 📌 Today = 빨강 강조(운영자 260710) + 라벨을 상단 고정 대신 점 바로 위(값·변동 스택 위)로 하강 · 상단 클램프(padT-14)로 고점유 시 관통 방지
-  s+='<text x="'+pts[todayIdx][0].toFixed(1)+'" y="'+Math.max(pts[todayIdx][1]-R-6-19-16,padT-14).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--danger)">📌 Today</text>';
+  // [260710 운영자 후속 "Today 좀 더 위로"] 증감 스택과의 간격 16→26(+10 상향 — 증감 숫자와 붙어 보임 해소). 미세조정 축 = docs/reports/260710_판매현황_커스텀_플레이그라운드.html
+  s+='<text x="'+pts[todayIdx][0].toFixed(1)+'" y="'+Math.max(pts[todayIdx][1]-R-6-19-26,padT-14).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--danger)">📌 Today</text>';
   pts.forEach(function(q,i){
     var future=i>todayIdx,today=(i===todayIdx),recent=(i>=todayIdx-2);
     var seat=seatOf(q[2]),prevSeat=(i>0)?seatOf(vals[i-1]):null,dseat=(prevSeat!=null)?(seat-prevSeat):null;
