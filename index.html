@@ -5032,6 +5032,11 @@ async function _srailEditSave(){
   var ok=await showConfirm('시트(운영_일일입력)에 바로 반영돼요.<br><b>'+escapeHtml(_srailEdit.name)+'</b> '+_srailEdit.rows.length+'행으로 저장할까요?',{title:'실적 저장',html:true,okText:'저장',cancelText:'취소'});
   if(!ok)return;
   _srailEdit.busy=true;
+  // [260710 운영자] 저장 = 시트 전체 재작성(행 단위 쓰기 API 부재 → 전 공연·전 날짜 재조회+재작성)이라 수 초 소요 →
+  //   처리중 표시로 "멈춘 느낌"·오클릭 제거: 저장 버튼 = dots '저장 중', 모달 내 버튼·입력 전부 잠금(오류 시 복원)
+  var _em=document.getElementById('srail-edit-modal'), _sv=_em&&_em.querySelector('.m-btn.save');
+  var _lock=_em?[].slice.call(_em.querySelectorAll('button,input')):[];
+  _lock.forEach(function(el){el.disabled=true;}); _btnBusy(_sv,true,'저장 중');
   try{
     // 저장 직전 실시간 재조회(fresh=1 = isolate 캐시 우회) — 그 사이 다른 관리자 입력 보존(이 공연 행만 교체)
     var fresh=await api('GET','/api/ops?sheet='+encodeURIComponent('일일입력')+'&fresh=1');
@@ -5065,7 +5070,7 @@ async function _srailEditSave(){
     _salesState.daily={sheet:'일일입력',headers:headers,rows:rows,count:rows.length};
     _srailEditClose(); showToast('실적이 시트에 반영됐어요');
     _srailRender();
-  }catch(e){ console.error('[srailEdit]',e); showToast('저장 실패: '+(e.message||e),'error'); }
+  }catch(e){ console.error('[srailEdit]',e); showToast('저장 실패: '+(e.message||e),'error'); _lock.forEach(function(el){el.disabled=false;}); _btnBusy(_sv,false,'저장'); }
   finally{ _srailEdit.busy=false; }
 }
 
