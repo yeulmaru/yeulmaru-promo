@@ -554,7 +554,7 @@ button{font-family:inherit;cursor:pointer}
 /* 헤더 밴드 전경색 제거(운영자 260705) — 옛 불투명 --bg 판때기가 메시 위를 덮던 것 → 투명(메시가 그대로 이어짐) */
 .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:0;flex-wrap:wrap;gap:12px;position:sticky;top:56px;z-index:6;background:transparent;padding:16px 0 12px 0}
 /* ═══ 배너 펫(산책 마스코트) — .hdr 하단 라인(요일 헤더 바로 위)을 좌우로 산책. 공 차는 모션은 webp에 내장, CSS는 좌우 이동만 ═══ */
-.pet{position:absolute;left:clamp(120px,14%,200px);bottom:2px;height:40px;width:auto;pointer-events:none;user-select:none;z-index:6;will-change:transform,opacity;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35));opacity:0}
+.pet{position:relative;display:block;margin-top:-42px;margin-left:clamp(120px,14%,200px);height:40px;width:auto;pointer-events:none;user-select:none;z-index:6;will-change:transform,opacity;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35));opacity:0}
 .pet.in{opacity:1;animation:petEnter .75s cubic-bezier(.2,1.25,.4,1) both,petStroll 9s ease-in-out .75s infinite}
 @keyframes petStroll{
   0%{transform:translateX(0) scaleX(1)}
@@ -1933,10 +1933,10 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
           <button class="arrow" onclick="changeMonth(1)">›</button>
         </div>
         <div class="chips" id="chips"></div>
-        <img class="pet" src="image/pet.webp" alt="" aria-hidden="true" draggable="false">
       </div>
       <div class="cal-head-wrap" id="cal-head-wrap"></div>
         <div class="cal" id="cal"></div>
+        <img class="pet" src="image/pet.webp" alt="" aria-hidden="true" draggable="false"><!-- 캘린더 맨 아래 셀 아랫변 기준(운영자 260710 "너무 위에서 심란") — #cal 형제라 renderCal innerHTML에 안 지워짐 -->
     </div>
     <!-- 판매 레일 — 판매현황·분석 보드와 _salesState 캐시 공유. data-panel = 레일 클릭이 사이드패널 closePanel을 타지 않게.
          운영자 260710 확정: 제목 = 박스 밖 유리 스트립(월헤더 라인 중앙) · 기준일(srail-asof)/[분석]/[새로고침] 푸터 = 숨김(마크업 제거·JS는 els 가드 dormant).
@@ -2115,9 +2115,7 @@ const MENUS=[
   {label:'캘린더',id:'cal'},
   {label:'상품 등록 및 홍보 신청',id:'schedule'},   // [260710 운영자] 구 '일정 관리' — 캘린더 다음 핵심 메뉴
   {label:'콘텐츠 제작',id:'content'},
-  {label:'플랫폼 현황',id:'platform'},
-  {label:'사업현황',id:'sales'},
-  {label:'연간 일정',id:'annual'},
+  {label:'사업 실적',id:'sales'},   // [260710 운영자] 구 '사업현황' — 플랫폼 현황·연간 일정 대메뉴는 서브로 흡수
   {label:'PLAY ZONE',id:'playzone'},
 ];
 
@@ -3989,7 +3987,7 @@ function buildNav(){
   try{_bnavBuild();}catch(_e){}  // 모바일 하단 네비 (role별 재구성)
 }
 // 언더바 = 글자폭 근사(버튼폭 58%) 중앙 배치 — 운영자 확정 조합(살몬 언더바)
-function movePill(btn,pill){const r=btn.getBoundingClientRect(),p=btn.parentElement.getBoundingClientRect();const w=r.width*.58;pill.style.left=(r.left-p.left+(r.width-w)/2)+'px';pill.style.width=w+'px';}
+function movePill(btn,pill){const r=btn.getBoundingClientRect(),p=btn.parentElement.getBoundingClientRect();const w=28;pill.style.left=(r.left-p.left+(r.width-w)/2)+'px';pill.style.width=w+'px';}   // [260710 운영자] 호버 pill = 글자수 무관 고정 28px · 각 메뉴 슬롯 중심(세로축) 정렬(구 r.width*.58 비례)
 
 // 관리자 패널 (Phase 3B~3E에서 각 서브메뉴 구현 예정)
 function openAdminPanel(){
@@ -17638,7 +17636,9 @@ function _scheduleMenuBuild(menu){
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">상품 등록 및 홍보 신청</div>'
     +'<button type="button" onclick="_ddCloseAll();openTicketReg()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">상품 등록 및 변경</button>'
     +'<button type="button" onclick="_ddCloseAll();openBatchWizard()" style="'+itemCss+';background:rgba(74,77,231,0.06)" onmouseenter="this.style.background=\'rgba(74,77,231,0.12)\'" onmouseleave="this.style.background=\'rgba(74,77,231,0.06)\'"><span style="flex:1">홍보 일괄 신청</span><span style="font-size:10px;color:var(--accent);font-weight:700">기본</span></button>'
-    +'<button type="button" onclick="_ddCloseAll();openPromoBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">홍보 일정 확인</button>';   // [260710 운영자] 순서·용어 확정(구 일정 등록/확인·티켓 등록 신청)
+    +'<button type="button" onclick="_ddCloseAll();openPromoBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">홍보 계획</button>'
+    +'<button type="button" onclick="_ddCloseAll();openPlatformBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">홍보 현황</button>'
+    +'<button type="button" onclick="_ddCloseAll();openAnnualCalendar()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">연간 일정</button>';   // [260710 운영자] 1 상품 등록 및 변경 · 2 홍보 일괄 신청 · 3 홍보 계획 · 4 홍보 현황(구 플랫폼 현황 대메뉴) · 5(맨 뒤) 연간 일정(구 대메뉴)
 }
 function _contentMenuBuild(menu){
   menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:#999;font-weight:700">콘텐츠 제작</div>'
@@ -19092,10 +19092,10 @@ function _playzoneMenuBuild(menu){
 // 판매 현황 드롭다운 — 판매 현황 보기(분석 보드) + 일일입력(관리자, 운영자 260709 "판매현황 대메뉴 아래에도 일일입력")
 function _salesMenuBuild(menu){
   var itemCss='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:0;text-align:left;font-size:13px;font-weight:600;color:var(--text);border-radius:9px;cursor:pointer;font-family:inherit;transition:background .12s';
-  menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:var(--dim);font-weight:700">사업현황</div>'
-    +'<button type="button" onclick="_ddCloseAll();openAnalyticsBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">판매 현황</button>'
-    +'<button type="button" onclick="_ddCloseAll();openBusinessBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">연간 누적 실적</button>'
-    +(userRole==='admin'?'<button type="button" onclick="_ddCloseAll();openDailyInput()" style="'+itemCss+';background:rgba(74,77,231,0.06)" onmouseenter="this.style.background=\'rgba(74,77,231,0.12)\'" onmouseleave="this.style.background=\'rgba(74,77,231,0.06)\'"><span style="flex:1">일일입력</span></button>':'');
+  menu.innerHTML='<div style="padding:8px 14px 6px;font-size:11px;color:var(--dim);font-weight:700">사업 실적</div>'
+    +(userRole==='admin'?'<button type="button" onclick="_ddCloseAll();openDailyInput()" style="'+itemCss+';background:rgba(74,77,231,0.06)" onmouseenter="this.style.background=\'rgba(74,77,231,0.12)\'" onmouseleave="this.style.background=\'rgba(74,77,231,0.06)\'"><span style="flex:1">일일 실적 입력</span></button>':'')
+    +'<button type="button" onclick="_ddCloseAll();openAnalyticsBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">판매 실적 조회</button>'
+    +'<button type="button" onclick="_ddCloseAll();openBusinessBoard()" style="'+itemCss+';background:none" onmouseenter="this.style.background=\'rgba(74,77,231,0.07)\'" onmouseleave="this.style.background=\'none\'">연간 실적 분석</button>';   // [260710 운영자] 1 일일 실적 입력(관리자) · 2 판매 실적 조회 · 3 연간 실적 분석
 }
 // 루트 enneagram_all.html은 playground/enneagram/ 이사(플레이그라운드 정리분)로 소멸 — 이사 후 경로로 교정
 function openEnneagram(){window.open('playground/enneagram/','_blank','noopener');}
