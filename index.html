@@ -8568,6 +8568,24 @@ function _msgHasTarget(m){
   if(!Array.isArray(records) || records.length===0) return true;
   return records.some(function(r){ return (r['No']||r['NO']||'').toString().trim() === refNo; });
 }
+// 유령 메시지 서버 정리(자동) — 화면에서 이미 숨긴 '내 수신 · 대상 없는' 메시지를 '메시지' 시트에서도 삭제.
+//   · records 미로드/0건이면 스킵(오삭제 방지 — _msgHasTarget과 동일 가드)  · 내 수신분(recipient===myAppl)만 = 크로스유저 안전
+//   · reason 담긴 반려 등은 _msgHasTarget=true라 대상에서 제외(사유 보존)  · 멱등(이미 없으면 서버가 ok)
+//   · _msgApiCall 우회 직접 fetch — DELETE 404(Worker 미배포)가 GET/PATCH의 60초 봉인을 걸지 않게(배포 전에도 무해, 화면 숨김만 유지)
+function _msgPurgeGhosts(){
+  try{
+    if(!Array.isArray(records) || records.length===0) return;
+    const myAppl = _msgMyAppl();
+    if(!myAppl) return;
+    const pw = (typeof password!=='undefined'?password:'')||'';
+    let pin=''; try{ pin=sessionStorage.getItem('subAdminPin')||''; }catch(e){}
+    _msgGet().forEach(function(m){
+      if(!m || !m.id || m.recipient!==myAppl || _msgHasTarget(m)) return;
+      const h={'X-App-Password':pw}; if(pin)h['X-Sub-Admin-PIN']=pin;
+      try{ fetch(_MSG_API_BASE+'/api/messages/'+encodeURIComponent(m.id),{method:'DELETE',headers:h}).catch(function(){}); }catch(e){}
+    });
+  }catch(e){}
+}
 
 // === 메시지함 API hybrid (Worker 있으면 SharePoint sync, 없으면 localStorage fallback) ===
 const _MSG_API_BASE = 'https://yeulmaru-promo-api.yeulmarumaster.workers.dev';
@@ -8767,6 +8785,7 @@ async function openMsgBox(){
   // 로그인 전 폴링이 걸어둔 봉인이 남아있으면 해제해 반드시 서버를 다시 조회한다(분신술 B-HIGH).
   _msgApiAvailable = true;
   try { await _msgFetchAll(); } catch(_e){}
+  try { _msgPurgeGhosts(); } catch(_e){}  // 유령(대상 없는 내 알림) 서버 정리 — 화면 숨김과 서버 시트 동기
   const myAppl = _msgMyAppl();
   if(!myAppl){
     if(typeof showToast === 'function') showToast('로그인 후 사용 가능해요','info');

@@ -806,6 +806,21 @@ async function handleMarkMessageRead(token, id) {
 }
 __name(handleMarkMessageRead, "handleMarkMessageRead");
 
+// 유령 메시지 삭제 — 참조 대상(신청)이 사라진 '대상 없는 알림' 정리용. 행 클리어(ID 빈 행은 목록 GET에서 걸러짐, handleDeleteSheetRow 방식).
+//   권한 = 메시지 API 공통 위상(로그인 게이트, 개인 신원은 클라 전달 신뢰 — 기존 GET/PATCH와 동일). 내부 직원 툴(앱지침 권한 FULL).
+//   멱등 — 이미 없는 id도 ok 반환(자동 정리가 매번 재시도해도 무해).
+async function handleDeleteMessage(token, id) {
+  const { driveId, itemId } = await ensureMessagesSheet(token);
+  const { headers, rows } = await handleGetSheet(token, MSG_SHEET);
+  const target = rows.find((r) => String(r["ID"] || "").trim() === String(id).trim());
+  if (!target) return { ok: true, dedup: true };
+  const numCols = (headers && headers.length) ? headers.length : 11;
+  const lastCol = colLetter(numCols);
+  await graphPatch(token, `${sheetPathFor(driveId, itemId, MSG_SHEET)}/range(address='A${target._rowIndex}:${lastCol}${target._rowIndex}')`, { values: [Array(numCols).fill("")] });
+  return { ok: true };
+}
+__name(handleDeleteMessage, "handleDeleteMessage");
+
 // === 예매 프로세스 도표 공유 — '도표' 시트 (공유범위: 비공개/팀/전체 · 소유자 = 로그인 담당자명) ===
 // 본문 JSON은 셀 32,767자 제한 때문에 청크 10개(28,000자 단위)로 분할 — 문서당 최대 ~280KB.
 // 삭제 = 행 클리어(handleDeleteSheetRow 방식) — ID 빈 행은 목록 필터에서 걸러진다.
@@ -1736,6 +1751,7 @@ var index_default = {
       if (url.pathname.startsWith("/api/messages/")) {
         const mid = decodeURIComponent(url.pathname.split("/").pop());
         if (request.method === "PATCH") return json(await handleMarkMessageRead(token, mid), env);
+        if (request.method === "DELETE") return json(await handleDeleteMessage(token, mid), env);
       }
 
       // === 예매 프로세스 도표 공유 — 로그인 사용자: 목록/단건(범위 필터) · 저장/삭제(소유자 또는 admin) ===
