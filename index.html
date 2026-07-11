@@ -581,8 +581,8 @@ button{font-family:inherit;cursor:pointer}
 /* 픽셀 펫 무대 — 노뮤트서 이전한 같은 주황 펫 패밀리(흰+검 가장자리 키잉본). .crablane=캘린더 아랫변 앵커(높이0=레이아웃 무점유·#cal 형제라 renderCal 생존)에 크랩(정면·컨페티)·LOVE(측면 walk) 공존. 크기는 공차는 애 기준 통일(캐릭터 ~27px·image-rendering:pixelated로 픽셀 유지). */
 .crablane{position:relative;height:0;z-index:6;pointer-events:none}
 .crablane .petcrab,.crablane .petlove{position:absolute;left:0;bottom:0;image-rendering:pixelated;pointer-events:none;user-select:none;will-change:transform,opacity;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35));opacity:0;transition:opacity .7s ease}
-.petcrab{width:66px;height:60px;background:url(image/pet_crab.png) no-repeat;background-size:660px 540px}   /* 크랩 정면 82프레임·10열9행·표시 0.5배(132×120→66×60)·30fps 스텝(픽셀 보간 금지) */
-.petlove{width:38px;height:29px;background:url(image/pet_love.png) no-repeat;background-size:76px 29px}      /* LOVE 측면 walk 2프레임(235×180→38×29)·6fps — 노뮤트 marquee_pet.js walkA/B 정렬·키잉 이식 */
+.petcrab{width:66px;height:60px;background:url(image/pets/pet_crab.png) no-repeat;background-size:660px 540px}   /* 크랩 정면 82프레임·10열9행·표시 0.5배(132×120→66×60)·30fps 스텝(픽셀 보간 금지) */
+.petlove{width:38px;height:29px;background:url(image/pets/pet_love.png) no-repeat;background-size:76px 29px}      /* LOVE 측면 walk 2프레임(235×180→38×29)·6fps — 노뮤트 marquee_pet.js walkA/B 정렬·키잉 이식 */
 @media (prefers-reduced-motion:reduce){.pet{opacity:1}.pet.walk{animation:none}.crablane{display:none}}
 @media (max-width:768px){.pet{display:none}.crablane{display:none}}
 .month-nav{display:flex;align-items:center;gap:16px}
@@ -1974,7 +1974,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
       <div id="chips" style="position:sticky;top:56px;z-index:6;height:0;display:flex;justify-content:flex-end;padding-right:8px"></div>
       <div class="cal-head-wrap" id="cal-head-wrap"></div>
         <div class="cal" id="cal"></div>
-        <img class="pet" src="image/pet.webp" alt="" aria-hidden="true" draggable="false"><!-- 공차는 애 — 캘린더 맨 아래 셀 아랫변 기준(운영자 260710 "너무 위에서 심란") · #cal 형제라 renderCal innerHTML에 안 지워짐 -->
+        <img class="pet" src="image/pets/pet.webp" alt="" aria-hidden="true" draggable="false"><!-- 공차는 애 — 캘린더 맨 아래 셀 아랫변 기준(운영자 260710 "너무 위에서 심란") · #cal 형제라 renderCal innerHTML에 안 지워짐 -->
         <div class="crablane" aria-hidden="true"><div class="petcrab"></div><div class="petlove"></div></div><!-- 픽셀 펫 레인 — 노뮤트서 이전한 크랩(정면·컨페티)·LOVE(측면 walk) · #cal 형제(renderCal 생존)라 공차는 애와 같은 하단 무대서 3개 랜덤 등장 -->
     </div>
     <!-- 판매 레일 — 판매현황·분석 보드와 _salesState 캐시 공유. data-panel = 레일 클릭이 사이드패널 closePanel을 타지 않게.
