@@ -761,9 +761,9 @@ button{font-family:inherit;cursor:pointer}
   color:#444;
   padding-left:20px;
 }
-.wc-range{color:#666;font-weight:500;font-variant-numeric:tabular-nums;transition:color 0.2s,font-weight 0.2s}
+.wc-range{color:var(--neutral-text);font-weight:500;font-variant-numeric:tabular-nums;transition:color 0.2s,font-weight 0.2s}   /* [260711] #666→var(--neutral-text) 청산(wc-count와 동일 색 통일) */
 .week-collapsed:hover .wc-range{color:var(--text);font-weight:700}
-.wc-count{margin-left:auto;color:var(--accent);font-weight:600;font-size:11px;transition:transform 0.2s}
+.wc-count{margin-left:auto;color:var(--neutral-text);font-weight:500;font-size:11px;transition:transform 0.2s}   /* [260711 운영자] 강조색 제거 — wc-range와 동일 색·굵기로 통일 */
 .week-collapsed:hover .wc-count{transform:scale(1.08)}
 .wc-count.empty{color:#ccc;font-weight:400;font-size:13px;letter-spacing:1px}
 /* 펼침 애니메이션 — 위에서 샤라락 슬라이드 다운 */
@@ -779,15 +779,15 @@ button{font-family:inherit;cursor:pointer}
   0%{opacity:0;transform:translateY(-10px) scale(0.985)}
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
-/* 펼친 주 되접기 핸들 — 좌측 상시 ⌃(접힌 줄 클릭=펼침과 대칭). 색·모션 전부 토큰 계승(새 색 0) */
-.wk-collapse{position:absolute;left:0;top:0;bottom:0;width:15px;display:flex;align-items:center;justify-content:center;
-  background:var(--past-bg);border-right:1px solid var(--border);color:var(--dim);cursor:pointer;z-index:7;
+/* 펼친 주 되접기 핸들 — [260711 운영자] 우측(일요일 옆)으로 이동해 통일. 색·모션 전부 토큰 계승(새 색 0) */
+.wk-collapse{position:absolute;right:0;top:0;bottom:0;width:15px;display:flex;align-items:center;justify-content:center;
+  background:var(--past-bg);border-left:1px solid var(--border);color:var(--dim);cursor:pointer;z-index:7;
   transition:background .2s,color .2s,width .2s;user-select:none}
 .wk-collapse:hover{background:rgba(74,77,231,0.12);color:var(--accent);width:18px}
 .wk-collapse svg{width:11px;height:11px;display:block;opacity:.65;transition:opacity .2s}
 .wk-collapse:hover svg{opacity:1}
-/* 핸들 폭만큼 첫 칸 안쪽 여백 — 날짜·일정이 핸들에 안 가리게 */
-.week > .c:first-child{padding-left:18px}
+/* 핸들 폭만큼 마지막 칸(일요일) 안쪽 여백 — 날짜·일정이 핸들에 안 가리게(운영자 260711 우측 이동) */
+.week > .c:last-child{padding-right:18px}
 /* 접힘 애니메이션 — 펼침(wk-slide-down)과 짝, 접힌 줄이 부드럽게 자리잡음 */
 .week-collapsed.just-collapsed{animation:wk-collapse-in 0.34s cubic-bezier(0.4,0,0.2,1)}
 @keyframes wk-collapse-in{
@@ -1847,7 +1847,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .srail-spark svg{display:block;width:100%;height:34px}
 /* 판매 차트 범례(운영자 260710) — 차트 아래 2열 띠 · 색 전부 :root 토큰 계승(새 색 0) */
 /* 범례 = 헤더 아래 고정 밴드 1개(운영자 260710 — 카드 반복 제거·한 줄·스크롤 밖) */
-.srail-leg{flex-shrink:0;display:flex;align-items:center;gap:14px;padding:7px 16px;border-bottom:1px solid rgba(0,0,0,.07);overflow:hidden}
+.srail-leg{flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:7px 16px;overflow:hidden}   /* [260711 운영자] 범례 우측 정렬 + 하단 구분선(border-bottom) 삭제 */
 .srail-leg-i{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:10.5px;color:var(--neutral-text);font-weight:600;font-variant-numeric:tabular-nums}
 .srail-leg-i .d{flex:none;width:9px;height:9px;border-radius:50%;display:inline-block}
 .srail-leg-i .n{color:var(--green);font-weight:400;font-size:11.5px}
@@ -1862,7 +1862,7 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 .srail-occrow{display:flex;align-items:baseline;gap:8px;margin:8px 0 0}   /* [260710 운영자] 메타↔수치줄 1.3배(6→8) — 22.0% 라인박스로 붙어 보임 해소 */
 .srail-seatsub{font-size:11.5px;color:var(--dim);font-weight:600}   /* [260710 운영자] 카드 숫자 폰트 통일 — 기준 = 어제대비(.srail-delta) 11.5px */
 .srail-occcap{font-size:11.5px;color:var(--dim);font-weight:400}   /* [260710 운영자] 〃 (점유율/달성률 캡션) */
-.srail-fc{font-size:11.5px;color:var(--text);font-weight:400;margin-top:7px;background:rgba(74,77,231,.03);border:1px solid rgba(74,77,231,.04);border-radius:9px;padding:10px 11px;line-height:1.5}   /* [260710 운영자 선택값] bg .04→.03 · bd .10→.04 · pad 5/9→10/11 · [260711] 기본 글자=--text(검정), 강조만 --accent(.srail-fc b) */
+.srail-fc{font-size:11.5px;color:var(--text);font-weight:400;margin-top:7px;background:var(--glass-surface);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--accent-glow);box-shadow:var(--glass-shadow);border-radius:9px;padding:10px 14px;line-height:1.5}   /* [260711 운영자] 글래스모피즘 — 반투명 glass 배경+blur, 겉 테두리만 살짝 강조색(--accent-glow), 글자색 불변(--text·라벨만 --accent). 우측 간격 11→14 */
 .srail-fc b{color:var(--accent);font-weight:400}   /* [260711 운영자] 볼드 해제 — <b>는 색 강조만 담당 */
 .srail-ft{padding:8px 16px 12px;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-shrink:0}
 .srail-note{font-size:10px;color:var(--muted);line-height:1.4;flex:1}
@@ -2018,7 +2018,8 @@ html::-webkit-scrollbar{width:8px}
       <div class="srail">
         <div class="srail-head" id="srail-head"><span class="srail-ttltext">판매 현황</span><span class="srail-cnt" id="srail-cnt" style="display:none">0</span><div class="srail-sum" id="srail-sum" style="display:none"></div><span id="srail-nav-slot" style="margin-left:auto;display:none;flex-shrink:0"></span></div>
         <!-- 차트 범례 = 헤더 바로 아래 고정 밴드 1개(운영자 260710 — 카드마다 반복 제거·짧은 라벨 한 줄·스크롤 밖 고정). 정적 마크업 = 로딩·빈 상태에도 유지 -->
-        <div class="srail-leg" aria-hidden="true"><span class="srail-leg-i"><span class="d" style="background:var(--danger)"></span>오늘</span><span class="srail-leg-i"><span class="d" style="background:var(--accent)"></span>일일 누계</span><span class="srail-leg-i"><span class="n">+N</span> 변동</span><span class="srail-leg-i"><span class="d" style="background:var(--muted)"></span>예상 누계</span><span class="srail-leg-i"><span class="d" style="background:var(--c2)"></span>종료 예상</span></div>
+        <!-- [260711 운영자] 예측 점(예측제외·예상누계·종료예상)은 차트와 동일하게 속빈 원(surface fill + 색 테두리, box-sizing으로 9px 유지). 채운 점 = 실측(오늘·일일누계)만. -->
+        <div class="srail-leg" aria-hidden="true"><span class="srail-leg-i"><span class="d" style="background:var(--danger)"></span>오늘</span><span class="srail-leg-i"><span class="d" style="background:var(--accent)"></span>일일 누계</span><span class="srail-leg-i"><span class="d" style="background:var(--surface-solid);border:1.5px solid var(--accent);box-sizing:border-box"></span>예측 제외</span><span class="srail-leg-i"><span class="n">+N</span> 변동</span><span class="srail-leg-i"><span class="d" style="background:var(--surface-solid);border:1.5px solid var(--muted);box-sizing:border-box"></span>예상 누계</span><span class="srail-leg-i"><span class="d" style="background:var(--surface-solid);border:1.5px solid var(--c2);box-sizing:border-box"></span>종료 예상</span></div>
         <div class="srail-body" id="srail-body"></div>
       </div>
     </aside>
