@@ -4833,7 +4833,7 @@ function _srailCard(p){
     var _last=_o[_o.length-1], _fcAt=function(_dy){var _pf=Math.max(0,Math.min(100,_last+_g*_dy)),_s=Math.round((p.totalOpen||926)*_pf/100);return {s:_s,cum:_s-p.seats};};
     var _f7=_fcAt(7), _f14=_fcAt(14);
     var _aiIco='<svg width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px;margin-right:3px"><path d="M12 3l1.7 5.4L19 10l-5.3 1.6L12 17l-1.7-5.4L5 10l5.3-1.6z"/><path d="M18.5 14.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg>';
-    fc='<div class="srail-fc"><b>'+_aiIco+'[AI 예상]</b> 이 추세면, <b>7일</b> 뒤 예상 누적 <b>'+_f7.s.toLocaleString()+'</b>석 ( <b>'+(_f7.cum>=0?'+':'')+_f7.cum+'</b> ), <b>2주</b> 뒤 예상 누적 <b>'+_f14.s.toLocaleString()+'</b>석 ( <b>'+(_f14.cum>=0?'+':'')+_f14.cum+'</b> )</div>';
+    fc='<div class="srail-fc"><b>'+_aiIco+'AI 예상</b> 이 추세면, 7일 뒤 예상 누적 '+_f7.s.toLocaleString()+'석 ( '+(_f7.cum>=0?'+':'')+_f7.cum+' ), 2주 뒤 예상 누적 '+_f14.s.toLocaleString()+'석 ( '+(_f14.cum>=0?'+':'')+_f14.cum+' )</div>';   // [260711 운영자] AI 예상 = 라벨+픽토(_aiIco)만 강조(.srail-fc b), 나머지 수치·기간은 검정(--text) · 대괄호 삭제
   }
   return '<div class="srail-card'+(p.noData?' ro':'')+'" role="button" tabindex="0" onclick="_srailDrill(\'perf\',\''+_anaEsc(p.name)+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}" title="'+escapeHtml(p.name)+' — 개별 분석 (레일 안에서 열려요)">'
     +'<div class="srail-r1"><div class="srail-name">'+escapeHtml(p.name)+'</div>'+(dd?'<span class="srail-dday" style="color:'+_srailDdayColor(p.dday)+'">'+dd+'</span>':'')+'</div>'
@@ -22336,8 +22336,15 @@ function _ldMake(kind,size,speed){
 /* 버튼 busy 공용 — dots 14px를 라벨 앞에 합류(.btn 자체 gap 6px 정렬). on=disabled+로더+라벨 · off=라벨 원복 */
 function _btnBusy(btn,on,label){
   if(!btn)return;btn.disabled=on;
-  if(on){btn.textContent='';btn.appendChild(_ldMake('dots',14,.8));btn.appendChild(document.createTextNode(label));}
-  else btn.textContent=label;
+  if(on){
+    // [260711 운영자] 로딩 중 = 버튼을 inline-flex 중앙정렬(점 픽토가 baseline서 위로 뜨던 것 해소) + 점↔글자 gap. 좌우 여백은 .m-btn padding(22px) 유지.
+    btn.textContent='';
+    btn.style.display='inline-flex';btn.style.alignItems='center';btn.style.justifyContent='center';btn.style.gap='4px';
+    btn.appendChild(_ldMake('dots',14,.8));btn.appendChild(document.createTextNode(label));
+  } else {
+    btn.style.display='';btn.style.alignItems='';btn.style.justifyContent='';btn.style.gap='';
+    btn.textContent=label;
+  }
 }
 function showOverlayLoad(msg){
   msg=msg||'\uBCC0\uACBD \uC911';
