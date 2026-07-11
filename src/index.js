@@ -433,12 +433,21 @@ async function memberSheetRead(token, sheetName) {
   let srcHeaders = [];
   const KEEP = 7;   // A~G = 휴대폰정규화·이름·주소1~4·우편번호 (v2 정제본 열 순서 고정)
   const rows = [];
-  for (let s = 1; s <= totalRows; s += CHUNK) {
-    const e = Math.min(s + CHUNK - 1, totalRows);
-    const part = await graphGet(token, `${base}/range(address='A${s}:L${e}')?$select=values`);
-    const vals = part.values || [];
+  // [성능 260711] 순차 청크 → 4개씩 병렬 배치(왕복 시간 ~1/4) — graphGet 자체 재시도가 429를 흡수.
+  const ranges = [];
+  for (let s = 1; s <= totalRows; s += CHUNK) ranges.push([s, Math.min(s + CHUNK - 1, totalRows)]);
+  const parts = new Array(ranges.length);
+  const BATCH = 4;
+  for (let b = 0; b < ranges.length; b += BATCH) {
+    const batch = ranges.slice(b, b + BATCH).map((r, i) =>
+      graphGet(token, `${base}/range(address='A${r[0]}:L${r[1]}')?$select=values`).then((p) => { parts[b + i] = p; })
+    );
+    await Promise.all(batch);
+  }
+  for (let pi = 0; pi < parts.length; pi++) {
+    const vals = (parts[pi] && parts[pi].values) || [];
     for (let i = 0; i < vals.length; i++) {
-      if (s === 1 && i === 0) { srcHeaders = vals[0].map((h) => String(h == null ? "" : h)); continue; }
+      if (pi === 0 && i === 0) { srcHeaders = vals[0].map((h) => String(h == null ? "" : h)); continue; }
       const row = vals[i];
       if (row.every((cv) => cv === "" || cv === null || cv === undefined)) continue;
       const obj = {};
@@ -1907,13 +1916,23 @@ var index_default = {
               if (opsName === "운영_회원") {
                 const memAuth = await checkAdmin(request, env, token);
                 if (!memAuth.admin) return json({ error: "Admin only (member data)" }, env, 403);
-                if (url.searchParams.get("fresh") === "1") delete opsCache[opsName];
-                // [성능 260710 분신술 HIGH] 30k행 usedRange 단일 읽기 = Graph 504·isolate 메모리 리스크
-                //  → 조회 UI가 쓰는 7열(A~G)만 5,000행 청크로 분할 읽기 + 캐시 TTL_SHORT(상주 최소화).
+                // [성능 260711 운영자 "더 빠르게"] 3계층: isolate 인메모리(5분) → KV 전역(1시간, isolate 무관
+                //  = 첫 요청도 웜히트면 <1s) → Graph 청크(병렬 4). fresh=1 = 캐시 전부 우회 후 재적재.
+                //  KV 저장은 계정 내 암호화 저장(다른 시크릿과 동일 신뢰경계) · 응답은 계속 no-store(브라우저 잔류 차단).
+                const MEM_KV_KEY = "membersheet:v1";
+                const fresh = url.searchParams.get("fresh") === "1";
+                if (fresh) delete opsCache[opsName];
+                let data = null;
                 const c = opsCache[opsName];
-                let data;
-                if (c && Date.now() < c.expires) data = c.data;
-                else { data = await memberSheetRead(token, opsName); opsCache[opsName] = { data, expires: Date.now() + TTL_SHORT }; }
+                if (!fresh && c && Date.now() < c.expires) data = c.data;
+                if (!data && !fresh) {
+                  try { const kv = await env.ops_kv.get(MEM_KV_KEY); if (kv) data = JSON.parse(kv); } catch (e) {}
+                }
+                if (!data) {
+                  data = await memberSheetRead(token, opsName);
+                  try { await env.ops_kv.put(MEM_KV_KEY, JSON.stringify(data), { expirationTtl: 3600 }); } catch (e) {}
+                }
+                opsCache[opsName] = { data, expires: Date.now() + TTL_MASTER };
                 return new Response(JSON.stringify({ sheet, headers: data.headers, rows: data.rows, count: data.rows.length }), {
                   status: 200,
                   headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders(env) }
