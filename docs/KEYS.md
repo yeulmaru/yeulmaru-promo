@@ -37,7 +37,7 @@
 - **권한(필수)**: Repository access = *Only select repositories* → `yeulmaru-promo` / Repository permissions → **Contents: Read and write** (repository_dispatch 트리거 + drafts 파일 읽기에 필요)
   - ⚠️ 예전 토스트 **"Contents: write 필요"** = 그 토큰에 이 권한이 없다는 뜻 (이제 서버 PAT가 이 권한을 가져야 함).
 - **용도**: Worker가 대행 ①`POST /dispatches` (초안 생성 트리거 = repository_dispatch[nb-blog]) ②`GET /contents/drafts/<id>.json` (결과 폴링). 프론트는 `POST /api/blog/dispatch`·`GET /api/blog/draft?id=`로 **Worker만** 호출(X-App-Password 게이트). 톤 참조는 이제 localStorage 전용(GitHub 저장 폐지).
-- **발급**: https://github.com/settings/personal-access-tokens/new → Resource owner `yeulmaru` → Only select repositories `yeulmaru-promo` → Permissions: **Contents → Read and write** → Generate → 값 복사
+- **발급**: https://github.com/settings/personal-access-tokens/new → Resource owner `muteno` → Only select repositories `yeulmaru-promo` → Permissions: **Contents → Read and write** → Generate → 값 복사
 - **Worker에 넣는 법**: Cloudflare 대시보드 → Workers & Pages → `yeulmaru-promo-api` → Settings → Variables and Secrets → **Secret 추가 `GITHUB_PAT`** = 복사한 값 → 저장 → 배포. (또는 `wrangler secret put GITHUB_PAT`) 대체 이름 `GH_BLOG_PAT`/`GITHUB_TOKEN`도 인식. repo/branch는 `GITHUB_REPO`/`GITHUB_BRANCH`로 오버라이드(기본 `muteno/yeulmaru-promo`·`main`).
 - **회전(교체)**: GitHub에서 Regenerate → 새 값을 Worker 시크릿 `GITHUB_PAT`에 갱신 → 재배포. **브라우저는 건드릴 것 없음.** 만료일은 짧게(7~90일).
 - **미설정 시**: 시크릿 없으면 `/api/blog/dispatch`가 503 → 프론트가 '초안 생성이 서버에 아직 설정되지 않았어요' 토스트. 앱 나머지 기능은 무관하게 정상.

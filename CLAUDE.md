@@ -151,7 +151,7 @@
 ## 3. 저장소·백업 원칙 + 수정 모드 (§수정 모드 · 운영 고정)
 
 ### 1) 원칙
-- a) **단일 원본 = GitHub `yeulmaru`/`yeulmaru-promo`(main).** 라이브 = GitHub Pages(main에서 빌드). ⚠️ **Worker(`src/index.js`)는 예외** — git 반영 ≠ 배포, Cloudflare에 별도 배포해야 반영(`docs/앱지침.md` §시스템 설계).
+- a) **단일 원본 = GitHub `muteno`/`yeulmaru-promo`(main).** 라이브 = GitHub Pages(main에서 빌드). ⚠️ **Worker(`src/index.js`)는 예외** — git 반영 ≠ 배포, Cloudflare에 별도 배포해야 반영(`docs/앱지침.md` §시스템 설계).
 - b) **수정 모드 트리거 = `git`(대소문자 무관) 또는 `깃`** — 즉시 시스템 파일 편집 모드.
 - c) **롤백** = *그 버전으로* 한마디 → `_versions/`에서 복원(앱 코드는 git 이력로도 가능).
 
