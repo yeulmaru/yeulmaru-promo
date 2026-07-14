@@ -53,7 +53,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-all;max-height:210px;overflow:auto}
 
 /* ═══ 프레임 — 판매현황 패널 재현 ═══ */
-.frame{width:min(640px,96vw);margin:0 auto}
+/* 실앱 배선 미러: .srail 은 overflow:hidden(L1834) → 삐져나온 버튼이 잘림.
+   그래서 좌우버튼은 .srail 이 아니라 바깥(#sales-rail=.frame)에 앵커해야 진짜 1/3 밖이 보인다. */
+.frame{position:relative;width:min(640px,96vw);margin:0 auto}
+:root{--fpad:26px}
 .stagecap{text-align:center;font-size:11.5px;color:var(--dim);margin:12px auto 0;line-height:1.7;max-width:600px}
 .stagecap b{color:var(--text)}
 
@@ -90,11 +93,12 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
   display:flex;align-items:center;justify-content:center;line-height:1;padding:0;
   box-shadow:0 2px 8px rgba(26,26,46,.12);transition:border-color .15s,background .15s}
 .srail-cbtn:hover{border-color:var(--accent);background:var(--accent-light)}
-.srail-cbtn.prev{left:calc(-1 * var(--oh,0.333) * var(--bs,26px))}
-.srail-cbtn.next{right:calc(-1 * var(--oh,0.333) * var(--bs,26px))}
+/* .frame 기준 앵커 — .srail 좌우 라인(=frame 안쪽 --fpad 지점)에 걸침. 밖 비율 --oh 만큼 라인 밖으로 */
+.srail-cbtn.prev{left:calc(var(--fpad) - var(--oh,0.333) * var(--bs,26px))}
+.srail-cbtn.next{right:calc(var(--fpad) - var(--oh,0.333) * var(--bs,26px))}
 
-/* 프레임 여백 = 버튼이 밖으로 나가므로 좌우 패딩 확보(실앱은 #sales-rail 안, 여기선 잘림 방지용) */
-.framepad{padding:0 22px}
+/* 프레임 여백 = 버튼이 밖으로 나가므로 좌우 패딩 확보(실앱은 #sales-rail padding이 담당) */
+.framepad{padding:0 var(--fpad)}
 
 /* ── 재현용 카드 콘텐츠(축약) ── */
 .mock{padding:14px 16px}
@@ -134,9 +138,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
           </div>
           <div class="srail-dots" id="dots"></div>
         </div>
-        <button class="srail-cbtn prev" id="prev" aria-label="이전">‹</button>
-        <button class="srail-cbtn next" id="next" aria-label="다음">›</button>
       </div>
+      <!-- 좌우버튼 = .srail 바깥(.frame)에 앵커 → overflow:hidden 클립 회피(실앱은 #sales-rail) -->
+      <button class="srail-cbtn prev" id="prev" aria-label="이전">‹</button>
+      <button class="srail-cbtn next" id="next" aria-label="다음">›</button>
     </div>
     <p class="stagecap">
       카드 높이 640px = <b>캘린더 높이 캡 재현</b>(콘텐츠가 짧아 아래가 빔 → 현행 dots가 그 바닥에 고정됨).<br>
@@ -201,7 +206,7 @@ var SLIDES=[
 ];
 var track=document.getElementById('dots')?null:null;
 var $=function(id){return document.getElementById(id);};
-var elTrack=$('track'),elDots=$('dots'),srail=$('srail');
+var elTrack=$('track'),elDots=$('dots'),srail=$('srail'),frame=document.querySelector('.frame');
 var N=SLIDES.length, idx=0, autoT=null;
 
 function cardHtml(s){
@@ -228,8 +233,8 @@ elDots.addEventListener('click',function(e){var b=e.target.closest('.srail-dot')
 $('prev').addEventListener('click',function(){go(idx-1);});
 $('next').addEventListener('click',function(){go(idx+1);});
 
-/* 컨트롤 배선 */
-function setVar(k,v){srail.style.setProperty(k,v);}
+/* 컨트롤 배선 — 버튼이 .frame 자식이므로 공통 조상 .frame 에 변수 세팅(양쪽 다 상속) */
+function setVar(k,v){frame.style.setProperty(k,v);}
 $('seg-align').addEventListener('click',function(e){
   var s=e.target.closest('.seg');if(!s)return;
   $('seg-align').querySelectorAll('.seg').forEach(function(x){x.classList.toggle('on',x===s);});
@@ -279,13 +284,15 @@ function emit(){
 (show?
 '  표시: ON\n'+
 '  크기(w=h): '+bs+'px\n'+
-'  걸침(밖 비율): '+oh+'  → left/right: calc(-1 * '+oh+' * '+bs+'px) = '+(-oh*bs).toFixed(1)+'px\n'+
+'  걸침(밖 비율): '+oh+'  → 라인 밖 '+(oh*bs).toFixed(1)+'px · 안 '+((1-oh)*bs).toFixed(1)+'px (1/3=0.33)\n'+
 '  세로 위치: top '+bt+'% (translateY -50%)\n'+
 '  루프: _srailCarTo 의 modulo 로 이미 구현됨(끝→처음)\n'
 :'  표시: OFF (좌우버튼 미사용)\n')+
 '\n[③ DOM 배선 필요]\n'+
+'  · 버튼 앵커 = #sales-rail(바깥) — .srail은 overflow:hidden(L1834)이라 안에 넣으면 밖 1/3 잘림!\n'+
+'    #sales-rail{position:relative}\n'+
+'    .srail-cbtn.prev{left:calc(<railpad> - '+oh+' * '+bs+'px)} · .next{right: 동일}\n'+
 '  · _srailRenderInner(L5012~) 캐러셀 분기에 prev/next <button class="srail-cbtn"> 2개 추가\n'+
-'  · .srail(#sales-rail 내부)에 position:relative 확인(버튼 절대배치 기준)\n'+
 '  · onclick=_srailCarTo(idx±1,true) — 루프 자동';
   $('out').textContent=out;
 }
