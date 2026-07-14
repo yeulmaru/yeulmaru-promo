@@ -93,9 +93,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
   display:flex;align-items:center;justify-content:center;line-height:1;padding:0;
   box-shadow:0 2px 8px rgba(26,26,46,.12);transition:border-color .15s,background .15s}
 .srail-cbtn:hover{border-color:var(--accent);background:var(--accent-light)}
-/* .frame 기준 앵커 — .srail 좌우 라인(=frame 안쪽 --fpad 지점)에 걸침. 밖 비율 --oh 만큼 라인 밖으로 */
-.srail-cbtn.prev{left:calc(var(--fpad) - var(--oh,0.333) * var(--bs,26px))}
-.srail-cbtn.next{right:calc(var(--fpad) - var(--oh,0.333) * var(--bs,26px))}
+/* .frame 기준 앵커 — .srail 좌우 라인(=frame 안쪽 --fpad 지점). --binset(+안으로/−밖으로) 만큼 이동 */
+.srail-cbtn.prev{left:calc(var(--fpad) + var(--binset,40px))}
+.srail-cbtn.next{right:calc(var(--fpad) + var(--binset,40px))}
 
 /* 프레임 여백 = 버튼이 밖으로 나가므로 좌우 패딩 확보(실앱은 #sales-rail padding이 담당) */
 .framepad{padding:0 var(--fpad)}
@@ -121,7 +121,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
 <h1>판매현황 캐러셀 내비 — 위치 플레이그라운드</h1>
 <p class="sub">
 현행: <b>자동 슬라이드 dots가 카드 좌측·바닥에 쏠려</b> 있고(<code>max-width:62%</code>+정렬 없음), <b>좌우 이동버튼은 dormant</b>(CSS만 있고 DOM 미배선).<br>
-여기서 ① <b>dots 정렬·세로위치</b> ② <b>좌우버튼 걸침·세로위치·크기</b>를 맞추고 → 좌우버튼/점으로 <b>루프(끝→처음)</b> 확인 → <b>[선택값 복사]</b>로 답장하면 index.html에 배선할게.
+여기서 ① <b>dots 정렬·세로위치</b> ② <b>좌우버튼 가장자리 여백·세로위치·크기</b>를 맞추고 → 좌우버튼/점으로 <b>루프(끝→처음)</b> 확인 → <b>[선택값 복사]</b>로 답장하면 index.html에 배선할게.<br><b>여백 슬라이더 = +값이면 카드 안쪽으로</b> — 원하는 만큼 당길 수 있어(끝단 제한 풀림).
 </p>
 <div class="wrap">
   <div class="stagewrap">
@@ -145,7 +145,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
     </div>
     <p class="stagecap">
       카드 높이 640px = <b>캘린더 높이 캡 재현</b>(콘텐츠가 짧아 아래가 빔 → 현행 dots가 그 바닥에 고정됨).<br>
-      좌우버튼은 <b>.srail 박스 좌우 라인</b> 기준 — <b>1/3 밖 · 2/3 안</b>이 기본값(슬라이더로 조정).
+      좌우버튼은 <b>카드 좌우 라인에서 안쪽 여백(px)</b> — 기본 40px 안쪽, 슬라이더로 더 당기거나(+) 밖으로(−) 조정.
     </p>
   </div>
 
@@ -161,24 +161,24 @@ input[type=range]{width:100%;accent-color:var(--accent);height:4px}
         </div>
       </div>
       <div class="row">
-        <div class="lb"><b>세로 위치</b><span class="tg">바닥에서 위로 밀기</span><span class="vl" id="vl-mb">150px</span></div>
-        <input type="range" id="r-mb" min="0" max="420" step="2" value="150">
+        <div class="lb"><b>세로 위치</b><span class="tg">바닥에서 위로 밀기</span><span class="vl" id="vl-mb">40px</span></div>
+        <input type="range" id="r-mb" min="0" max="420" step="2" value="40">
       </div>
     </div>
 
     <div class="csec">
       <div class="ct">② 좌우 이동 버튼 <em>끝→처음 루프 내장</em></div>
       <div class="row">
-        <div class="lb"><b>걸침 비율(밖으로)</b><span class="tg">1/3≈0.33 · 라인 밖 비율</span><span class="vl" id="vl-oh">0.33</span></div>
-        <input type="range" id="r-oh" min="0" max="0.6" step="0.01" value="0.33">
+        <div class="lb"><b>가장자리 여백</b><span class="tg">+안으로 · −밖으로(px)</span><span class="vl" id="vl-in">40px</span></div>
+        <input type="range" id="r-in" min="-24" max="200" step="1" value="40">
       </div>
       <div class="row">
-        <div class="lb"><b>세로 위치</b><span class="tg">카드 상단 기준 %</span><span class="vl" id="vl-bt">42%</span></div>
-        <input type="range" id="r-bt" min="8" max="92" step="1" value="42">
+        <div class="lb"><b>세로 위치</b><span class="tg">카드 상단 기준 %</span><span class="vl" id="vl-bt">37%</span></div>
+        <input type="range" id="r-bt" min="8" max="92" step="1" value="37">
       </div>
       <div class="row">
-        <div class="lb"><b>버튼 크기</b><span class="tg">현행 .srail-cbtn=26</span><span class="vl" id="vl-bs">30px</span></div>
-        <input type="range" id="r-bs" min="20" max="44" step="1" value="30">
+        <div class="lb"><b>버튼 크기</b><span class="tg">현행 .srail-cbtn=26</span><span class="vl" id="vl-bs">22px</span></div>
+        <input type="range" id="r-bs" min="18" max="44" step="1" value="22">
       </div>
       <label class="tog" style="margin-top:12px"><input type="checkbox" id="c-show" checked> 좌우 버튼 표시</label>
     </div>
@@ -250,7 +250,7 @@ function bindRange(id,varName,fmt,unit){
   });
 }
 bindRange('r-mb','--dot-mb',null,'px');
-bindRange('r-oh','--oh',function(v){return (+v).toFixed(2);},'');
+bindRange('r-in','--binset',null,'px');
 bindRange('r-bt','--btop',null,'%');
 bindRange('r-bs','--bs',null,'px');
 
@@ -265,33 +265,35 @@ $('c-auto').addEventListener('change',function(){
   }
 });
 
-/* 초기값 반영 */
-setVar('--dot-align','center');setVar('--dot-mb','150px');
-setVar('--oh','0.33');setVar('--btop','42%');setVar('--bs','30px');
+/* 초기값 반영 — 운영자 선택값(dots 가운데·mb40 · 버튼 22px·top37%) + 여백 40px 안쪽 */
+setVar('--dot-align','center');setVar('--dot-mb','40px');
+setVar('--binset','40px');setVar('--btop','37%');setVar('--bs','22px');
 
 function emit(){
   var align=$('seg-align').querySelector('.seg.on').dataset.v;
-  var mb=$('r-mb').value, oh=(+$('r-oh').value).toFixed(2), bt=$('r-bt').value, bs=$('r-bs').value, show=$('c-show').checked;
+  var mb=$('r-mb').value, inset=+$('r-in').value, bt=$('r-bt').value, bs=$('r-bs').value, show=$('c-show').checked;
   var alignKo={'flex-start':'좌','center':'가운데','flex-end':'우'}[align];
   var out=
-'━━ 판매현황 캐러셀 내비 선택값 (20260714_'+'v1) ━━\n\n'+
+'━━ 판매현황 캐러셀 내비 선택값 (20260714_v1) ━━\n\n'+
 '[① dots — index.html .srail-dots L1900]\n'+
 '  justify-content: '+align+';   /* '+alignKo+' 정렬 */\n'+
 '  align-self: center;            /* 컨테이너 자체 가운데(좌측쏠림 해소) */\n'+
 '  margin-bottom: '+mb+'px;       /* 바닥에서 위로 */\n'+
-'  /* max-width:62% 제거(좌우버튼이 밖으로 빠져 폭 여유) */\n\n'+
+'  /* max-width:62% 제거 */\n\n'+
 '[② 좌우버튼 — .srail-cbtn 재배선(dormant→활성)]\n'+
 (show?
 '  표시: ON\n'+
 '  크기(w=h): '+bs+'px\n'+
-'  걸침(밖 비율): '+oh+'  → 라인 밖 '+(oh*bs).toFixed(1)+'px · 안 '+((1-oh)*bs).toFixed(1)+'px (1/3=0.33)\n'+
+'  가장자리 여백: '+inset+'px '+(inset>=0?'(카드 라인에서 안쪽)':'(라인 밖으로)')+'\n'+
 '  세로 위치: top '+bt+'% (translateY -50%)\n'+
 '  루프: _srailCarTo 의 modulo 로 이미 구현됨(끝→처음)\n'
 :'  표시: OFF (좌우버튼 미사용)\n')+
 '\n[③ DOM 배선 필요]\n'+
-'  · 버튼 앵커 = #sales-rail(바깥) — .srail은 overflow:hidden(L1834)이라 안에 넣으면 밖 1/3 잘림!\n'+
-'    #sales-rail{position:relative}\n'+
-'    .srail-cbtn.prev{left:calc(<railpad> - '+oh+' * '+bs+'px)} · .next{right: 동일}\n'+
+'  · '+(inset>=0
+      ?'버튼이 카드 안쪽 → .srail{position:relative} 기준 배치 OK(overflow:hidden 클립 무관)\n'+
+       '    .srail-cbtn.prev{left:'+inset+'px} · .next{right:'+inset+'px}\n'
+      :'버튼이 라인 밖 → #sales-rail(바깥) 앵커 필요(.srail은 overflow:hidden L1834)\n'+
+       '    #sales-rail{position:relative} + prev.left/next.right = calc(<railpad> '+inset+'px)\n')+
 '  · _srailRenderInner(L5012~) 캐러셀 분기에 prev/next <button class="srail-cbtn"> 2개 추가\n'+
 '  · onclick=_srailCarTo(idx±1,true) — 루프 자동';
   $('out').textContent=out;
