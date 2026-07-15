@@ -6061,6 +6061,7 @@ function _anaDrillFromHeat(name){
 
 // === [DB통합] 일일입력 폼 (운영_일일입력에 기록 — Streamlit 입력 대체) ===
 var _dailyState = { master:null, programs:null };
+var _dailyOrigin=null;   // [260715] 일일 판매 입력 저장 후 '직전 메뉴' 복원용 출처(salesboard·analytics·salesmenu)
 function _dailyToday(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 // 프로그램(콘텐츠구분) 인덱스: 정규화 공연명 → 콘텐츠구분 (공연마스터엔 카테고리가 없어 프로그램에서 조인)
 function _dailyCatIndex(){
@@ -6125,8 +6126,10 @@ function _dailyMasters(){
   });
   return out.filter(function(m){ if(!m.name)return false; if(!allowed)return true; if(!m.cat)return true; return allowed.indexOf(m.cat)>=0; });  // 담당 카테고리만(카테고리 미상=조인실패는 표시해 입력 누락 방지)
 }
-function openDailyInput(){
+function openDailyInput(origin){
   if(userRole!=='admin'){showToast('관리자만 입력할 수 있어요','error');return;}
+  // [260715] 저장 후 직전 메뉴 복원 — 명시 출처 없으면 현재 열린 보드로 자동 판별(둘 다 없으면 사업 실적 메뉴에서 진입)
+  _dailyOrigin=origin||((document.getElementById('analytics-board')&&document.getElementById('analytics-board').innerHTML)?'analytics':((document.getElementById('sales-board')&&document.getElementById('sales-board').innerHTML)?'salesboard':'salesmenu'));
   let el=document.getElementById('daily-input');
   if(!el){el=document.createElement('div');el.id='daily-input';document.body.appendChild(el);}
   el.innerHTML='<div class="modal-bg show" style="z-index:99990" onclick="if(event.target===this)closeDailyInput()"><div class="modal" style="width:96vw;max-width:760px;max-height:90vh;overflow:auto;padding:0;position:relative;background:#fff"><button class="modal-x" onclick="closeDailyInput()" title="닫기" style="position:absolute;top:14px;right:22px;z-index:10">✕</button><div style="padding:18px 22px;border-bottom:1px solid #eee;font-size:15px;font-weight:700">➕ 일일 판매 입력</div><div id="daily-body" style="padding:18px 22px"><div style="text-align:center;color:#888;padding:30px">'+_ldHtml(16)+'공연 목록 불러오는 중</div></div></div></div>';
@@ -6137,6 +6140,20 @@ function openDailyInput(){
   ]).then(function(res){_dailyState.master=res[0];_dailyState.programs=res[1];_dailyRenderForm();}).catch(function(e){var b=document.getElementById('daily-body');if(b)b.innerHTML='<div style="color:var(--danger);text-align:center;padding:30px">공연 목록 로드 실패: '+escapeHtml(e.message||String(e))+'</div>';});
 }
 function closeDailyInput(){ var el=document.getElementById('daily-input'); if(el)el.innerHTML=''; window._dsxState=null; window._dsxPending=null; if(_dailyState)_dailyState._gSaved=false; }
+// [260715] 저장 완료 후 '직전 메뉴'로 복원 — 캘린더 메인으로 빠지지 않게. 보드는 재오픈(새 실적 반영), 메뉴 진입은 드롭다운 재오픈(모바일 등 앵커 불가 시 판매 실적 조회로 대체).
+function _navBtnByLabel(lbl){ var r=null; document.querySelectorAll('.nav-btn').forEach(function(b){ if((b.textContent||'').trim()===lbl)r=b; }); return r; }
+function _dailyRestoreOrigin(){
+  var o=_dailyOrigin; _dailyOrigin=null;
+  if(o==='salesboard'){ if(typeof openSalesBoard==='function')openSalesBoard(); return; }
+  if(o==='analytics'){ if(typeof openAnalyticsBoard==='function')openAnalyticsBoard(); return; }
+  if(o==='salesmenu'){
+    var btn=_navBtnByLabel('사업 실적');
+    if(btn&&btn.offsetParent!==null&&typeof _ddOpen==='function'&&typeof _salesMenuBuild==='function'){ _ddOpen(btn,_salesMenuBuild,210,'sales'); return; }
+    if(typeof openAnalyticsBoard==='function')openAnalyticsBoard(); return;
+  }
+  // 폴백(구 동작 보존): 분석 보드가 떠 있었으면 유지
+  if(document.getElementById('analytics-board')&&document.getElementById('analytics-board').innerHTML)openAnalyticsBoard();
+}
 // [운영자 260710] 선택한 기준일자에 이미 일일입력 행이 있는 공연명 집합 — 폼 목록에서 제외("이미 등록한 공연은 없어지게").
 //   소스 = 레일 캐시(_salesState.daily). 캐시 미로딩이면 null 반환 → 필터 스킵(데이터 없이 잘못 숨기는 것 방지). 매칭 = 공연명 trim 정확 일치(실적 수정과 동일 축).
 function _dailyRegisteredSet(ymd){
@@ -6244,15 +6261,15 @@ async function _dailySubmit(){
     closeDailyInput();
     _salesState.master=null;_salesState.daily=null;_salesState.rounds=null;
     try{_srailInit();}catch(_e){}  // 판매 레일 최신화(일일입력 반영 재fetch)
-    if(document.getElementById('analytics-board')&&document.getElementById('analytics-board').innerHTML){openAnalyticsBoard();}
+    _dailyRestoreOrigin();
   }catch(e){ if(msg)msg.textContent='저장 실패: '+(e.message||e); _btnBusy(btn,false,'저장'); }
 }
 // === 티켓링크 판매현황 업로드(.xls·.xlsx) → 순판매를 날짜순 누적해 일일입력에 자동 반영 ===
 // 서식 A(티켓링크 「거래 일자별 집계」): 헤더행 '일자'+'상품명', 상품명 우측이 총판매합계(현금 매수/금액·카드 매수/금액). 상품명별 그룹.
 // 서식 B(레거시 「상품별 일별 판매현황」): A열 '상품명:'/날짜, F~I 순판매. 공연 자동매칭 실패 시 미리보기에서 직접 선택 가능.
-function _dsxDrop(e){ e.preventDefault(); var dz=document.getElementById('d-xdrop'); if(dz)dz.style.background='none'; var fs=e.dataTransfer&&e.dataTransfer.files; if(fs&&fs.length)_dsxParse(Array.prototype.slice.call(fs)); }
-function _dsxFiles(input){ var fs=Array.prototype.slice.call(input.files||[]); input.value=''; if(fs.length)_dsxParse(fs); }
-function _dsxParse(files){
+function _dsxDrop(e,append){ e.preventDefault(); var dz=e.currentTarget||document.getElementById('d-xdrop'); if(dz&&dz.style)dz.style.background='none'; var fs=e.dataTransfer&&e.dataTransfer.files; if(fs&&fs.length)_dsxParse(Array.prototype.slice.call(fs),append); }
+function _dsxFiles(input,append){ var fs=Array.prototype.slice.call(input.files||[]); input.value=''; if(fs.length)_dsxParse(fs,append); }
+function _dsxParse(files, append){
   if(files.some(function(f){return f.size>20*1024*1024;})){showToast('파일이 너무 커요(20MB 제한)','error');return;}
   if(files.some(function(f){return !/\.x(lsx|ls)$/i.test(f.name);})){showToast('xls·xlsx 파일만 올릴 수 있어요','error');return;}
   showToast('판매현황 읽는 중','info');
@@ -6271,7 +6288,7 @@ function _dsxParse(files){
       api('GET','/api/ops?sheet='+encodeURIComponent('일일입력')).catch(function(){return {headers:[],rows:[],_getFailed:1};}) // dedup 대조용 기존 행(실패 시 경고)
     ]).then(function(r){
       var flat=[]; r[0].forEach(function(arr){ (Array.isArray(arr)?arr:[arr]).forEach(function(x){flat.push(x);}); });
-      _dsxPreview(flat, r[1]);
+      _dsxPreview(flat, r[1], append);
     }).catch(function(e){ showToast('읽기 실패: '+(e.message||e),'error'); });
   });
 }
@@ -6327,7 +6344,7 @@ function _dsxExtract(wb, fname){
 function _dsxUname(s){ try{return _uName(s);}catch(_){return String(s||'').replace(/\s+/g,'').toLowerCase();} }
 // 최장 공통 부분문자열 길이 (mjs 260618_daily_ingest 정본 계승 — 보일러플레이트 붙어도 핵심 겹침으로 매칭)
 function _dsxLcs(a,b){ var best=0,n=b.length,prev=new Array(n+1).fill(0); for(var i=1;i<=a.length;i++){ var cur=new Array(n+1).fill(0); for(var j=1;j<=n;j++){ if(a[i-1]===b[j-1]){ cur[j]=prev[j-1]+1; if(cur[j]>best)best=cur[j]; } } prev=cur; } return best; }
-function _dsxPreview(results, existingData){
+function _dsxPreview(results, existingData, append){
   var body=document.getElementById('daily-body'); if(!body)return;
   // 매칭/선택 후보 = 판매중 공연. byName=선택값(공연명)→마스터 역참조. nameMap/cands=자동매칭용(정규화명 2자 이상, 오매칭 방지)
   var mlist=_dailyMasters(), nameMap={}, cands=[], byName={};
@@ -6352,7 +6369,14 @@ function _dsxPreview(results, existingData){
     return {m:nameMap[best]};
   };
   // 각 결과에 자동매칭 주입(chosen 초기값 = 자동매칭 성공 공연) — 실패해도 chosen='' 로 두고 사용자 선택 대기
-  results.forEach(function(R){ if(R.error)return; var rr=resolve(R.pname); R.autoName=rr.m?rr.m.name:''; R.ambiguous=!!rr.ambiguous; R.chosen=rr.m?rr.m.name:''; });
+  results.forEach(function(R){ if(R.error||R._resolved)return; var rr=resolve(R.pname); R.autoName=rr.m?rr.m.name:''; R.ambiguous=!!rr.ambiguous; R.chosen=rr.m?rr.m.name:''; R._resolved=1; });
+  // [260715 누적] append면 기존 미리보기 뒤에 새 파일 이어붙임 — 같은 파일·공연 중복은 스킵, 기존 수동 선택 보존
+  if(append && window._dsxState && window._dsxState.results && window._dsxState.results.length){
+    var _prior=window._dsxState.results.filter(function(R){return !R.error;});
+    var _pk={}; _prior.forEach(function(R){ _pk[(R.file||'')+'|'+(R.pname||'')]=1; });
+    var _adds=results.filter(function(R){ return R.error || !_pk[(R.file||'')+'|'+(R.pname||'')]; });
+    results=_prior.concat(_adds);
+  }
   window._dsxState={results:results, byName:byName, nameMap:nameMap, cands:cands, existing:existing, dedupWarn:dedupWarn};
   _dsxRender();
 }
@@ -6365,6 +6389,8 @@ function _dsxRender(){
   var pending=[], anyChosen=false, seenPend={};  // seenPend = 이번 업로드 배치 내 (공연|날짜) 상호 dedup(분신술 공통 지적)
   var h='<div style="font-size:15px;font-weight:700;margin-bottom:3px">📄 판매현황 반영 미리보기</div>';
   h+='<div style="font-size:12px;color:var(--dim);margin-bottom:14px">순판매를 날짜순 <b>누적</b>한 값이에요. 공연이 자동 인식되면 그대로, 못 잡으면 <b>공연을 선택</b>하면 저장·분석돼요. 이미 있는 날짜는 건너뛰어요. 누적이 정확하려면 <b>전체 기간</b> 다운로드본을 올려주세요.</div>';
+  // [260715] 미리보기에서도 파일 더 붙이기 — 여러 개 이어붙여 한 번에 저장(줄줄이 누적). append=1로 기존 카드 보존.
+  h+='<div id="d-xdrop2" ondragover="event.preventDefault();this.style.background=\'var(--accent-light)\'" ondragleave="this.style.background=\'none\'" ondrop="_dsxDrop(event,1)" onclick="if(event.target.id!==\'d-xfile2\')document.getElementById(\'d-xfile2\').click()" style="border:1.5px dashed var(--accent);border-radius:var(--r-pop);padding:9px 13px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:background .15s"><span style="font-size:16px">➕</span><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;color:var(--accent)">파일 더 올리기</div><div style="font-size:11px;color:var(--dim);margin-top:1px">여러 개 이어붙여 한 번에 저장 · 같은 파일은 자동 제외</div></div><input type="file" id="d-xfile2" accept=".xlsx,.xls" multiple style="display:none" onchange="_dsxFiles(this,1)"></div>';
   if(st.dedupWarn)h+='<div style="padding:9px 12px;border-radius:8px;background:var(--accent-light);margin-bottom:12px;font-size:12px;color:var(--danger)">⚠️ 기존 일일입력을 못 읽어 중복 확인을 못 했어요 — 이미 입력한 날짜면 중복될 수 있으니 확인 후 저장하세요</div>';
   st.results.forEach(function(R, idx){
     if(R.error){ h+='<div style="padding:9px 12px;border-radius:8px;background:var(--accent-light);margin-bottom:10px;font-size:12px;color:var(--danger)">⚠️ '+escapeHtml(R.file||'')+' — '+escapeHtml(R.error)+'</div>'; return; }
@@ -6409,7 +6435,7 @@ async function _dsxSubmit(){
     closeDailyInput();
     _salesState.master=null;_salesState.daily=null;_salesState.rounds=null;
     try{_srailInit();}catch(_e){}
-    if(document.getElementById('analytics-board')&&document.getElementById('analytics-board').innerHTML){openAnalyticsBoard();}
+    _dailyRestoreOrigin();
   }catch(e){ if(msg)msg.textContent='저장 실패: '+(e.message||e); _btnBusy(btn,false,rows.length+'건 저장'); }
 }
 function _salesToggleEnded(){ _salesState.showEnded=!_salesState.showEnded; _salesRender(); }
