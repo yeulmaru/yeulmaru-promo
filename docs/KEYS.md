@@ -2,7 +2,7 @@
 
 > **이 문서엔 비밀값을 적지 않는다.** 키의 *이름·위치·용도·발급/회전 절차*만. 실제 값은 각 플랫폼 콘솔/시크릿에만 존재.
 > 공개 식별자(MSAL clientId, Naver client key)는 이미 `index.html`에 박혀 있어 그대로 표기.
-> Last updated: 2026-07-13 (KST)
+> Last updated: 2026-07-15 (KST)
 
 ---
 
@@ -26,9 +26,33 @@
 
 ---
 
+## 🗺️ 배포 지도 — 어느 게 어느 계정·도메인에서 도는가
+
+> ⚠️ **홈페이지 주소(도메인)와 API 키가 사는 곳은 서로 다른 계정이다.** 블로그 생성이 안 될 때 도메인·DNS를 건드리는 건 헛수고 — 키는 아래 ②의 Worker에 있다.
+
+| 층 | 무엇 | 도는 곳 | 관리 주체 |
+|---|---|---|---|
+| ① 홈페이지(프론트) | `index.html` 정적 사이트 | **https://promo.yeulmaru.org** (구 `muteno.github.io/yeulmaru-promo/`) | `yeulmaru.org` = **외부 도메인 관리 업체** 소유·DNS. promo 서브도메인을 우리 사이트로 붙여줌(우리는 도메인 자체 미소유) |
+| ② API·키 | Cloudflare Worker `yeulmaru-promo-api` | **`yeulmarumaster.workers.dev`** 계정 (❗`muteno` 계정 아님 — 별도 로그인) | 이 계정 Worker 시크릿에 `GITHUB_PAT` 등 전부 |
+| ③ 레포·엔진 | 소스 + Actions(`claude -p`) | GitHub **`muteno/yeulmaru-promo`** | GitHub `muteno` 계정 |
+
+**블로그 흐름**: 브라우저(promo.yeulmaru.org) → ② Worker(`GITHUB_PAT`) → ③ GitHub `repository_dispatch[nb-blog]` → Actions가 초안 생성 → `drafts/<id>.json` → ② Worker가 폴링해 화면 표시. (프론트가 부르는 API 주소 = `https://yeulmaru-promo-api.yeulmarumaster.workers.dev`, `index.html`에 하드코딩)
+
+**핵심**: ①(도메인)은 ②③과 독립. `dispatch 502 · github_denied · "Resource not accessible by personal access token"` 에러 = **②의 `GITHUB_PAT`가 ③ 레포에 접근 못 하는 것**(도메인·DNS 무관).
+
+### 🔧 소유권 이전·PAT 회전 후 블로그 복구 체크리스트
+레포 소유권을 옮겼거나 PAT가 만료되면 fine-grained PAT이 옛 소유자에 묶여 죽어 위 에러가 난다(리소스 오너는 편집 불가 → **재발급**만 답). 순서대로:
+1. **새 PAT 발급** — https://github.com/settings/personal-access-tokens/new → Resource owner **`muteno`** → Only select repositories `yeulmaru-promo` → **Contents: Read and write** → 값 복사
+2. **Worker 시크릿 교체** — **`yeulmarumaster` 계정**의 `yeulmaru-promo-api` → Settings → Variables and Secrets → `GITHUB_PAT` = 새 값 → Deploy
+3. **`GH_VARS_TOKEN`도 함께** — 같은 fine-grained라 같이 죽음. owner `muteno` · **Variables: Read and write**로 재발급 → Actions Secret 교체(안 하면 활성 계정 자동 승격만 조용히 멈춤)
+4. **검증** — 앱에서 초안 생성 정상이면 끝. 또는 새 PAT로 `POST /repos/muteno/yeulmaru-promo/dispatches` 를 curl → **HTTP 204**면 통과
+5. **(무관)** `CLAUDE_CODE_OAUTH_TOKEN_*`은 Anthropic 토큰이라 GitHub 소유권 이전과 무관 — 건드리지 말 것
+
+---
+
 ## 1. GitHub
 
-- **레포**: `muteno/yeulmaru-promo` (Public) · **사이트**: https://muteno.github.io/yeulmaru-promo/
+- **레포**: `muteno/yeulmaru-promo` (Public) · **사이트**: https://promo.yeulmaru.org (구 `muteno.github.io/yeulmaru-promo/`)
 - **계정**: `yeulmarulicense@gmail.com`
 
 ### 1-a. Fine-grained PAT — 블로그 글쓰기 도우미 (⚠️ 260701 브라우저→Worker 시크릿 이관)
@@ -63,7 +87,8 @@
 
 ## 2. Cloudflare Worker `yeulmaru-promo-api`
 
-- **위치**: 대시보드 → Workers & Pages → `yeulmaru-promo-api` → **Settings → Variables and Secrets** (또는 `wrangler secret put <NAME>`)
+- **⚠️ 계정**: `yeulmarumaster.workers.dev` 하위도메인 계정 (❗`muteno` 계정 아님 — 별도 로그인 필요). 맞는 계정 확인법: Workers 목록에 `yeulmaru-promo-api`가 있고 우측 하단 하위도메인이 `yeulmarumaster.workers.dev`.
+- **위치**: 대시보드 → (위 계정 선택) → Workers & Pages → `yeulmaru-promo-api` → **Settings → Variables and Secrets** (또는 `wrangler secret put <NAME>`)
 - **배포**: Quick Edit 또는 `wrangler deploy` — **git push와 무관** (Worker 코드 고쳐도 Pages 반영 안 됨, 반대도)
 - **소스**: `src/index.js` (단일 원본) · 설정: `wrangler.toml`
 
