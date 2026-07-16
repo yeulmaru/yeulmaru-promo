@@ -5032,6 +5032,11 @@ function _srailRenderInner(els){
     else els.sum.style.display='none';
   }
   if(!actives.length){
+    // [로딩 정합 260716 운영자] PERFS(프로그램 시트) 도착 전엔 '없어요' 확정 금지 — 상태 판정·집계 전 카드가 PERFS 폴백에 기대는 공연(마스터 날짜 공백 등)만 판매중인 구성에서 「없어요」가 번쩍였다 카드가 뜨던 레이스 차단. PERFS 도착 시 initApp의 loadPrograms().then 재렌더가 이 자리를 다시 그린다(로딩 표기 = _srailInit과 동일 스펙).
+    if(typeof _perfReady!=='undefined'&&!_perfReady){
+      els.body.innerHTML='<div style="position:relative;height:100%"><div class="sk-sweep" aria-hidden="true"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--accent);opacity:.75;font-size:14px;font-weight:600">'+_ldHtml(16)+'불러오는 중</div></div>';
+      return;
+    }
     els.body.innerHTML='<div class="u-empty" style="padding:30px 8px"><div class="ico">🎫</div><div class="msg">지금 판매·진행중인 프로그램이 없어요</div></div>'+_srailExErrNote();
     return;
   }
