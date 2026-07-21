@@ -2819,6 +2819,7 @@ async function tryLogin(){
   if(_loggingIn) return;
   _loggingIn = true;
   try {
+    if(!_loginEmail){ try{_loginEmail=(sessionStorage.getItem('myEmail')||'').trim();}catch(e){} }   // [260721] F5 복원 세션의 잠금 해제 폴백 — 이 탭 인증분(myEmail)만, 표시전용 lastLoginEmail 금지
     if(!_loginEmail){ document.getElementById('login-msg').textContent='먼저 Microsoft 인증이 필요합니다'; _loggingIn=false; return; }
     const pin=Array.from(pins).map(p=>p.value).join('');
     if(pin.length!==4){_loggingIn=false;return;}
@@ -2876,6 +2877,7 @@ function _enterApp(){
   }
   try{ if(typeof _loginEmail!=='undefined' && _loginEmail) localStorage.setItem('lastLoginEmail', _loginEmail); }catch(e){}
   try{ localStorage.removeItem('_msAutoRedirAt'); }catch(e){}   // [분신술 260710] 자동 리다이렉트 TTL 백스톱 클리어(성공 진입 = 루프 아님 확정)
+  try{ sessionStorage.removeItem('_lockedAt'); }catch(e){}   // [260721] 잠금 도장 제거 — 정상 진입·PIN 해제 성공의 단일 수렴점
   _locked=false; initApp(); if(typeof _bindIdleEvents==='function'){ _bindIdleEvents(); resetIdleTimer(); }
 }
 
@@ -3309,13 +3311,15 @@ function _resolveNewPinOk(){
   _resolveNewPin(v);
 }
 
-function _enterAppFromSession(){window._appEnteredAt=Date.now();password=sessionStorage.getItem('pw');userRole=sessionStorage.getItem('role')||'user';document.getElementById('login').style.display='none';document.getElementById('app').style.display='';initApp();if(typeof _bindIdleEvents==='function'){_bindIdleEvents();resetIdleTimer();}}
+// [260721] 복원 시 _loginEmail 재수화 — 미복원이면 유휴잠금 해제 PIN 제출이 "먼저 Microsoft 인증이 필요합니다"로 오차단(잠금 못 푸는 함정).
+//  소스는 sessionStorage.myEmail(이 탭에서 MS+PIN 인증 완료 후 _enterAsManager가 저장)만 — 표시전용 localStorage.lastLoginEmail은 인증 근거가 아니라 금지(260704 2FA 원칙).
+function _enterAppFromSession(){window._appEnteredAt=Date.now();password=sessionStorage.getItem('pw');userRole=sessionStorage.getItem('role')||'user';try{if(!_loginEmail)_loginEmail=(sessionStorage.getItem('myEmail')||'').trim();}catch(e){}document.getElementById('login').style.display='none';document.getElementById('app').style.display='';initApp();if(typeof _bindIdleEvents==='function'){_bindIdleEvents();resetIdleTimer();}}
 async function _msalHasLiveSession(){try{const inst=await _msalGet();if(!inst)return false;let acc=inst.getActiveAccount();if(!acc){const accs=inst.getAllAccounts();if(accs&&accs.length){acc=accs[0];inst.setActiveAccount(acc);}}if(!acc){for(let i=0;i<5;i++){await new Promise(function(r){setTimeout(r,200);});acc=inst.getActiveAccount();if(!acc){const accs=inst.getAllAccounts();if(accs&&accs.length){acc=accs[0];inst.setActiveAccount(acc);}}if(acc){console.log('[zombie-check] account found after polling attempt',i+1);break;}}}if(!acc){console.warn('[zombie-check] no account after polling');return false;}try{await Promise.race([inst.acquireTokenSilent({scopes:_MSAL_SCOPES,account:acc}),new Promise(function(_,rej){setTimeout(function(){rej(new Error('silent_timeout'));},4000);})]);return true;}catch(e){console.warn('[zombie-check] silent token failed:',e.errorCode||e.message);return false;}}catch(e){console.warn('[zombie-check]',e);return false;}}
 function _zombieToLogin(){try{['pw','role','myApplicant','myUserDept','subAdminPin'].forEach(function(k){sessionStorage.removeItem(k);});}catch(e){}password='';userRole='user';try{document.getElementById('app').style.display='none';var _l=document.getElementById('login');if(_l){_l.style.display='flex';_l.style.opacity='1';_l.style.visibility='visible';_l.classList.remove('login-leave');}var _zc=document.querySelector('.login-card');if(_zc)_zc.classList.remove('lc-lift');}catch(e){}if(typeof initLoginScreen==='function')initLoginScreen();}
 // [분신술 260710 감사2] 자동 loginRedirect 후 브라우저 뒤로가기 → bfcache 복원이면 '이동 중' 스피너로 동결(리로드가 없어 initLoginScreen 미재실행) — 로그인 화면 표시 중 복원 시에만 리로드로 재기동(앱 사용 중 복원은 무간섭)
 window.addEventListener('pageshow',function(e){ try{ if(e.persisted){ var _l=document.getElementById('login'); if(_l&&_l.style.display!=='none')location.reload(); } }catch(_e){} });
 var _idleLockDisabled=false; var IDLE_MS=10*60*1000; /* 260717 원복: 점검용 임시 OFF가 44일 방치 → 보안 자동잠금 복구 */ // hoisted above session-restore IIFE: on F5 _enterAppFromSession→resetIdleTimer runs here, before the original (later) declaration executed; undefined IDLE_MS made setTimeout(lockScreen,undefined)=0ms → instant false lock
-(function(){try{localStorage.removeItem('myApplicant');localStorage.removeItem('myUserDept');}catch(e){}const s=sessionStorage.getItem('pw');if(s){_enterAppFromSession();_msalHasLiveSession();}else{var _rp=null;try{_rp=localStorage.getItem('_resumePin');}catch(e){} if(_rp){try{localStorage.removeItem('_resumePin');}catch(e){} _loginEmail=_rp; if(typeof startLoginShader==='function'){try{startLoginShader();}catch(e){}} if(typeof goToPinStep==='function'){setTimeout(function(){goToPinStep(true);},0);}else{if(typeof initLoginScreen==='function')initLoginScreen();}}else{if(typeof initLoginScreen==='function')initLoginScreen();}}})();
+(function(){try{localStorage.removeItem('myApplicant');localStorage.removeItem('myUserDept');}catch(e){}const s=sessionStorage.getItem('pw');if(s){var _lk=null;try{_lk=sessionStorage.getItem('_lockedAt');}catch(e){} if(_lk){try{if(!_loginEmail)_loginEmail=(sessionStorage.getItem('myEmail')||'').trim();}catch(e){} lockScreen();}else{_enterAppFromSession();_msalHasLiveSession();}}else{var _rp=null;try{_rp=localStorage.getItem('_resumePin');}catch(e){} if(_rp){try{localStorage.removeItem('_resumePin');}catch(e){} _loginEmail=_rp; if(typeof startLoginShader==='function'){try{startLoginShader();}catch(e){}} if(typeof goToPinStep==='function'){setTimeout(function(){goToPinStep(true);},0);}else{if(typeof initLoginScreen==='function')initLoginScreen();}}else{if(typeof initLoginScreen==='function')initLoginScreen();}}})();
 
 async function api(method,path,body){
   const headers={'Content-Type':'application/json','X-App-Password':password};
@@ -3964,7 +3968,7 @@ function showLogoutModal(){
 function closeLogoutModal(){ const m=document.getElementById('logout-modal'); if(m)m.remove(); }
 async function _doSwitchUser(){
   closeLogoutModal(); _stopIdleTimer();
-  try{ sessionStorage.removeItem('pw'); sessionStorage.removeItem('role'); sessionStorage.removeItem('subAdminPin'); sessionStorage.removeItem('myApplicant'); sessionStorage.removeItem('myUserDept'); }catch(e){}
+  try{ sessionStorage.removeItem('pw'); sessionStorage.removeItem('role'); sessionStorage.removeItem('subAdminPin'); sessionStorage.removeItem('myApplicant'); sessionStorage.removeItem('myUserDept'); sessionStorage.removeItem('_lockedAt'); }catch(e){}
   password=''; userRole='user';
   const app=document.getElementById('app'); if(app)app.style.display='none';
   const login=document.getElementById('login'); if(login)login.style.display='';
@@ -3976,7 +3980,7 @@ async function _doSwitchUser(){
 }
 async function _doLogout(){
   closeLogoutModal(); _stopIdleTimer();
-  try{ sessionStorage.removeItem('pw'); sessionStorage.removeItem('role'); sessionStorage.removeItem('subAdminPin'); sessionStorage.removeItem('myApplicant'); sessionStorage.removeItem('myUserDept'); }catch(e){}
+  try{ sessionStorage.removeItem('pw'); sessionStorage.removeItem('role'); sessionStorage.removeItem('subAdminPin'); sessionStorage.removeItem('myApplicant'); sessionStorage.removeItem('myUserDept'); sessionStorage.removeItem('_lockedAt'); }catch(e){}
   try{ await _msalLogout(); }catch(e){ console.warn('[logout msal]',e); }
   location.reload();
 }
@@ -3994,6 +3998,7 @@ function _bindIdleEvents(){
 }
 function lockScreen(){
   _stopIdleTimer(); _locked=true;
+  try{sessionStorage.setItem('_lockedAt',String(Date.now()));}catch(e){}   // [260721] 잠금 도장 — F5 세션복원 IIFE가 이 도장을 보면 앱 직행 대신 잠금화면 유지(새로고침 우회 봉쇄). 해제 성공(_enterApp)·로그아웃(_doLogout)이 제거
   try{if(typeof _memPurge==='function')_memPurge();}catch(e){}   // 회원 PII 모달은 body 직속(z 2000)이라 #app 숨김만으론 잠금화면 위에 남음(분신술 보안 MED-4) — 잠금 시 소거
   const app=document.getElementById('app'); if(app)app.style.display='none';
   const login=document.getElementById('login'); if(login){login.style.display='';login.classList.remove('login-leave');}
@@ -9018,19 +9023,27 @@ async function adminCompleteWithResult(rowIndex){
   // PATCH — 진행상태='완료' + 결과 필드 3개 (기존 다른 필드 유지)
   showOverlayLoad('완료 처리 중');
   try{
-    const row = buildRecordRow(rec, {
+    // [260721] 완료 표시 실종 수정 — syncReload(0)는 행 '개수'만 검증해서, 시트(Graph) 읽기 지연이면
+    //  재조회가 옛 상태('예정')를 그대로 되그려 캘린더 취소선이 안 나타났음. PATCH 성공 = 확정 사실이므로
+    //  ① 로컬 record에 즉시 반영(선반영) ② 재조회 결과가 아직 옛 상태면 확정값 재적용.
+    const ov={
       '진행 상태':'완료',
       '결과_링크':result.link||'',
       '결과_첨부URL':result.attach||'',
       '결과_비고':result.memo||''
-    });
+    };
+    if((rec['진행 상태']||'')!=='완료'){ ov['직전 상태']=statusToPrimary(rec['진행 상태']); ov['상태 변경 KST']=nowKstStr(); }   // buildRecordRow 자동채움과 동일 조건·값 — 시트/로컬 거울 일치
+    const row = buildRecordRow(rec, ov);
     await api('PATCH','/api/records/'+rowIndex,{values: row});
-    // 메시지함 hook — 신청자에게 완료 알림 (단순 완료 경로와 동일하게)
+    // 메시지함 hook — 신청자에게 완료 알림 (단순 완료 경로와 동일하게) · before는 갱신 전 값이라 Object.assign보다 먼저
     try{
       pushMessage({recipient:rec['신청자']||'',type:'일반',trigger:'예정→완료',before:rec['진행 상태']||'예정',after:'완료',reason:'',refNo:rec['No']||rec['NO']||'',refSummary:(getRecDateKey(rec)+' '+(rec['플랫폼 1']||'')+' '+(rec['콘텐츠 제목']||'')).trim()});
     }catch(_e){ console.error('[pushMessage adminComplete]', _e); }
+    Object.assign(rec,ov);
     showToast('완료 처리됐어요','success');
+    render(); if(typeof renderPromoBoard==='function')renderPromoBoard();
     await syncReload(0);
+    try{ const _fr=(records||[]).find(function(x){return x._rowIndex===rowIndex;}); if(_fr&&_fr['진행 상태']!=='완료')Object.assign(_fr,ov); }catch(_e){}
     if(typeof renderPromoBoard==='function')renderPromoBoard();
     render();
   }catch(e){
