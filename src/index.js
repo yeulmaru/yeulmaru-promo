@@ -1981,6 +1981,10 @@ var index_default = {
       // [260721 운영자] 콘텐츠 제작 ▸ 링크 자료수집 — 목록/파일 프록시 (핸들러 = 파일 하단 linkgrab 블록)
       if (url.pathname === "/api/linkgrab" && request.method === "GET") return lgList(url, env);
       if (url.pathname === "/api/linkgrab/file" && request.method === "GET") return lgFile(url, env);
+      if (url.pathname === "/api/linkgrab/head" && request.method === "GET") return lgHead(url, env);
+      if (url.pathname === "/api/linkgrab/ytdl" && request.method === "POST") return lgYtDispatch(request, env);
+      if (url.pathname === "/api/linkgrab/ytstat" && request.method === "GET") return lgYtStat(url, env);
+      if (url.pathname === "/api/linkgrab/ytfile" && request.method === "GET") return lgYtFile(url, env);
 
       if (url.pathname === "/api/health") return json({ status: "ok", ts: (/* @__PURE__ */ new Date()).toISOString() }, env);
       return json({ error: "Not found" }, env, 404);
@@ -1993,10 +1997,12 @@ var index_default = {
 // ============================================================
 // 콘텐츠 제작 ▸ 링크 자료수집 (linkgrab) — 운영자 260721
 //  URL 하나를 받아 그 페이지 안의 내려받을 자료(PDF·문서·사진·영상·압축)를 목록으로 돌려준다.
-//  GET /api/linkgrab?url=…             → { source, title, items:[{kind,title,url,dl,via,note}] }
+//  GET /api/linkgrab?url=…             → { source, title, items:[{kind,title,url,dl,via,note,thumb,stream,vid}] }
 //  GET /api/linkgrab/file?url=…&name=… → 파일 스트리밍 프록시(Content-Disposition: attachment = 탭 즉시 저장)
-//  전용 처리: linktr.ee(__NEXT_DATA__ JSON) · 드롭박스(dl=1 재작성, 폴더=ZIP) · 구글드라이브(uc?export=download)
-//  · 유튜브/스트리밍(kind:'stream' — 저작권·기술상 다운로드 불가, 열기만) · 그 외 = 범용 href/src 스캔.
+//  GET /api/linkgrab/head?url=…        → { size, type } (HEAD·Range 폴백 = 용량만 · 갤러리 우상단 표시용, 프론트가 항목별 지연 조회)
+//  스캔 대상: img·video·source·poster·og:image 미디어 태그 + 파일 확장자 링크(사진·영상·문서·음성·압축) — 종류별 섹션.
+//  전용 처리: linktr.ee(__NEXT_DATA__ JSON) · 드롭박스(dl=1, 폴더=ZIP) · 구글드라이브(uc?export=download)
+//  · 유튜브 등 스트리밍(kind:'video'·stream:true — 저작권·기술상 다운로드 불가, 열기·yt-dlp 검토) · 아이콘·로고성 이미지 제외.
 //  가드(SSRF·오남용): http/https만 · IP 리터럴/localhost/비표준 포트 차단 · HTML 3MB 캡 · 목록 15초 타임아웃 ·
 //  파일 프록시 300MB 상한. 이식 노트(노뮤트 에디터): 이 블록 + 라우터 2줄 + 프론트 lg-* 블록이 전부(의존 = corsHeaders/json).
 // ============================================================
@@ -2030,13 +2036,26 @@ function lgFetchPage(u, ms) {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; yeulmaru-linkgrab)", "Accept": "text/html,application/xhtml+xml,*/*" }
   });
 }
+// 스트리밍 영상 식별 — 영상 섹션에 넣되(stream:true) 파일 다운로드는 불가(yt-dlp 경로 = 인프라 결정 대기)
+function lgStreamInfo(href) {
+  let u;
+  try { u = new URL(href); } catch (_) { return null; }
+  const h = u.hostname.toLowerCase();
+  let vid = "";
+  if (h === "youtu.be") vid = u.pathname.slice(1).split("/")[0];
+  else if (h.endsWith("youtube.com")) vid = u.searchParams.get("v") || (u.pathname.match(/\/(shorts|embed)\/([^/?]+)/) || [])[2] || "";
+  if (vid) return { stream: "youtube", vid, thumb: "https://i.ytimg.com/vi/" + vid + "/mqdefault.jpg" };
+  if (h === "youtu.be" || h.endsWith("youtube.com")) return { stream: "youtube", vid: "", thumb: "" };   // 재생목록·채널 등 — 영상(스트리밍) 취급
+  if (h.endsWith("vimeo.com") || h.endsWith("arte.tv") || h.endsWith("tv.naver.com") || h.endsWith("tiktok.com")) return { stream: h.split(".").slice(-2).join("."), vid: "", thumb: "" };
+  return null;
+}
 // 잘 알려진 저장소·스트리밍 주소의 다운로드 경로 재작성
 function lgSpecial(href) {
   let u;
   try { u = new URL(href); } catch (_) { return null; }
   const h = u.hostname.toLowerCase();
-  if (h === "youtu.be" || h.endsWith("youtube.com") || h.endsWith("vimeo.com") || h.endsWith("arte.tv") || h.endsWith("tv.naver.com") || h.endsWith("tiktok.com"))
-    return { kind: "stream", dl: null, note: "스트리밍 영상 — 내려받기 불가, 열기만 가능" };
+  const st = lgStreamInfo(href);
+  if (st) return { kind: "video", dl: null, stream: st.stream, vid: st.vid, thumb: st.thumb, note: "스트리밍 — 권리 확인 동의 후 [저장 요청]으로 변환해 받기" };
   if (h.endsWith("dropbox.com")) {
     u.searchParams.set("dl", "1");
     const folder = u.pathname.includes("/scl/fo/") || u.pathname.startsWith("/sh/");
@@ -2048,6 +2067,10 @@ function lgSpecial(href) {
     if (u.pathname.startsWith("/drive/folders/")) return { kind: "link", dl: null, note: "드라이브 폴더 — 열어서 받아주세요" };
   }
   return null;
+}
+// 아이콘·로고·트래킹 픽셀 등 자료 가치 없는 이미지 걸러내기(범용 스캔 전용 — 명시 링크는 안 거름)
+function lgJunkImg(abs) {
+  return /favicon|sprite|logo|icon|badge|pixel|spacer|blank|1x1|\/emoji\/|\/flags?\//i.test(abs);
 }
 // 링크트리 페이지 — __NEXT_DATA__ JSON에서 링크·첨부(EXTENSION documentUrl) 추출
 function lgParseLinktree(html) {
@@ -2068,32 +2091,92 @@ function lgParseLinktree(html) {
     }
     if (!l.url) continue;
     const sp = lgSpecial(l.url);
-    if (sp) { items.push({ kind: sp.kind, title, url: l.url, dl: sp.dl || null, via: sp.via || "direct", note: sp.note || "" }); continue; }
+    if (sp) { items.push({ kind: sp.kind, title, url: l.url, dl: sp.dl || null, via: sp.via || "direct", note: sp.note || "", thumb: sp.thumb || "", stream: sp.stream || "", vid: sp.vid || "" }); continue; }
     const k = lgKindOf(l.url);
-    items.push(k ? { kind: k, title, url: l.url, dl: l.url, via: "proxy", note: "" } : { kind: "link", title, url: l.url, dl: null, via: "", note: "" });
+    items.push(k ? { kind: k, title, url: l.url, dl: l.url, via: "proxy", note: "", thumb: k === "img" ? l.url : "" } : { kind: "link", title, url: l.url, dl: null, via: "", note: "" });
   }
   return { source: "linktree", title: String(acct.pageTitle || acct.username || "").trim(), items };
 }
-// 범용 페이지 — href/src에서 파일 확장자 링크만 수집
+// 범용 페이지 — 미디어 태그(img·video·source·audio·poster·og:image) + 파일 확장자 링크를 전수 스캔
 function lgParseGeneric(html, baseUrl) {
   const items = [];
   const seen = new Set();
   const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const og = html.match(/property=["']og:title["'][^>]*content=["']([^"']+)/i);
-  const re = /(?:href|src)\s*=\s*["']([^"'\s]+)["']/gi;
+  function absol(raw) {
+    if (!raw || /^(data|javascript|blob):/i.test(raw)) return "";
+    try { return new URL(raw, baseUrl).toString(); } catch (_) { return ""; }
+  }
+  function push(abs, kind, extra) {
+    if (!abs || seen.has(abs) || items.length >= 200) return;
+    seen.add(abs);
+    const name = lgDec((abs.split("?")[0].split("/").pop() || "파일")) || "파일";
+    items.push(Object.assign({ kind, title: name, url: abs, dl: abs, via: "proxy", note: "", thumb: kind === "img" ? abs : "" }, extra || {}));
+  }
   let m;
-  while ((m = re.exec(html)) && items.length < 120) {
-    let abs;
-    try { abs = new URL(m[1], baseUrl).toString(); } catch (_) { continue; }
-    if (seen.has(abs)) continue;
+  // ① <video src poster> + 내부 <source> — 포스터는 그 영상의 썸네일로
+  const reVideo = /<video\b[^>]*>/gi;
+  while ((m = reVideo.exec(html))) {
+    const tag = m[0];
+    const src = absol((tag.match(/\ssrc\s*=\s*["']([^"']+)["']/i) || [])[1]);
+    const poster = absol((tag.match(/\sposter\s*=\s*["']([^"']+)["']/i) || [])[1]);
+    if (src) push(src, "video", { thumb: poster || "" });
+  }
+  const reSource = /<source\b[^>]+>/gi;
+  while ((m = reSource.exec(html))) {
+    const tag = m[0];
+    const src = absol((tag.match(/\ssrc\s*=\s*["']([^"']+)["']/i) || [])[1]);
+    if (!src) continue;
+    const ty = (tag.match(/\stype\s*=\s*["']([^"']+)["']/i) || [])[1] || "";
+    push(src, ty.startsWith("audio/") ? "audio" : (ty.startsWith("video/") ? "video" : (lgKindOf(src) || "video")));
+  }
+  const reAudio = /<audio\b[^>]*\ssrc\s*=\s*["']([^"']+)["']/gi;
+  while ((m = reAudio.exec(html))) push(absol(m[1]), "audio");
+  // ② <img src> — 확장자 없어도 이미지로 취급(CDN 주소 대응) · 아이콘/로고/픽셀 제외
+  const reImg = /<img\b[^>]*\ssrc\s*=\s*["']([^"']+)["']/gi;
+  while ((m = reImg.exec(html))) {
+    const abs = absol(m[1]);
+    if (!abs || lgJunkImg(abs)) continue;
+    const k = lgKindOf(abs);
+    if (k && k !== "img") continue;
+    push(abs, "img");
+  }
+  const ogImg = html.match(/property=["']og:image["'][^>]*content=["']([^"']+)/i);
+  if (ogImg) push(absol(ogImg[1]), "img", { title: "대표 이미지(og:image)" });
+  // ③ 파일 확장자가 있는 모든 href/src 링크(문서·압축·직링크 미디어) + 스트리밍 영상 링크
+  const re = /(?:href|src)\s*=\s*["']([^"'\s]+)["']/gi;
+  while ((m = re.exec(html)) && items.length < 200) {
+    const abs = absol(m[1]);
+    if (!abs) continue;
     const sp = lgSpecial(abs);
     const k = sp ? sp.kind : lgKindOf(abs);
     if (!k || k === "link") continue;
+    if (k === "img" && lgJunkImg(abs)) continue;
+    if (seen.has(abs)) continue;
     seen.add(abs);
-    const name = lgDec((abs.split("?")[0].split("/").pop() || "파일"));
-    items.push({ kind: k, title: name, url: abs, dl: sp ? (sp.dl || null) : abs, via: sp ? (sp.via || "") : "proxy", note: sp ? (sp.note || "") : "" });
+    const name = lgDec((abs.split("?")[0].split("/").pop() || "파일")) || "파일";
+    items.push({ kind: k, title: name, url: abs, dl: sp ? (sp.dl || null) : abs, via: sp ? (sp.via || "") : "proxy", note: sp ? (sp.note || "") : "", thumb: sp ? (sp.thumb || "") : (k === "img" ? abs : ""), stream: sp ? (sp.stream || "") : "", vid: sp ? (sp.vid || "") : "" });
   }
   return { source: "page", title: String((og && og[1]) || (tm && tm[1]) || "").trim(), items };
+}
+// 항목별 용량·타입 조회(HEAD → Range 폴백) — 갤러리 우상단 표시용(프론트가 지연 호출)
+async function lgHead(url, env) {
+  let target;
+  try { target = lgGuardUrl(url.searchParams.get("url")); } catch (e) { return json({ error: e.message }, env, 400); }
+  const hdr = { "User-Agent": "Mozilla/5.0 (compatible; yeulmaru-linkgrab)" };
+  try {
+    let r = await fetch(target.toString(), { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(8e3), headers: hdr });
+    let size = parseInt(r.headers.get("content-length") || "0", 10) || 0;
+    let type = r.headers.get("content-type") || "";
+    if (!r.ok || !size) {
+      r = await fetch(target.toString(), { method: "GET", redirect: "follow", signal: AbortSignal.timeout(8e3), headers: Object.assign({ "Range": "bytes=0-0" }, hdr) });
+      const total = String(r.headers.get("content-range") || "").split("/")[1];
+      size = (total && total !== "*") ? (parseInt(total, 10) || 0) : (parseInt(r.headers.get("content-length") || "0", 10) || 0);
+      type = r.headers.get("content-type") || type;
+      try { if (r.body && r.body.cancel) r.body.cancel(); } catch (_) {}
+    }
+    return json({ size, type }, env);
+  } catch (_) { return json({ size: 0, type: "" }, env); }
 }
 async function lgList(url, env) {
   let target;
@@ -2106,7 +2189,7 @@ async function lgList(url, env) {
     // 파일 직링크 — 그 파일 1건짜리 목록으로 응답
     const k = lgKindOf(target.pathname) || (ct.startsWith("image/") ? "img" : ct.startsWith("video/") ? "video" : "doc");
     const name = lgDec(target.pathname.split("/").pop() || "파일");
-    return json({ source: "file", title: name, items: [{ kind: k, title: name, url: target.toString(), dl: target.toString(), via: "proxy", note: "" }] }, env);
+    return json({ source: "file", title: name, items: [{ kind: k, title: name, url: target.toString(), dl: target.toString(), via: "proxy", note: "", thumb: k === "img" ? target.toString() : "" }] }, env);
   }
   const buf = await res.arrayBuffer();
   const html = new TextDecoder("utf-8").decode(buf.byteLength > 3e6 ? buf.slice(0, 3e6) : buf);
@@ -2116,6 +2199,57 @@ async function lgList(url, env) {
   if (!out) out = lgParseGeneric(html, res.url || target.toString());
   if (!out.title) out.title = target.hostname;
   return json(out, env);
+}
+// --- 영상(yt-dlp) 저장 파이프라인 — 운영자 승인 260721: 권리 보유·이용 허가 콘텐츠 전용(앱 동의 체크 후) ---
+//  앱 → POST /api/linkgrab/ytdl → repository_dispatch[ytdl] → Actions(.github/workflows/ytdl.yml, yt-dlp)
+//  → 릴리스 ytdl-drops 자산(<id>.mp4) → /ytstat 폴링 → /ytfile = GitHub 서명 URL 발급(브라우저 직접 수신 — 대용량 안전).
+//  id = 영상 URL의 SHA-1 앞 16자리 → 같은 영상 재요청 = 변환 생략(자산 재사용, 7일 보관).
+async function lgYtId(u) {
+  const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(String(u)));
+  return "v" + [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+async function lgYtAsset(env, name) {
+  const cfg = ghBlogCfg(env);
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/releases/tags/ytdl-drops`, { headers: { "Authorization": "Bearer " + cfg.pat, "Accept": "application/vnd.github+json", "User-Agent": "yeulmaru-promo-worker" } });
+  if (!r.ok) return null;
+  const rel = await r.json();
+  return (rel.assets || []).find((a) => a.name === name) || null;
+}
+async function lgYtDispatch(request, env) {
+  const cfg = ghBlogCfg(env);
+  if (!cfg.pat) return json({ error: "no_github_pat", note: "Worker에 GITHUB_PAT 시크릿 미설정" }, env, 503);
+  let b = {};
+  try { b = await request.json(); } catch (_) {}
+  const vurl = String(b.url || "");
+  if (!lgStreamInfo(vurl)) return json({ error: "스트리밍 영상 주소가 아니에요" }, env, 400);
+  const id = await lgYtId(vurl);
+  const done = await lgYtAsset(env, id + ".mp4");
+  if (done) return json({ ok: true, id, ready: true, size: done.size, asset: done.id }, env);
+  const gr = await fetch(`https://api.github.com/repos/${cfg.repo}/dispatches`, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + cfg.pat, "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "yeulmaru-promo-worker" },
+    body: JSON.stringify({ event_type: "ytdl", client_payload: { d: { id, url: vurl, title: String(b.title || "").slice(0, 120) } } })
+  });
+  if (!gr.ok) return json({ error: "dispatch_failed", status: gr.status, note: (await gr.text()).slice(0, 160) }, env, 502);
+  return json({ ok: true, id }, env);
+}
+async function lgYtStat(url, env) {
+  const id = String(url.searchParams.get("id") || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 20);
+  if (!id) return json({ error: "id가 필요해요" }, env, 400);
+  const ok = await lgYtAsset(env, id + ".mp4");
+  if (ok) return json({ ready: true, size: ok.size, asset: ok.id }, env);
+  const err = await lgYtAsset(env, id + ".err.txt");
+  if (err) return json({ failed: true }, env);
+  return json({ ready: false }, env);
+}
+async function lgYtFile(url, env) {
+  const cfg = ghBlogCfg(env);
+  const aid = String(url.searchParams.get("asset") || "").replace(/\D/g, "");
+  if (!aid) return json({ error: "asset이 필요해요" }, env, 400);
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/releases/assets/${aid}`, { redirect: "manual", headers: { "Authorization": "Bearer " + cfg.pat, "Accept": "application/octet-stream", "User-Agent": "yeulmaru-promo-worker" } });
+  const loc = r.headers.get("location");
+  if (!loc) return json({ error: "파일 위치를 얻지 못했어요" }, env, 502);
+  return json({ url: loc }, env);
 }
 async function lgFile(url, env) {
   let target;
