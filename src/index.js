@@ -1982,6 +1982,9 @@ var index_default = {
       if (url.pathname === "/api/linkgrab" && request.method === "GET") return lgList(url, env);
       if (url.pathname === "/api/linkgrab/file" && request.method === "GET") return lgFile(url, env);
       if (url.pathname === "/api/linkgrab/head" && request.method === "GET") return lgHead(url, env);
+      if (url.pathname === "/api/linkgrab/ytdl" && request.method === "POST") return lgYtDispatch(request, env);
+      if (url.pathname === "/api/linkgrab/ytstat" && request.method === "GET") return lgYtStat(url, env);
+      if (url.pathname === "/api/linkgrab/ytfile" && request.method === "GET") return lgYtFile(url, env);
 
       if (url.pathname === "/api/health") return json({ status: "ok", ts: (/* @__PURE__ */ new Date()).toISOString() }, env);
       return json({ error: "Not found" }, env, 404);
@@ -2052,7 +2055,7 @@ function lgSpecial(href) {
   try { u = new URL(href); } catch (_) { return null; }
   const h = u.hostname.toLowerCase();
   const st = lgStreamInfo(href);
-  if (st) return { kind: "video", dl: null, stream: st.stream, vid: st.vid, thumb: st.thumb, note: "스트리밍 영상 — 파일 저장 불가, 열기로 재생" };
+  if (st) return { kind: "video", dl: null, stream: st.stream, vid: st.vid, thumb: st.thumb, note: "스트리밍 — 권리 확인 동의 후 [저장 요청]으로 변환해 받기" };
   if (h.endsWith("dropbox.com")) {
     u.searchParams.set("dl", "1");
     const folder = u.pathname.includes("/scl/fo/") || u.pathname.startsWith("/sh/");
@@ -2196,6 +2199,57 @@ async function lgList(url, env) {
   if (!out) out = lgParseGeneric(html, res.url || target.toString());
   if (!out.title) out.title = target.hostname;
   return json(out, env);
+}
+// --- 영상(yt-dlp) 저장 파이프라인 — 운영자 승인 260721: 권리 보유·이용 허가 콘텐츠 전용(앱 동의 체크 후) ---
+//  앱 → POST /api/linkgrab/ytdl → repository_dispatch[ytdl] → Actions(.github/workflows/ytdl.yml, yt-dlp)
+//  → 릴리스 ytdl-drops 자산(<id>.mp4) → /ytstat 폴링 → /ytfile = GitHub 서명 URL 발급(브라우저 직접 수신 — 대용량 안전).
+//  id = 영상 URL의 SHA-1 앞 16자리 → 같은 영상 재요청 = 변환 생략(자산 재사용, 7일 보관).
+async function lgYtId(u) {
+  const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(String(u)));
+  return "v" + [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+async function lgYtAsset(env, name) {
+  const cfg = ghBlogCfg(env);
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/releases/tags/ytdl-drops`, { headers: { "Authorization": "Bearer " + cfg.pat, "Accept": "application/vnd.github+json", "User-Agent": "yeulmaru-promo-worker" } });
+  if (!r.ok) return null;
+  const rel = await r.json();
+  return (rel.assets || []).find((a) => a.name === name) || null;
+}
+async function lgYtDispatch(request, env) {
+  const cfg = ghBlogCfg(env);
+  if (!cfg.pat) return json({ error: "no_github_pat", note: "Worker에 GITHUB_PAT 시크릿 미설정" }, env, 503);
+  let b = {};
+  try { b = await request.json(); } catch (_) {}
+  const vurl = String(b.url || "");
+  if (!lgStreamInfo(vurl)) return json({ error: "스트리밍 영상 주소가 아니에요" }, env, 400);
+  const id = await lgYtId(vurl);
+  const done = await lgYtAsset(env, id + ".mp4");
+  if (done) return json({ ok: true, id, ready: true, size: done.size, asset: done.id }, env);
+  const gr = await fetch(`https://api.github.com/repos/${cfg.repo}/dispatches`, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + cfg.pat, "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "yeulmaru-promo-worker" },
+    body: JSON.stringify({ event_type: "ytdl", client_payload: { d: { id, url: vurl, title: String(b.title || "").slice(0, 120) } } })
+  });
+  if (!gr.ok) return json({ error: "dispatch_failed", status: gr.status, note: (await gr.text()).slice(0, 160) }, env, 502);
+  return json({ ok: true, id }, env);
+}
+async function lgYtStat(url, env) {
+  const id = String(url.searchParams.get("id") || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 20);
+  if (!id) return json({ error: "id가 필요해요" }, env, 400);
+  const ok = await lgYtAsset(env, id + ".mp4");
+  if (ok) return json({ ready: true, size: ok.size, asset: ok.id }, env);
+  const err = await lgYtAsset(env, id + ".err.txt");
+  if (err) return json({ failed: true }, env);
+  return json({ ready: false }, env);
+}
+async function lgYtFile(url, env) {
+  const cfg = ghBlogCfg(env);
+  const aid = String(url.searchParams.get("asset") || "").replace(/\D/g, "");
+  if (!aid) return json({ error: "asset이 필요해요" }, env, 400);
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/releases/assets/${aid}`, { redirect: "manual", headers: { "Authorization": "Bearer " + cfg.pat, "Accept": "application/octet-stream", "User-Agent": "yeulmaru-promo-worker" } });
+  const loc = r.headers.get("location");
+  if (!loc) return json({ error: "파일 위치를 얻지 못했어요" }, env, 502);
+  return json({ url: loc }, env);
 }
 async function lgFile(url, env) {
   let target;

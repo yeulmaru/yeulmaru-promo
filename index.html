@@ -22183,7 +22183,7 @@ function _veSpecPrompt(){
 //  레퍼런스 = nblog 보드 골격(openNaverBlogTool) + _contentMenuBuild 메뉴 문법 그대로 — 신규 raw hex 0(전부 :root 토큰).
 //  이식 노트(노뮤트 에디터): 이 블록 + Worker linkgrab 블록 + 메뉴 항목 1줄이 전부(전역 상태 _lgState 하나 · 의존 = API/escapeHtml/showToast/_btnBusy/모달 공용부).
 // ============================================================
-var _lgState={busy:false,res:null,err:'',lastUrl:'',escHandler:null,sel:{},meta:{},got:{},histOpen:false};
+var _lgState={busy:false,res:null,err:'',lastUrl:'',escHandler:null,sel:{},meta:{},got:{},histOpen:false,ytConsent:false,yt:{}};
 var _LG_KIND={doc:['문서','var(--accent-light)','var(--accent)'],img:['사진','var(--peach-light)','var(--peach-text)'],video:['영상','var(--today-bg)','var(--c5)'],audio:['음성','var(--today-bg)','var(--c5)'],zip:['압축','var(--neutral)','var(--neutral-text)'],link:['링크','var(--neutral)','var(--neutral-text)']};
 var _LG_SECTIONS=[['img','📷 사진'],['video','🎬 영상'],['doc','📄 문서'],['audio','🎧 음성'],['zip','🗜 압축'],['link','🔗 기타 링크']];
 var _LG_GOT_KEY='lg_got_v1';   // 이미 받은 항목(URL 키) — 기기 로컬 편의 캐시
@@ -22194,7 +22194,7 @@ function openLinkGrab(){
   var el=document.getElementById('lg-board');
   if(!el){el=document.createElement('div');el.id='lg-board';document.body.appendChild(el);}
   try{if(_lgState&&_lgState.escHandler)document.removeEventListener('keydown',_lgState.escHandler);}catch(_e){}
-  _lgState={busy:false,res:null,err:'',lastUrl:'',escHandler:null,sel:{},meta:{},got:_lgLoadGot(),histOpen:false};   // 결과는 매번 새로(공용 PC 원칙) · 받음/기록만 기기 보존
+  _lgState={busy:false,res:null,err:'',lastUrl:'',escHandler:null,sel:{},meta:{},got:_lgLoadGot(),histOpen:false,ytConsent:false,yt:{}};   // 결과는 매번 새로(공용 PC 원칙) · 받음/기록만 기기 보존
   el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeLinkGrab)">'
     +'<div class="modal" style="width:96vw;max-width:720px;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden;background:var(--surface-solid)">'
     +'<button class="modal-x" onclick="closeLinkGrab()" title="닫기" style="position:absolute;top:14px;right:22px;z-index:10">✕</button>'
@@ -22207,7 +22207,7 @@ function openLinkGrab(){
 }
 function closeLinkGrab(){
   if(_lgState.escHandler)document.removeEventListener('keydown',_lgState.escHandler);
-  _lgState={busy:false,res:null,err:'',lastUrl:'',escHandler:null,sel:{},meta:{},got:{},histOpen:false};
+  _lgState={busy:false,res:null,err:'',lastUrl:'',escHandler:null,sel:{},meta:{},got:{},histOpen:false,ytConsent:false,yt:{}};
   var el=document.getElementById('lg-board');if(el)el.innerHTML='';
 }
 function _lgKey(it){return String(it.dl||it.url||'');}
@@ -22237,6 +22237,12 @@ function _lgRender(){
         +'<div style="font-size:13px;font-weight:700">'+label+' <span style="color:var(--dim);font-weight:600">'+idxs.length+'</span></div>'
         +(selectable.length?'<button class="btn btn--ghost btn--sm" onclick="_lgSelSection(\''+kind+'\')">모두 선택</button>':'')
         +'</div>';
+      // 영상 섹션에 스트리밍(유튜브 등)이 있으면 — 권리 확인 동의 체크 후에만 [저장 요청] 활성(운영자 260721)
+      if(kind==='video'&&idxs.some(function(i){return items[i].stream&&!items[i].dl;})){
+        h+='<label style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--past-bg);font-size:12px;line-height:1.6;cursor:pointer">'
+          +'<input type="checkbox" '+(_lgState.ytConsent?'checked':'')+' onchange="_lgYtConsentSet(this.checked)" style="margin-top:2px;accent-color:var(--accent)">'
+          +'<span>이 영상들은 <b>내가 권리를 보유했거나 이용 허가를 받은 콘텐츠</b>(예: 기획사가 공유해 준 홍보 영상)임을 확인하고 저장 요청에 동의합니다</span></label>';
+      }
       if(kind==='img'){
         h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-top:10px">';
         idxs.forEach(function(i){h+=_lgCardHtml(items[i],i);});
@@ -22286,7 +22292,8 @@ function _lgRowHtml(it,i){
     +'<span style="flex:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:'+kd[1]+';color:'+kd[2]+'">'+kd[0]+'</span>'
     +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(it.title||'자료')
     +'<span id="lg-got-'+i+'" style="margin-left:6px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--green);color:var(--surface-solid);'+(got?'':'display:none')+'">받음</span></div>'
-    +'<div style="font-size:11px;color:var(--dim);margin-top:1px"><span id="lg-size-'+i+'">'+(_lgFmtSize(m.size)||(it.dl?'용량 확인 중':''))+'</span>'+(it.note?' · '+escapeHtml(it.note):'')+'</div></div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-top:1px"><span id="lg-size-'+i+'">'+(_lgFmtSize(m.size)||(it.dl?'용량 확인 중':''))+'</span>'+(it.note?' · '+escapeHtml(it.note):'')+' <span id="lg-ytst-'+i+'" style="color:var(--accent);font-weight:700"></span></div></div>'
+    +(it.stream&&!it.dl?'<button id="lg-ytbtn-'+i+'" class="btn btn--neutral btn--sm" style="flex:none" '+(_lgState.ytConsent?'':'disabled ')+'onclick="event.stopPropagation();_lgYtReq('+i+')">저장 요청</button>':'')
     +'<button class="btn btn--ghost btn--sm" style="flex:none" onclick="event.stopPropagation();_lgOpen('+i+')">열기</button>'
     +'</div>';
 }
@@ -22408,12 +22415,71 @@ function _lgHistSave(u,title){
     localStorage.setItem(_LG_HIST_KEY,JSON.stringify(hist.slice(0,20)));
   }catch(_e){}
 }
+// --- 스트리밍 영상 저장(yt-dlp 파이프라인) — 동의 체크 후 요청 → Actions 변환(2~5분) → 서명 URL로 직접 수신 ---
+function _lgYtConsentSet(v){
+  _lgState.ytConsent=!!v;
+  _lgEachIdx(function(it,i){
+    if(it.stream&&!it.dl){var b=document.getElementById('lg-ytbtn-'+i);var y=_lgState.yt[i];if(b&&!(y&&y.st&&y.st!=='idle'))b.disabled=!v;}
+  });
+}
+async function _lgYtReq(i){
+  var it=((_lgState.res||{}).items||[])[i];if(!it||!it.stream)return;
+  if(!_lgState.ytConsent){showToast('먼저 권리 보유·이용 허가 동의에 체크해 주세요','error');return;}
+  var y=_lgState.yt[i]={st:'req',polls:0};
+  _lgYtPaint(i,'요청 중',true);
+  try{
+    var r=await fetch(API+'/api/linkgrab/ytdl',{method:'POST',headers:{'Content-Type':'application/json','X-App-Password':password},body:JSON.stringify({url:it.url,title:it.title})});
+    var d=await r.json().catch(function(){return {};});
+    if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));
+    y.id=d.id;
+    if(d.ready){y.st='ready';y.asset=d.asset;y.size=d.size;_lgYtReady(i);return;}   // 같은 영상 변환분 재사용
+    y.st='run';_lgYtPaint(i,'변환 중 — 보통 2~5분',true);
+    _lgYtPoll(i);
+  }catch(e){y.st='idle';_lgYtPaint(i,'',false);showToast('저장 요청 실패 — '+((e&&e.message)||'오류'),'error');}
+}
+function _lgYtPoll(i){
+  var y=_lgState.yt[i];if(!y||y.st!=='run')return;
+  var board=document.getElementById('lg-board');
+  if(!board||!board.innerHTML)return;   // 보드를 닫으면 폴링도 멈춘다(백그라운드 상주 금지)
+  if(++y.polls>40){y.st='idle';_lgYtPaint(i,'시간 초과 — 다시 요청해 주세요',false);return;}
+  setTimeout(function(){
+    fetch(API+'/api/linkgrab/ytstat?id='+encodeURIComponent(y.id),{headers:{'X-App-Password':password}})
+      .then(function(r){return r.json();}).catch(function(){return {};})
+      .then(function(d){
+        if(y.st!=='run')return;
+        if(d&&d.ready){y.st='ready';y.asset=d.asset;y.size=d.size;_lgYtReady(i);return;}
+        if(d&&d.failed){y.st='fail';_lgYtPaint(i,'변환 실패 — 주소·연령 제한·크기(1.5GB 상한)를 확인해 주세요',false);return;}
+        _lgYtPoll(i);
+      });
+  },15000);
+}
+function _lgYtPaint(i,msg,busy){
+  var st=document.getElementById('lg-ytst-'+i);if(st)st.textContent=msg||'';
+  var b=document.getElementById('lg-ytbtn-'+i);if(b)b.disabled=!!busy||!_lgState.ytConsent;
+}
+function _lgYtReady(i){
+  var y=_lgState.yt[i];if(!y)return;
+  var st=document.getElementById('lg-ytst-'+i);if(st)st.textContent='변환 완료'+(y.size?' · '+_lgFmtSize(y.size):'');
+  var b=document.getElementById('lg-ytbtn-'+i);
+  if(b){b.disabled=false;b.textContent='받기';b.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();_lgYtGet(i);};}
+}
+async function _lgYtGet(i){
+  var y=_lgState.yt[i];if(!y||!y.asset)return;
+  try{
+    var r=await fetch(API+'/api/linkgrab/ytfile?asset='+encodeURIComponent(y.asset),{headers:{'X-App-Password':password}});
+    var d=await r.json().catch(function(){return {};});
+    if(!d||!d.url)throw new Error((d&&d.error)||'파일 위치 조회 실패');
+    var a=document.createElement('a');a.href=d.url;a.rel='noopener';document.body.appendChild(a);a.click();   // GitHub 서명 URL — 브라우저 직접 수신(대용량 안전)
+    setTimeout(function(){try{a.remove();}catch(_e){}},1200);
+    _lgGotMark(i);
+  }catch(e){showToast('받기 실패 — '+((e&&e.message)||'오류'),'error');}
+}
 async function _lgGo(){
   if(_lgState.busy)return;
   var inp=document.getElementById('lg-url');var u=String((inp&&inp.value)||_lgState.lastUrl||'').trim();
   if(!u){showToast('페이지 주소를 먼저 붙여넣어 주세요','error');return;}
   if(!/^https?:\/\//i.test(u))u='https://'+u;
-  _lgState.busy=true;_lgState.err='';_lgState.lastUrl=u;_lgState.sel={};_lgState.meta={};
+  _lgState.busy=true;_lgState.err='';_lgState.lastUrl=u;_lgState.sel={};_lgState.meta={};_lgState.ytConsent=false;_lgState.yt={};   // 동의는 가져오기마다 새로 받는다(운영자 260721)
   var btn=document.getElementById('lg-go');if(btn)_btnBusy(btn,true,'스캔 중');
   try{
     var r=await fetch(API+'/api/linkgrab?url='+encodeURIComponent(u),{headers:{'X-App-Password':password}});   // 전 API 공통 게이트(X-App-Password) 계승
