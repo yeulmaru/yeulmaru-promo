@@ -1487,6 +1487,18 @@ table.promo-board-table th:last-child .col-resize-handle{display:none}
 @media(max-width:760px){.nb-tgt2{flex-direction:column;align-items:stretch}.nb-tgt2-av{flex-direction:row;width:auto;justify-content:center;gap:12px}}
 @media(max-width:760px){.nb-wrap{grid-template-columns:1fr;height:auto;overflow:visible}.nb-col{overflow:visible}.nb-out,.nb-out-empty{min-height:220px}}
 
+/* === 콘텐츠 제작 — 링크 자료수집 (lg-*) 동의 유도 링(운영자 260721 "테두리 한 바퀴 디밍") — 색 = --accent 토큰·알파 변주만. 스윕(@property) 미지원 브라우저 = 펄스만 동작(무해 강등) === */
+@property --lg-sweep{syntax:'<angle>';initial-value:0deg;inherits:false}
+.lg-ring{animation:lgPulse 1.15s ease-out 1}
+.lg-ring{position:relative}
+.lg-ring::after{content:'';position:absolute;inset:-4px;border-radius:15px;padding:2.5px;pointer-events:none;
+  background:conic-gradient(from var(--lg-sweep),var(--accent) 0 56deg,transparent 56deg 360deg);
+  -webkit-mask:linear-gradient(black 0 0) content-box,linear-gradient(black 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(black 0 0) content-box,linear-gradient(black 0 0);mask-composite:exclude;
+  animation:lgSweep 1.15s linear 1 forwards}
+@keyframes lgSweep{from{--lg-sweep:0deg}to{--lg-sweep:360deg}}
+@keyframes lgPulse{0%{box-shadow:0 0 0 0 var(--accent-glow)}45%{box-shadow:0 0 0 7px var(--accent-glow)}100%{box-shadow:0 0 0 0 rgba(74,77,231,0)}}
+
 /* === 콘텐츠 제작 — 영상 편집기 3분류(영상 편집·자막 삽입·영상 프롬프팅) (ve-*) — 색 전부 :root 토큰·기존 토큰 알파 변주만(§🚨) === */
 .ve-stage{position:relative;width:100%;background:var(--text);border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;max-height:46vh}
 .ve-stage video,.ve-stage iframe{width:100%;height:100%;border:0;background:var(--text)}
@@ -22261,11 +22273,11 @@ function _lgRender(){
         +'<div style="font-size:13px;font-weight:700">'+label+' <span style="color:var(--dim);font-weight:600">'+idxs.length+'</span></div>'
         +(selectable.length?'<button class="btn btn--ghost btn--sm" onclick="_lgSelSection(\''+kind+'\')">모두 선택</button>':'')
         +'</div>';
-      // 영상 섹션에 스트리밍(유튜브 등)이 있으면 — 권리 확인 동의 체크 후에만 [저장 요청] 활성(운영자 260721)
+      // 영상 섹션에 스트리밍(유튜브 등)이 있으면 — 권리 확인 동의 체크(미체크로 [저장] 누르면 여기로 스크롤+링 유도, 운영자 260721)
       if(kind==='video'&&idxs.some(function(i){return items[i].stream&&!items[i].dl;})){
-        h+='<label style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--past-bg);font-size:12px;line-height:1.6;cursor:pointer">'
+        h+='<label id="lg-consent" style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--past-bg);font-size:12px;line-height:1.6;cursor:pointer">'
           +'<input type="checkbox" '+(_lgState.ytConsent?'checked':'')+' onchange="_lgYtConsentSet(this.checked)" style="margin-top:2px;accent-color:var(--accent)">'
-          +'<span>이 영상들은 <b>내가 권리를 보유했거나 이용 허가를 받은 콘텐츠</b>(예: 기획사가 공유해 준 홍보 영상)임을 확인하고 저장 요청에 동의합니다</span></label>';
+          +'<span>이 영상들은 <b>내가 권리를 보유했거나 이용 허가를 받은 콘텐츠</b>(예: 기획사가 공유해 준 홍보 영상)임을 확인하고 저장에 동의합니다</span></label>';
       }
       if(kind==='img'){
         h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-top:10px">';
@@ -22317,7 +22329,7 @@ function _lgRowHtml(it,i){
     +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(it.title||'자료')
     +'<span id="lg-got-'+i+'" style="margin-left:6px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--green);color:var(--surface-solid);'+(got?'':'display:none')+'">받음</span></div>'
     +'<div style="font-size:11px;color:var(--dim);margin-top:1px"><span id="lg-size-'+i+'">'+(_lgFmtSize(m.size)||(it.dl?'용량 확인 중':''))+'</span>'+(it.note?' · '+escapeHtml(it.note):'')+' <span id="lg-ytst-'+i+'" style="color:var(--accent);font-weight:700"></span></div></div>'
-    +(it.stream&&!it.dl?'<button id="lg-ytbtn-'+i+'" class="btn btn--neutral btn--sm" style="flex:none" '+(_lgState.ytConsent?'':'disabled ')+'onclick="event.stopPropagation();_lgYtReq('+i+')">저장 요청</button>':'')
+    +(it.stream&&!it.dl?'<button id="lg-ytbtn-'+i+'" class="btn btn--neutral btn--sm" style="flex:none" onclick="event.stopPropagation();_lgYtReq('+i+')">저장</button>':'')
     +'<button class="btn btn--ghost btn--sm" style="flex:none" onclick="event.stopPropagation();_lgOpen('+i+')">열기</button>'
     +'</div>';
 }
@@ -22437,14 +22449,19 @@ function _lgHistSave(u,title){
 }
 // --- 스트리밍 영상 저장(yt-dlp 파이프라인) — 동의 체크 후 요청 → Actions 변환(2~5분) → 서명 URL로 직접 수신 ---
 function _lgYtConsentSet(v){
-  _lgState.ytConsent=!!v;
-  _lgEachIdx(function(it,i){
-    if(it.stream&&!it.dl){var b=document.getElementById('lg-ytbtn-'+i);var y=_lgState.yt[i];if(b&&!(y&&y.st&&y.st!=='idle'))b.disabled=!v;}
-  });
+  _lgState.ytConsent=!!v;   // [저장] 버튼은 상시 활성(운영자 260721) — 미체크 클릭 시 _lgConsentNudge()가 체크박스로 유도
+}
+// 동의 미체크로 [저장] 클릭 — 체크박스로 화면 이동 + 테두리 한 바퀴 디밍(운영자 260721)
+function _lgConsentNudge(){
+  var box=document.getElementById('lg-consent');if(!box)return;
+  try{box.scrollIntoView({behavior:'smooth',block:'center'});}catch(_e){try{box.scrollIntoView();}catch(_e2){}}
+  box.classList.remove('lg-ring');void box.offsetWidth;   // 연타 시 애니메이션 재시동
+  box.classList.add('lg-ring');
+  setTimeout(function(){try{box.classList.remove('lg-ring');}catch(_e){}},1300);
 }
 async function _lgYtReq(i){
   var it=((_lgState.res||{}).items||[])[i];if(!it||!it.stream)return;
-  if(!_lgState.ytConsent){showToast('먼저 권리 보유·이용 허가 동의에 체크해 주세요','error');return;}
+  if(!_lgState.ytConsent){_lgConsentNudge();return;}
   var y=_lgState.yt[i]={st:'req',polls:0};
   _lgYtPaint(i,'요청 중',true);
   try{

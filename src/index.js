@@ -2065,7 +2065,7 @@ function lgSpecial(href) {
   try { u = new URL(href); } catch (_) { return null; }
   const h = u.hostname.toLowerCase();
   const st = lgStreamInfo(href);
-  if (st) return { kind: "video", dl: null, stream: st.stream, vid: st.vid, thumb: st.thumb, note: "스트리밍 — 권리 확인 동의 후 [저장 요청]으로 변환해 받기" };
+  if (st) return { kind: "video", dl: null, stream: st.stream, vid: st.vid, thumb: st.thumb, note: "스트리밍 — 권리 확인 동의 후 [저장]으로 변환해 받기" };
   if (h.endsWith("dropbox.com")) {
     u.searchParams.set("dl", "1");
     const folder = u.pathname.includes("/scl/fo/") || u.pathname.startsWith("/sh/");
