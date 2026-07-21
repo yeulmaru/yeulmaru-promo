@@ -1,0 +1,71 @@
+name: 링크 자료수집 영상 저장 (yt-dlp · repository_dispatch)
+
+# 앱(콘텐츠 제작 ▸ 링크 자료수집)이 repository_dispatch[ytdl]로 {d:{id,url,title}}를 던지면
+# 러너가 yt-dlp로 영상을 받아 릴리스 ytdl-drops 자산(<id>.mp4)으로 올린다.
+# 앱은 /api/linkgrab/ytstat 폴링 → /api/linkgrab/ytfile(서명 URL 발급)로 브라우저가 직접 내려받는다.
+# 실패 시 <id>.err.txt 자산을 올려 앱이 실패를 표시. 매 실행 끝에 7일 지난 자산은 자동 정리.
+# ⚠ 운영 원칙(운영자 260721): 권리 보유·이용 허가 콘텐츠 전용 — 앱에서 동의 체크 후에만 요청 가능.
+
+on:
+  repository_dispatch:
+    types: [ytdl]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ytdl-${{ github.event.client_payload.d.id }}
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VID_ID: ${{ github.event.client_payload.d.id }}
+      VID_URL: ${{ github.event.client_payload.d.url }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: yt-dlp 설치
+        run: python3 -m pip install --quiet --upgrade yt-dlp
+
+      - name: 릴리스 보관함 준비 (ytdl-drops)
+        run: |
+          gh release view ytdl-drops -R "$REPO" >/dev/null 2>&1 || \
+            gh release create ytdl-drops -R "$REPO" --prerelease \
+              --title "링크 자료수집 영상 보관함" \
+              --notes "앱 '링크 자료수집'이 요청한 영상 파일 임시 보관함 — 7일 지난 파일은 자동 정리됩니다."
+
+      - name: 영상 다운로드 → 자산 업로드
+        run: |
+          set +e
+          mkdir -p out
+          # 주입 방지: URL·ID는 env 경유로만 인용. 1080p 이하 mp4 우선, 1.5GB 상한, 재생목록 통짜 금지.
+          yt-dlp -f "bv*[ext=mp4][height<=1080]+ba[ext=m4a]/b[ext=mp4]/b" \
+            --merge-output-format mp4 --max-filesize 1500m --no-playlist \
+            -o "out/${VID_ID}.%(ext)s" "$VID_URL" 2> out/err.log
+          rc=$?
+          set -e
+          f=$(ls out/"${VID_ID}".* 2>/dev/null | grep -v err | head -1)
+          if [ $rc -ne 0 ] || [ -z "$f" ]; then
+            tail -c 800 out/err.log > "out/${VID_ID}.err.txt" 2>/dev/null || echo "다운로드 실패" > "out/${VID_ID}.err.txt"
+            gh release upload ytdl-drops "out/${VID_ID}.err.txt" -R "$REPO" --clobber
+            echo "::warning::yt-dlp 실패 — err 자산 업로드"
+            exit 0
+          fi
+          if [ "$f" != "out/${VID_ID}.mp4" ]; then mv "$f" "out/${VID_ID}.mp4"; fi
+          # 성공 시 이전 실패 흔적 제거 후 업로드
+          gh release delete-asset ytdl-drops "${VID_ID}.err.txt" -R "$REPO" -y 2>/dev/null || true
+          gh release upload ytdl-drops "out/${VID_ID}.mp4" -R "$REPO" --clobber
+
+      - name: 7일 지난 자산 정리
+        if: always()
+        run: |
+          rid=$(gh api "repos/$REPO/releases/tags/ytdl-drops" --jq .id 2>/dev/null) || exit 0
+          cutoff=$(date -u -d '7 days ago' +%s)
+          gh api "repos/$REPO/releases/$rid/assets" --paginate --jq '.[] | "\(.id) \(.created_at)"' | \
+          while read -r aid ts; do
+            t=$(date -u -d "$ts" +%s 2>/dev/null) || continue
+            if [ "$t" -lt "$cutoff" ]; then gh api -X DELETE "repos/$REPO/releases/assets/$aid" >/dev/null || true; fi
+          done
