@@ -2231,6 +2231,7 @@ const MENUS=[
   {label:'상품 등록·변경',id:'prodreg'},   // [260711 운영자] 구 '상품 등록 및 홍보 신청'을 상품/홍보 2개 대메뉴로 분리 — 상품 등록 관련
   {label:'홍보 신청·확인',id:'promoapply'},   // [260711 운영자] 〃 홍보 신청 관련(일괄 신청·계획·현황). id≠'promo'(buildNav admin 숨김 필터 회피 = 기존 노출 유지)
   {label:'사업 실적',id:'sales'},   // [260710 운영자] 구 '사업현황' — 플랫폼 현황 서브 흡수 · [260711] 연간 일정도 여기로 이동
+  {label:'사업 현황',id:'bizstatus'},   // [260723 운영자] 연간 실적(망마·장도 2012~2026) 표 그대로 살린 보드 — 기존 '사업 실적'과 별개 대메뉴(openYearBoard)
   {label:'콘텐츠 제작',id:'content'},   // [260710 운영자] PLAY ZONE 좌측으로 스위치
   {label:'PLAY ZONE',id:'playzone'},
 ];
@@ -4053,6 +4054,7 @@ function buildNav(){
       if(m.id==='promoapply'){_ddOpen(b,_promoMenuBuild,210,'promoapply');return;}
       if(m.id==='platform'){openPlatformBoard();return;}
       if(m.id==='sales'){_ddOpen(b,_salesMenuBuild,210,'sales');return;}
+      if(m.id==='bizstatus'){openYearBoard();return;}   // [260723] 연간 실적 보드 직행(드롭다운 없음 · openAnnualCalendar 패턴 계승)
       if(m.id==='playzone'){_ddOpen(b,_playzoneMenuBuild,210,'playzone');return;}
       document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');movePill(b,pill);
     };
@@ -7207,6 +7209,166 @@ function _bizRender(){
   body.innerHTML=h;
   _bizEnsurePlotly(function(){ _bizDrawChart(list, selTypes.length>1); _bizDrawGenreBench(); _bizDrawSeason(); _accordionize('biz-body'); });
 }
+// ============================================================
+// 연간 실적 (사업 현황) — 예울마루(망마·장도) 2012~2026.1Q 연간 실적 표를 '그대로' 살린 보드.
+//   진입 = nav 「사업 현황」(대메뉴, id=bizstatus) · 모바일 더보기 시트. 데이터 = 아래 _YR 상수(엑셀 원본 무손실).
+//   골격 = openBusinessBoard/_bizRender 100% 계승(모달·.fbar-chip·Plotly·KPI 카드·표) · 색은 팔레트 토큰만
+//   (Plotly는 CSS var()를 못 읽어 getComputedStyle로 런타임 해석 → 소스 raw hex 0, 게이트 총량 동결 유지).
+//   필터 = 연도별(select) + 공연/전시/교육 별(칩) · 애니메이션 = KPI 카운트업·막대 성장·표 페이드업.
+// ============================================================
+var _YR={
+  years:[2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025],
+  cats:{
+    '공연':{tok:'--accent',rows:[
+      {sub:'공연횟수',key:'횟수',v:[85,169,162,180,151,131,124,154,61,141,184,200,187,178],q:0,sum:2107},
+      {sub:'공연일수',key:'일수',v:[77,143,145,154,127,111,99,116,51,99,128,128,121,124],q:0,sum:1623},
+      {sub:'관람인원',key:'인원',v:[57418,101534,73021,74875,77070,67004,66864,78506,17769,38543,74322,81048,78662,83455],q:0,sum:970091},
+      {sub:'문화나눔',key:'나눔',v:[1102,1347,697,592,513,624,430,612,0,0,2700,129,2078,1258],q:0,sum:12082}
+    ]},
+    '전시':{tok:'--peach-text',rows:[
+      {sub:'전시건수',key:'횟수',v:[9,9,10,10,13,12,11,16,16,23,22,14,15,18],q:0,sum:198},
+      {sub:'전시일수',key:'일수',v:[149,251,260,246,279,261,269,273,301,335,299,241,235,258],q:0,sum:3657},
+      {sub:'관람인원',key:'인원',v:[26090,35537,33122,31484,28432,23629,19477,76734,35287,46679,59582,32455,25508,26785],q:0,sum:500801},
+      {sub:'문화나눔',key:'나눔',v:[430,4381,1151,652,839,961,1062,856,264,0,0,125,6206,27569],q:0,sum:44496}
+    ]},
+    '교육':{tok:'--green',rows:[
+      {sub:'교육횟수',key:'횟수',v:[0,63,172,138,165,213,252,247,64,259,266,258,194,231],q:0,sum:2522},
+      {sub:'교육일수',key:'일수',v:[0,44,67,53,81,87,114,121,34,152,133,105,99,133],q:0,sum:1223},
+      {sub:'수강생',key:'인원',v:[0,286,459,380,930,2216,2660,3019,403,1811,11019,6516,4198,917],q:0,sum:34814},
+      {sub:'문화나눔',key:'나눔',v:[0,0,0,0,0,0,0,0,0,0,9060,4149,2574,0],q:0,sum:15783}
+    ]}
+  },
+  total:[
+    {sub:'횟수',key:'횟수',v:[94,241,344,328,329,356,387,417,141,423,472,472,396,427],q:0,sum:4827},
+    {sub:'일수',key:'일수',v:[226,438,472,453,487,459,482,510,386,586,560,474,455,515],q:0,sum:6503},
+    {sub:'인원',key:'인원',v:[83508,137357,106602,106739,106432,92849,89001,158259,53459,87033,144923,120019,108368,111157],q:0,sum:1505706},
+    {sub:'나눔인원',key:'나눔',v:[1532,5728,1848,1244,1352,1585,1492,1468,264,0,11760,4403,10858,28894],q:0,sum:72428}
+  ],
+  jangdo:{v:[null,null,null,null,null,null,null,161690,288200,334913,405124,374039,336036,284323],sum:2184325},
+  grand:3690031
+};
+var _yrState={cats:{'공연':true,'전시':true,'교육':true},metric:'인원',year:'all',esc:null,opened:false};
+var _YR_METRICS=[{k:'인원',l:'관람·수강'},{k:'횟수',l:'횟수·건수'},{k:'일수',l:'일수'},{k:'나눔',l:'문화나눔'}];
+var _YR_CATLIST=['공연','전시','교육'];
+function _yrCss(n){try{return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}catch(e){return '';}}
+function _yrFmt(n){return (n===null||n===undefined||n==='')?'':Number(n).toLocaleString();}
+function _yrRow(cat,key){var rs=_YR.cats[cat].rows;for(var i=0;i<rs.length;i++)if(rs[i].key===key)return rs[i];return null;}
+function _yrMetricLabel(k){for(var i=0;i<_YR_METRICS.length;i++)if(_YR_METRICS[i].k===k)return _YR_METRICS[i].l;return '';}
+function _yrCountUp(el,to,dur){
+  if(!el)return;to=Number(to)||0;dur=dur||900;var t0=performance.now();
+  (function step(now){var p=Math.min(1,(now-t0)/dur);var e=1-Math.pow(1-p,3);el.textContent=Math.round(to*e).toLocaleString();if(p<1)requestAnimationFrame(step);})(t0);
+}
+function _yrToggleCat(c){var s=_yrState.cats;var on=_YR_CATLIST.filter(function(k){return s[k];});if(s[c]&&on.length===1)return;s[c]=!s[c];_yrRender();}
+function _yrSetMetric(m){_yrState.metric=m;_yrRender();}
+function _yrSetYear(y){_yrState.year=(y==='all')?'all':parseInt(y,10);_yrRender();}
+function openYearBoard(){
+  var el=document.getElementById('year-board');
+  if(!el){el=document.createElement('div');el.id='year-board';document.body.appendChild(el);}
+  _yrState.opened=false;
+  el.innerHTML='<div class="modal-bg show" onmousedown="modalBgMouseDown(event)" onclick="modalBgClick(event,closeYearBoard)">'
+    +'<div class="modal" style="width:96vw;max-width:1200px;height:92vh;max-height:92vh;padding:0;position:relative;display:flex;flex-direction:column;overflow:hidden">'
+    +'<button class="modal-x" onclick="closeYearBoard()" title="닫기" aria-label="닫기" style="position:absolute;top:14px;right:22px;z-index:10">✕</button>'
+    +'<div style="padding:18px 24px;border-bottom:1px solid var(--border);font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;flex-shrink:0"><span>연간 실적</span><span style="font-size:11px;color:var(--muted);font-weight:500">· 예울마루(망마·장도) 2012 ~ 2026.1Q</span></div>'
+    +'<div id="yr-body" style="flex:1;overflow:auto;padding:20px 24px;min-width:0"></div>'
+    +'</div></div>';
+  _yrState.esc=function(e){if(e.key==='Escape')closeYearBoard();};
+  document.addEventListener('keydown',_yrState.esc);
+  _yrRender();
+}
+function closeYearBoard(){if(_yrState.esc)document.removeEventListener('keydown',_yrState.esc);var el=document.getElementById('year-board');if(el)el.innerHTML='';}
+function _yrCard(label,id,suf,tok){
+  return '<div style="flex:1;min-width:130px;padding:14px 16px;background:var(--past-bg);border-radius:12px;border:1px solid var(--border)"><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">'+label+'</div><div style="font-size:22px;font-weight:800;color:var('+(tok||'--accent')+');font-variant-numeric:tabular-nums"><span id="'+id+'">0</span>'+(suf||'')+'</div></div>';
+}
+function _yrTable(){
+  var st=_yrState,years=_YR.years,thCss='padding:8px 10px;',tdCss='padding:7px 10px;';
+  var h='<div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;margin-bottom:14px">';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">';
+  h+='<thead><tr style="background:var(--past-bg);color:var(--neutral-text);font-size:11px;font-weight:700">';
+  h+='<td colspan="2" style="'+thCss+'text-align:left;position:sticky;left:0;background:var(--past-bg)">구분</td>';
+  years.forEach(function(y){var hl=(st.year===y);h+='<td style="'+thCss+'text-align:right;'+(hl?'background:var(--accent-light);color:var(--accent)':'')+'">'+y+'</td>';});
+  h+='<td style="'+thCss+'text-align:right">2026<br>1분기</td><td style="'+thCss+'text-align:right;color:var(--accent)">누계</td></tr></thead><tbody>';
+  ['공연','전시','교육','계'].forEach(function(cat){
+    var rows=(cat==='계')?_YR.total:_YR.cats[cat].rows;
+    var dim=(cat!=='계'&&!st.cats[cat]);
+    var tok=(cat==='계')?'--neutral-text':_YR.cats[cat].tok;
+    rows.forEach(function(r,ri){
+      h+='<tr style="border-top:'+(ri===0?'2px solid var(--border2)':'1px solid var(--border)')+';'+(dim?'opacity:.38;':'')+'">';
+      if(ri===0)h+='<td rowspan="'+rows.length+'" style="'+tdCss+'font-weight:800;color:var('+tok+');vertical-align:middle;text-align:center;border-right:1px solid var(--border);position:sticky;left:0;background:var(--surface-solid)">'+cat+'</td>';
+      h+='<td style="'+tdCss+'color:var(--neutral-text);text-align:left;position:sticky;left:34px;background:var(--surface-solid)">'+r.sub+'</td>';
+      years.forEach(function(y,yi){var hl=(st.year===y);h+='<td style="'+tdCss+'text-align:right;font-variant-numeric:tabular-nums;'+(hl?'background:var(--accent-light);font-weight:700;color:var(--accent)':'')+'">'+_yrFmt(r.v[yi])+'</td>';});
+      h+='<td style="'+tdCss+'text-align:right;color:var(--muted)">'+_yrFmt(r.q)+'</td>';
+      h+='<td style="'+tdCss+'text-align:right;font-weight:800;color:var('+tok+');font-variant-numeric:tabular-nums">'+_yrFmt(r.sum)+'</td>';
+      h+='</tr>';
+    });
+  });
+  h+='<tr style="border-top:2px solid var(--border2)"><td colspan="2" style="'+tdCss+'font-weight:800;color:var(--c5);text-align:center;border-right:1px solid var(--border);position:sticky;left:0;background:var(--surface-solid)">장도 방문객</td>';
+  years.forEach(function(y,yi){var hl=(st.year===y);h+='<td style="'+tdCss+'text-align:right;font-variant-numeric:tabular-nums;'+(hl?'background:var(--accent-light);color:var(--accent)':'')+'">'+_yrFmt(_YR.jangdo.v[yi])+'</td>';});
+  h+='<td style="'+tdCss+'"></td><td style="'+tdCss+'text-align:right;font-weight:800;color:var(--c5);font-variant-numeric:tabular-nums">'+_yrFmt(_YR.jangdo.sum)+'</td></tr>';
+  h+='</tbody></table></div>';
+  h+='<div style="font-size:11px;color:var(--dim);line-height:1.7">※ 문화나눔 인원은 관람인원 숫자에 포함되어 있음<br>※ 단위: 회, 일, 명 · ~2026년 1분기는 집계 전(0)<br>※ 예울마루(망마/장도) 공연·전시 등 관람객 및 장도 방문객 합계(~2025년 누적) = <b style="color:var(--accent)">3,690,031</b> 명</div>';
+  return h;
+}
+function _yrDrawChart(first){
+  var div=document.getElementById('yr-chart');if(!div||!window.Plotly)return;
+  var st=_yrState,years=_YR.years;
+  var selCats=_YR_CATLIST.filter(function(c){return st.cats[c];});
+  var col={'공연':_yrCss('--accent'),'전시':_yrCss('--peach-text'),'교육':_yrCss('--green')};
+  var grid=_yrCss('--border'),paper=_yrCss('--surface-solid'),fc=_yrCss('--neutral-text');
+  var traces=[],layout,transp='rgba(0,0,0,0)';
+  if(st.year==='all'){
+    traces=selCats.map(function(c){var r=_yrRow(c,st.metric);return {type:'bar',name:c,x:years,y:r?r.v.slice():[],marker:{color:col[c]},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>'};});
+    layout={barmode:'group',height:360,margin:{t:14,r:16,b:44,l:60},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:-40},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.24,x:0.5,xanchor:'center'},bargap:.3,bargroupgap:.12};
+  }else{
+    var yi=years.indexOf(st.year);
+    var ys=selCats.map(function(c){var r=_yrRow(c,st.metric);return r?(r.v[yi]||0):0;});
+    var cs=selCats.map(function(c){return col[c];});
+    traces=[{type:'bar',x:selCats,y:ys,marker:{color:cs},text:ys.map(function(v){return v.toLocaleString();}),textposition:'auto',hovertemplate:'%{x}<br>%{y:,}<extra></extra>'}];
+    layout={height:360,margin:{t:14,r:16,b:36,l:60},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:12,color:fc},xaxis:{gridcolor:transp,zeroline:false},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:false,bargap:.5};
+  }
+  var _ally=traces.reduce(function(a,t){return a.concat(t.y||[]);},[]);var _ymax=Math.max.apply(null,_ally.concat([0]));layout.yaxis.range=[0,_ymax>0?_ymax*1.08:1];   // [260723] y축 명시 고정 — newPlot(0)+animate가 축 재계산을 안 해 막대가 천장 뚫는 것 차단
+  var cfg={responsive:true,displayModeBar:false};
+  if(first){
+    var z=traces.map(function(t){return Object.assign({},t,{y:(t.y||[]).map(function(){return 0;})});});
+    Plotly.newPlot(div,z,layout,cfg).then(function(){try{Plotly.animate(div,{data:traces},{transition:{duration:800,easing:'cubic-out'},frame:{duration:800}});}catch(e){Plotly.react(div,traces,layout,cfg);}});
+  }else Plotly.react(div,traces,layout,cfg);
+}
+function _yrRender(){
+  var body=document.getElementById('yr-body');if(!body)return;
+  var st=_yrState,years=_YR.years;
+  var selCats=_YR_CATLIST.filter(function(c){return st.cats[c];});
+  var mLabel=_yrMetricLabel(st.metric);
+  var combo=years.map(function(y,i){return selCats.reduce(function(a,c){var r=_yrRow(c,st.metric);return a+(r?(r.v[i]||0):0);},0);});
+  var selSum=selCats.reduce(function(a,c){var r=_yrRow(c,st.metric);return a+(r?r.sum:0);},0);
+  var bestIdx=0;for(var i=1;i<combo.length;i++)if(combo[i]>combo[bestIdx])bestIdx=i;
+  var nz=combo.filter(function(v){return v>0;}).length||1;
+  var avg=Math.round(combo.reduce(function(a,b){return a+b;},0)/nz);
+  var catTxt=selCats.join('·');
+  var h='';
+  h+='<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:14px 18px;background:var(--accent-glow);border-radius:14px;border:1px solid var(--accent-light)"><span style="font-size:12px;color:var(--neutral-text);font-weight:700">누적 총 관람객 · 방문객<br><span style="font-weight:500;color:var(--dim)">~2025년</span></span><span style="font-size:26px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums"><span id="yr-grand">0</span> 명</span><span style="font-size:11px;color:var(--dim)">예울마루 관람 1,505,706 &nbsp;+&nbsp; 장도 방문 2,184,325</span></div>';
+  h+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px">';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="fbar-lbl">분야</span>';
+  _YR_CATLIST.forEach(function(c){var on=!!st.cats[c];var lock=on&&selCats.length===1;h+='<label class="fbar-chip'+(on?' on':'')+(lock?' lock':'')+'"><input type="checkbox" '+(on?'checked':'')+(lock?' disabled':'')+' onchange="_yrToggleCat(\''+c+'\')">'+c+'</label>';});
+  h+='</div>';
+  h+='<div class="fbar-seg"><span class="fbar-lbl">지표</span>'+_YR_METRICS.map(function(m){var on=st.metric===m.k;return '<button class="'+(on?'on':'')+'" onclick="_yrSetMetric(\''+m.k+'\')">'+m.l+'</button>';}).join('')+'</div>';
+  h+='<div class="fbar-seg"><span class="fbar-lbl">연도</span><select onchange="_yrSetYear(this.value)" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer"><option value="all"'+(st.year==='all'?' selected':'')+'>전체 추이</option>'+years.map(function(y){return '<option value="'+y+'"'+(st.year===y?' selected':'')+'>'+y+'년</option>';}).join('')+'</select></div>';
+  h+='</div>';
+  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">';
+  h+=_yrCard(catTxt+' 누계 '+mLabel,'yr-k1','','--accent');
+  h+=_yrCard('최고 연도 ('+years[bestIdx]+')','yr-k2','','--peach-text');
+  h+=_yrCard('연평균','yr-k3','','--green');
+  h+='</div>';
+  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">'+(st.year==='all'?('연도별 '+mLabel+' 추이'):(st.year+'년 분야별 '+mLabel))+' <span style="font-weight:400;color:var(--dim);font-size:11px">— '+catTxt+' · '+(st.year==='all'?'2012~2025':'선택 연도')+'</span></div>';
+  h+='<div id="yr-chart" style="height:360px;margin-bottom:18px;animation:fadeUp .45s ease"></div>';
+  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">전체 실적표 <span style="font-weight:400;color:var(--dim);font-size:11px">— 엑셀 원본 그대로 · 선택 분야 강조·연도 열 하이라이트</span></div>';
+  h+=_yrTable();
+  body.innerHTML=h;
+  _yrCountUp(document.getElementById('yr-grand'),_YR.grand,1200);
+  _yrCountUp(document.getElementById('yr-k1'),selSum,900);
+  _yrCountUp(document.getElementById('yr-k2'),combo[bestIdx],900);
+  _yrCountUp(document.getElementById('yr-k3'),avg,900);
+  _bizEnsurePlotly(function(){_yrDrawChart(!_yrState.opened);_yrState.opened=true;});
+}
+
 function openPlatformBoard(){
   _platformState = {
     expanded: new Set(['offline','online','offline.external','offline.internal','offline.mangma','offline.jangdo']),
@@ -18220,6 +18382,7 @@ function _bnavMore(){
   add('🔗','링크 자료수집','openLinkGrab()');
   add('🧩','플랫폼 현황','openPlatformBoard()');
   add('🏢','연간 누적 실적','openBusinessBoard()');
+  add('📊','연간 실적 (사업 현황)','openYearBoard()');
   if(!isAdmin)add('📈','판매 현황','openAnalyticsBoard()');
   if(isAdmin)add('✏️','직접 등록','openAdminWizard()');
   if(isAdmin)add('⚙️','관리','openAdminPanel()');
