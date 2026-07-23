@@ -87,10 +87,12 @@
     <!-- 조정값 -->
     <div class="card">
       <div class="chips">
-        <span class="chip" onclick="preset('bug')">🐛 버그 재현</span>
+        <span class="chip" onclick="preset('bug')">🐛 판매시작+OFF</span>
+        <span class="chip" onclick="preset('bug2')">🐛 판매종료만+OFF</span>
         <span class="chip" onclick="preset('shot')">📸 스크린샷</span>
         <span class="chip" onclick="preset('after')">⛔ 홍보&gt;판매</span>
         <span class="chip" onclick="preset('same')">✅ 같은 날</span>
+        <span class="chip" onclick="preset('ended')">🕓 종료된 프로그램</span>
         <span class="chip" onclick="preset('noSale')">🎭 판매 없음</span>
       </div>
       <div class="row">
@@ -130,14 +132,17 @@ function syncMax(){ // 홍보시작일 max = 판매시작일 (실코드 _progSyn
   const ss=$('saS').value, ps=$('prS');
   if(ss){ ps.max=ss; if(ps.value&&ps.value>ss) ps.value=ss; } else ps.removeAttribute('max');
 }
-// saveProgram()의 실검증식 그대로
+// saveProgram()의 실검증식 그대로 (트리거 = 노출 창 열림 + 판매 설정됨)
 function validate(v){
   const {pfS,pfE,saS,saE,prS}=v, expEnd=saE||pfE, e=[];
-  if(pfS&&pfE&&pfE<pfS) e.push('공연 종료일이 시작일보다 빨라요');
-  if(saS&&saE&&saE<saS) e.push('판매종료일이 판매시작일보다 빨라요');
-  if(saS&&!prS) e.push('판매시작일이 있으면 홍보 신청 받기를 켜세요 (홍보시작일 = 판매시작일 당일이나 그 이전)');
-  if(prS&&saS&&prS>saS) e.push('홍보시작일('+prS+')은 판매시작일('+saS+') 당일이거나 그 이전이어야 해요');
-  if(prS&&expEnd&&prS>expEnd) e.push('홍보시작일('+prS+')이 홍보 노출 종료일('+expEnd+')보다 늦어요');
+  const open=(!expEnd)||(expEnd>=TODAY), hasSale=!!(saS||saE);
+  if(pfS&&pfE&&pfE<pfS) e.push('공연 종료일이 시작일보다 빨라요');           // 항상
+  if(saS&&saE&&saE<saS) e.push('판매종료일이 판매시작일보다 빨라요');         // 항상
+  if(open){                                                                  // 노출 창 열린 프로그램만
+    if(hasSale&&!prS) e.push('판매·노출 기간이 남아 있으면 홍보 신청 받기를 켜세요 (홍보시작일 = 판매시작일 당일이나 그 이전)');
+    if(prS&&saS&&prS>saS) e.push('홍보시작일('+prS+')은 판매시작일('+saS+') 당일이거나 그 이전이어야 해요');
+    if(prS&&expEnd&&prS>expEnd) e.push('홍보시작일('+prS+')이 홍보 노출 종료일('+expEnd+')보다 늦어요');
+  }
   return e;
 }
 // 캘린더 노출 판정: 홍보시작일 있고 오늘이 [홍보시작일, 판매종료일||공연종료일] 안이면 노출
@@ -148,7 +153,8 @@ function calStatus(v){
   if(expEnd&&TODAY>expEnd) return {on:false, why:'홍보 노출 종료 지남'};
   return {on:true, why:'홍보시작일~노출종료 안 → 정상 노출'};
 }
-function isSelling(v){ return v.saS && TODAY>=v.saS && (!v.saE||TODAY<=v.saE); }
+// 모순 조건 = 판매/노출 창이 아직 남아 있는데(오늘 ≤ 노출종료) 홍보가 꺼져 캘린더 누락
+function isSelling(v){ const expEnd=v.saE||v.pfE, open=(!expEnd)||(expEnd>=TODAY); return !!(v.saS||v.saE) && open; }
 
 function render(){
   const v={pfS:$('pfS').value,pfE:$('pfE').value,saS:$('saS').value,saE:$('saE').value,prS:promoOn?$('prS').value:''};
@@ -179,9 +185,11 @@ function render(){
 function preset(k){
   const P={
     bug:   {pfS:'2026-11-26',pfE:'2026-11-28',saS:'2026-07-15',saE:'2026-11-28',prS:'',on:false},
+    bug2:  {pfS:'2026-11-26',pfE:'2026-11-28',saS:'',saE:'2026-11-28',prS:'',on:false},   // 판매종료일만 미래+OFF (평의회 지적 재발 경로)
     shot:  {pfS:'2026-11-26',pfE:'2026-11-28',saS:'2026-07-15',saE:'2026-11-28',prS:'2026-07-11',on:true},
     after: {pfS:'2026-11-26',pfE:'2026-11-28',saS:'2026-07-15',saE:'2026-11-28',prS:'2026-07-20',on:true},
     same:  {pfS:'2026-11-26',pfE:'2026-11-28',saS:'2026-07-24',saE:'2026-11-28',prS:'2026-07-24',on:true},
+    ended: {pfS:'2026-03-01',pfE:'2026-03-05',saS:'2026-01-10',saE:'2026-03-05',prS:'',on:false},   // 종료된 프로그램(장소만 고쳐도 통과 = 과잉차단 없음)
     noSale:{pfS:'2026-11-26',pfE:'2026-11-28',saS:'',saE:'',prS:'',on:false},
   }[k];
   $('pfS').value=P.pfS;$('pfE').value=P.pfE;$('saS').value=P.saS;$('saE').value=P.saE;$('prS').value=P.prS;

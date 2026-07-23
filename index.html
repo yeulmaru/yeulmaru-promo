@@ -16984,7 +16984,7 @@ function openProgramForm(rowIndex){
   // 홍보 신청 받기 ON/OFF — 전 콘텐츠(공연·전시·예술교육·대관) 공통 opt-in. ON이면 홍보시작일=오늘 자동 채움(수정 가능),
   // OFF면 홍보시작일 비활성(disabled → FormData 제외 → 빈값 저장 = 홍보 대상 아님). 홍보 노출 종료 = 판매종료일(없으면 공연종료일)로 통합.
   var _promoOn=!!v.홍보시작;
-  html+='<div style="background:#F6F5FF;border:1px solid rgba(74,77,231,0.15);border-radius:10px;padding:10px 12px"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px"><div style="flex:1;font-size:11.5px;color:var(--accent);font-weight:700">📣 홍보 신청 받기 <span style="font-weight:400;color:#888">— ON이면 홍보시작일~판매종료일 동안 캘린더에서 홍보 신청 가능. OFF면 홍보 대상에서 제외(공연·전시·교육·대관 공통). 홍보 노출 종료는 아래 판매종료일(없으면 공연종료일)이 적용돼요. <b style="color:var(--accent)">홍보시작일은 판매시작일 당일이거나 그 이전이어야 하고, 판매시작일이 있으면 홍보는 켜져 있어야 해요.</b></span></div><span class="sw'+(_promoOn?' on':'')+'" id="prog-promo-sw" onclick="_progPromoToggle()" title="홍보 신청 받기 ON/OFF" style="margin-top:1px"><span class="sw-k"></span></span></div><div style="display:flex;gap:10px"><div style="flex:1"><label>홍보시작일(노출일)</label><input id="prog-promo-start" name="홍보시작일" type="date" value="'+v.홍보시작+'"'+(v.판매시작?' max="'+v.판매시작+'"':'')+(_promoOn?'':' disabled')+' style="'+(_promoOn?'':'opacity:0.5;background:#f0f0f0')+'"></div></div></div>';
+  html+='<div style="background:#F6F5FF;border:1px solid rgba(74,77,231,0.15);border-radius:10px;padding:10px 12px"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px"><div style="flex:1;font-size:11.5px;color:var(--accent);font-weight:700">📣 홍보 신청 받기 <span style="font-weight:400;color:#888">— ON이면 홍보시작일~판매종료일 동안 캘린더에서 홍보 신청 가능. OFF면 홍보 대상에서 제외(공연·전시·교육·대관 공통). 홍보 노출 종료는 아래 판매종료일(없으면 공연종료일)이 적용돼요. <b style="color:var(--accent)">홍보시작일은 판매시작일 당일이거나 그 이전이어야 하고, 판매·노출 기간이 남아 있으면 홍보는 켜져 있어야 해요.</b></span></div><span class="sw'+(_promoOn?' on':'')+'" id="prog-promo-sw" onclick="_progPromoToggle()" title="홍보 신청 받기 ON/OFF" style="margin-top:1px"><span class="sw-k"></span></span></div><div style="display:flex;gap:10px"><div style="flex:1"><label>홍보시작일(노출일)</label><input id="prog-promo-start" name="홍보시작일" type="date" value="'+v.홍보시작+'"'+(v.판매시작?' max="'+v.판매시작+'"':'')+(_promoOn?'':' disabled')+' style="'+(_promoOn?'':'opacity:0.5;background:#f0f0f0')+'"></div></div></div>';
   // 판매종료일 = 홍보 노출 종료를 겸함(비우면 공연종료일 폴백). 판매시작일 = 사업 분석용(선택).
   html+='<div style="display:flex;gap:10px"><div style="flex:1"><label>판매시작일 <span style="font-size:10px;color:#888;font-weight:400">(선택·사업분석용)</span></label><input id="prog-sale-start" name="판매시작일" type="date" value="'+v.판매시작+'" onchange="_progSyncPromoMax()"></div><div style="flex:1"><label>판매종료일 <span style="font-size:10px;color:var(--accent);font-weight:400">(홍보 노출 종료도 여기까지)</span></label><input name="판매종료일" type="date" value="'+v.판매종료+'"'+(v.판매시작?' min="'+v.판매시작+'"':'')+'></div></div>';
   html+='<div><label>담당자 <span style="font-size:10px;color:#888;font-weight:400">(콘텐츠구분 따라 필터)</span></label><select name="담당자">'+buildManagerOptions(v.구분,v.담당자)+'</select></div>';
@@ -17051,20 +17051,32 @@ async function saveProgram(rowIndex){
   const form=document.getElementById('prog-form');
   if(!form)return;
   const fd=new FormData(form);
-  // [260724 운영자] 날짜 상식·홍보 게이트 = 저장 전 하드 차단(재발 방지). 홍보 캘린더가 홍보시작일을 노출 게이트로 쓰므로,
-  //   "판매는 하는데 홍보시작일이 없다(=OFF)" 또는 "홍보시작일 > 판매시작일"은 캘린더 누락 모순 → 애초에 저장 불가로 막는다.
-  //   type=date 값은 'YYYY-MM-DD'라 문자열 비교 = 날짜 비교. 홍보 OFF면 입력 disabled→FormData 제외→''(=OFF 판정).
+  // [260724 운영자] 날짜 상식·홍보 게이트 = 저장 전 하드 차단(재발 방지). 홍보 캘린더가 홍보시작일(ps)을 노출 게이트로 쓰므로,
+  //   "노출 창이 아직 안 끝났는데(오늘 ≤ 노출종료) 홍보가 꺼져 있음(홍보시작일 없음)" = 캘린더 누락 모순 → 저장 불가.
+  //   노출종료 = 판매종료일(se), 없으면 공연종료일(e) — 캘린더 게이트 _pe=p.se||p.e와 동일 계승.
+  //   ▸ 트리거를 '판매시작일 존재'가 아니라 '노출 창 열림 + 판매 설정됨'으로 잡는다: 판매시작일·판매종료일 둘 다 선택 필드지만
+  //     판매종료일이 홍보 노출 종료를 겸해 더 흔히 채워지므로, 시작일에만 걸면 "판매종료일만 미래+홍보 OFF"가 새어 재발한다(평의회 지적).
+  //   ▸ 창이 이미 끝난(과거) 프로그램은 캘린더가 어차피 날짜로 제외 → 홍보 정합 강제는 무의미 + 이력(장소·URL) 편집만 막는 마찰 →
+  //     홍보 관련 검사는 창이 열린 프로그램에만. 공연/판매 시작≤종료 같은 순수 순서(오타) 상식은 항상.
+  //   type=date 값은 'YYYY-MM-DD'라 문자열 비교 = 날짜 비교. 홍보 OFF면 입력 disabled→FormData 제외→''(=OFF 판정). 오늘 = KST 강제.
   {
     var _pfS=(fd.get('시작일')||'').trim(), _pfE=(fd.get('종료일')||'').trim();
     var _saS=(fd.get('판매시작일')||'').trim(), _saE=(fd.get('판매종료일')||'').trim();
     var _prS=(fd.get('홍보시작일')||'').trim();
-    var _expEnd=_saE||_pfE;   // 홍보 노출 종료 = 판매종료일, 없으면 공연종료일(캘린더 게이트 _pe=p.se||p.e와 동일 계승)
+    var _expEnd=_saE||_pfE;                 // 홍보 노출 종료(캘린더 _pe=se||e 동일 계승)
+    var _todayKST=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'});  // KST 'YYYY-MM-DD'(브라우저 TZ 무관·[12] 준수)
+    var _open=(!_expEnd)||(_expEnd>=_todayKST);   // 노출 창이 아직 안 끝났나(종료 == 오늘도 포함, 캘린더 _pe<_refKey 제외와 동일 경계)
+    var _hasSale=!!(_saS||_saE);            // 판매 설정됨(시작·종료 어느 쪽이든 — 종료일이 홍보 노출 종료 겸함)
     var _errs=[];
+    // (A) 항상: 순서 상식(오타 차단)
     if(_pfS&&_pfE&&_pfE<_pfS) _errs.push('공연 종료일이 시작일보다 빨라요');
     if(_saS&&_saE&&_saE<_saS) _errs.push('판매종료일이 판매시작일보다 빨라요');
-    if(_saS&&!_prS) _errs.push('판매시작일이 있으면 홍보 신청 받기를 켜세요 (홍보시작일 = 판매시작일 당일이나 그 이전)');
-    if(_prS&&_saS&&_prS>_saS) _errs.push('홍보시작일('+_prS+')은 판매시작일('+_saS+') 당일이거나 그 이전이어야 해요');
-    if(_prS&&_expEnd&&_prS>_expEnd) _errs.push('홍보시작일('+_prS+')이 홍보 노출 종료일('+_expEnd+')보다 늦어요');
+    // (B) 노출 창이 열린 프로그램만: 홍보 정합(끝난 프로그램은 캘린더가 날짜로 제외 → 강제 무의미·이력 편집 마찰만)
+    if(_open){
+      if(_hasSale&&!_prS) _errs.push('판매·노출 기간이 남아 있으면 홍보 신청 받기를 켜세요 (홍보시작일 = 판매시작일 당일이나 그 이전)');
+      if(_prS&&_saS&&_prS>_saS) _errs.push('홍보시작일('+_prS+')은 판매시작일('+_saS+') 당일이거나 그 이전이어야 해요');
+      if(_prS&&_expEnd&&_prS>_expEnd) _errs.push('홍보시작일('+_prS+')이 홍보 노출 종료일('+_expEnd+')보다 늦어요');
+    }
     if(_errs.length){ showToast('저장할 수 없어요 · '+_errs.join(' · '),'error'); return; }
   }
   if(!rowIndex){try{await loadPrograms();}catch(_e){}}   // [검증반영] 신규 저장 직전 프로그램 재조회 → _genProgramId 순번을 최신 캐시로 계산(동시/연속 등록 완화). 완전 차단은 Worker 유일성 몫.
