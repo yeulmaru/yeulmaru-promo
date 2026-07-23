@@ -6441,8 +6441,9 @@ function _dailyMasters(){
       var rsOk=!!(id&&cntById[id]&&filledById[id]===cntById[id]&&(!(tc>1)||tc===cntById[id]));
       var totOpen=_salesNum(m['총오픈석']); var base=_salesNum(m['기준석'])||_SALES_FALLBACK_SEAT;
       var open=rsOk?sumById[id]:(totOpen||(base*rc));
-      // [회차 보정 260723 운영자] 회차 정보(총회차·회차상세·운영대장)가 전무 → 분모가 기간 폴백(대개 ×1)로 떨어지는 공연 = needRc. 폼에서 회차수를 직접 받아 공연마스터 총회차로 확정한다(달 샤베트류 6회차 × 좌석 = 정확 분모).
-      var needRc=!!(id)&&!(rcK>0)&&!totOpen&&!rsOk;
+      // [회차 보정 260723 운영자] 회차 신호(총회차·회차상세·운영대장)가 전무면 needRc — 폼에서 회차수를 직접 받아 총회차+총오픈석(=기준석×회차)을 확정(달 샤베트류 다회차 정확 분모).
+      // [260723 운영자 후속] 구 조건의 !totOpen 제거 — 총오픈석이 단회차 값(예: 926)으로 채워진 다회차 공연은 회차칸이 아예 안 떠 보정 불가였음. 회차 신호만 없으면(rcK===0) 노출해 운영자가 직접 회차수를 넣게.
+      var needRc=!!(id)&&!(rcK>0)&&!rsOk;
       return {name:name, id:id, open:open, cat:(catIdx[_uName(name)]||''), base:base, rc:rc, needRc:needRc, totalOpen:open}; });
   // [운영자 260708] 공연마스터 미등록 신규 오픈 공연 폴백 — 목록에 없으면 집계 자체를 못 넣는다.
   // 프로그램 시트 판매기간(판매시작일≤오늘≤판매종료일, 폴백=공연 종료일)로 판정 — 판매 현황 3차 폴백(_salesBuild)과 동일 원칙.
@@ -6512,10 +6513,10 @@ async function _opsMasterPatch(sheet, keyCol, patches){
   await api('POST','/api/ops',{sheet:sheet,headers:headers,rows:outRows});
   return {hit:hit, headers:headers, rows:outRows};
 }
-// [260723] 종류 선택 탭 — 담당이 전시 포함이고 진행중 전시가 있을 때만 노출. 아니면 기존 공연 단독 UI 100% 유지(디자인 기틀 계승).
+// [260723] 종류 선택 탭 — 진행중 전시가 있으면 노출. 아니면 기존 공연 단독 UI 100% 유지(디자인 기틀 계승).
+// [260723 운영자 버그수정] 구 게이트가 전시여부 플래그(또는 슈퍼admin)를 추가로 요구 → 슈퍼admin 폐기(role==='admin' 통일) 후 플래그 미보유 admin이 전시 입력 자체를 못 함. 모달이 이미 admin 전용(openDailyInput)이라 종류 제한은 불필요 → 진행중 전시 유무로만 판정.
 function _dailyKindTabs(){
-  var allowed=_dailyAllowedCats();
-  var showEx=(!allowed||allowed.indexOf('전시')>=0)&&_dailyExhibMasters().length>0;
+  var showEx=(typeof userRole!=='undefined'&&userRole==='admin')&&_dailyExhibMasters().length>0;
   if(!showEx){ if(_dailyKind!=='공연')_dailyKind='공연'; return ''; }
   var seg=function(k){ return '<button type="button" class="'+(_dailyKind===k?'on':'')+'" onclick="_dailySetKind(\''+k+'\')">'+k+'</button>'; };
   return '<div class="ana-seg" style="margin-bottom:16px">'+seg('공연')+seg('전시')+'</div>';
@@ -6641,8 +6642,8 @@ function _dailyRowHtml(r,regSet){
   s+='</select>';
   function inp(cls,val){return '<input type="number" class="'+cls+'" min="0" value="'+((r&&r[cls]!=null)?r[cls]:'')+'" style="flex:1;min-width:78px;padding:7px 8px;border:1.5px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit">';}
   s+=inp('d-paids',r)+inp('d-paida',r)+inp('d-free',r);
-  // [회차 보정 260723 운영자] 선택 공연이 회차 미설정(분모가 좌석×1로 폴백)이면 회차수 입력칸 노출 — 저장 시 공연마스터 총회차 확정 → 분모 = 좌석×회차(달 샤베트 6회차 문제 해결). 강조 = accent 토큰.
-  if(selO&&selO.needRc){ s+='<input type="number" class="d-rc" min="1" step="1" value="'+((r&&r['d-rc']!=null&&r['d-rc']!=='')?escapeHtml(String(r['d-rc'])):'')+'" placeholder="회차수" title="이 공연 총 회차수 — 지금은 회차 정보가 없어 '+selO.totalOpen+'석(좌석×1)으로 계산 중이에요. 예: 6 입력 → 분모 = '+selO.base+'×6" style="flex:1;min-width:74px;padding:7px 8px;border:1.5px solid var(--accent);border-radius:7px;font-size:12px;font-family:inherit;background:var(--accent-light);color:var(--text);font-weight:700">'; }
+  // [회차 보정 260723 운영자] 선택 공연에 회차 신호(총회차·회차상세·운영대장)가 없으면 회차수 입력칸 노출 — 저장 시 공연마스터 총회차+총오픈석(=기준석×회차) 확정 → 분모 = 오픈석×회차(달 샤베트 다회차 문제 해결). 강조 = accent 토큰.
+  if(selO&&selO.needRc){ s+='<input type="number" class="d-rc" min="1" step="1" value="'+((r&&r['d-rc']!=null&&r['d-rc']!=='')?escapeHtml(String(r['d-rc'])):'')+'" placeholder="회차수" title="다회차면 총 회차수를 넣어줘 — 현재 분모 '+selO.totalOpen.toLocaleString()+'석. 예: 6 입력 → 분모 = 기준석 '+selO.base.toLocaleString()+' × 6 = '+(selO.base*6).toLocaleString()+'석(저장 시 공연마스터에 반영). 단회차면 비워둬." style="flex:1;min-width:74px;padding:7px 8px;border:1.5px solid var(--accent);border-radius:7px;font-size:12px;font-family:inherit;background:var(--accent-light);color:var(--text);font-weight:700">'; }
   s+='<button onclick="_dailyRemoveRow(this)" title="삭제" style="border:0;background:none;color:var(--danger);cursor:pointer;font-size:14px;padding:4px">✕</button>';
   s+='</div>'; return s;
 }
@@ -6718,7 +6719,7 @@ async function _dailySubmit(){
   if(!entries.length && !gEntries.length){if(msg)msg.textContent='공연을 1개 이상 선택하세요';return;}
   // [회차 보정 260723 운영자] needRc 공연에 회차수 입력됨 → 공연마스터 총회차 확정(분모 = 좌석×회차). masters(분모)도 즉시 갱신해 이 저장의 점유율까지 정확하게.
   var rcPatch={}, _mByName={}; _dailyMasters().forEach(function(m){ _mByName[m.name]=m; });
-  entries.forEach(function(r){ var rcv=parseInt(r['d-rc'],10); var mo=_mByName[r.공연]; if(rcv>0&&mo&&mo.needRc&&mo.id){ rcPatch[mo.id]={총회차:rcv}; masters[r.공연]=(mo.base||_SALES_FALLBACK_SEAT)*rcv; } });
+  entries.forEach(function(r){ var rcv=parseInt(r['d-rc'],10); var mo=_mByName[r.공연]; if(rcv>0&&mo&&mo.needRc&&mo.id){ var _op=(mo.base||_SALES_FALLBACK_SEAT)*rcv; rcPatch[mo.id]={총회차:rcv,총오픈석:_op}; masters[r.공연]=_op; } });   // [260723 운영자] 총회차 + 총오픈석(=기준석×회차) 동시 확정 — _salesBuild 분모가 총오픈석을 우선하므로, 단회차 총오픈석이 남아 있어도 이 값으로 확실히 덮어 오픈석×회차 분모 반영
   var rows=entries.map(function(r){
     var paidS=parseFloat(r['d-paids'])||0, paidA=parseFloat(r['d-paida'])||0, free=parseFloat(r['d-free'])||0;
     var totSeat=paidS+free, open=masters[r.공연]||926, occ=open>0?Math.min(totSeat/open*100,100):0;
@@ -7617,9 +7618,10 @@ function _yrBand(y,hl){   // 최근(2025) 상시 강조 + 선택 하이라이트
   if(recent)s+='border-left:2px solid var(--accent-light);border-right:2px solid var(--accent-light);';
   return s;
 }
+function _yrScrollTable(dir){ var el=document.getElementById('yr-tscroll'); if(el)el.scrollBy({left:dir*Math.max(220,el.clientWidth*0.7),behavior:'smooth'}); }   // [260723 운영자] 표 가로 스크롤 — 묻히는 연도 열을 ◀▶로 페이지 이동(약 70% 폭씩)
 function _yrTable(){
-  var st=_yrState,years=_YR.years,thCss='padding:8px 10px;',tdCss='padding:7px 10px;';
-  var h='<div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;margin-bottom:14px">';
+  var st=_yrState,years=_YR.years,thCss='padding:8px 10px;vertical-align:top;',tdCss='padding:7px 10px;';   // [260723 운영자] 헤더 상단정렬 — 2025('최근 취합' 2줄) 때문에 단줄 연도가 중앙정렬로 떠 보이던 것 교정
+  var h='<div id="yr-tscroll" style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;margin-bottom:14px">';   // [260723 운영자] id = 가로 스크롤 타깃(부제줄 ◀▶ 네비가 제어)
   h+='<table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">';
   h+='<thead><tr style="background:var(--past-bg);color:var(--neutral-text);font-size:11px;font-weight:700">';
   h+='<td colspan="2" style="'+thCss+'text-align:left;position:sticky;left:0;background:var(--past-bg)">구분</td>';
@@ -7684,17 +7686,18 @@ function _yrDrawChart(first){
     var ordered=selCats.slice().sort(function(a,b){var ra=_yrRow(a,st.metric),rb=_yrRow(b,st.metric);return (rb?Math.max.apply(null,rb.v):0)-(ra?Math.max.apply(null,ra.v):0);});   // [260723 운영자] z-순서: 값 큰 분야 먼저(아래)→작은 분야 나중(위) = 낮은 수치가 안 가려짐
     ordered.forEach(function(c){
       var r=_yrRow(c,st.metric),vv=r?r.v.slice():[],hex=col[c];
+      var vm=vv.map(function(v){return v/10000;});   // [260723 운영자] 만명 스케일 — 축·플롯·라벨 통일(눈금도 만명). hover는 customdata로 정확 명수.
       var pi=0;for(var i2=1;i2<vv.length;i2++)if(vv[i2]>vv[pi])pi=i2;
       var vi=-1;for(var i3=0;i3<vv.length;i3++)if(vv[i3]>0&&(vi<0||vv[i3]<vv[vi]))vi=i3;
-      traces.push({type:'bar',name:c,x:years,y:vv,marker:{color:hex,opacity:.14},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false});   // [260723 운영자] 막대 = 얇고 옅은 보조(곡선이 주역)
-      var _mo=_yrMono(years,vv,16);
+      traces.push({type:'bar',name:c,x:years,y:vm,customdata:vv,marker:{color:hex,opacity:.14},hovertemplate:'%{x}년 '+c+'<br>%{customdata:,}명<extra></extra>',showlegend:false});   // [260723 운영자] 막대 = 얇고 옅은 보조(곡선이 주역)
+      var _mo=_yrMono(years,vm,16);
       traces.push({type:'scatter',mode:'lines',name:c,x:_mo.x,y:_mo.y,line:{color:hex,width:2.6,shape:'linear'},fill:'tozeroy',fillcolor:_yrHexA(hex,.09),hoverinfo:'skip',showlegend:true});   // [260723 운영자] 곡선(단조 큐빅·왜곡0) + 아래 아주 옅은 area 음영 = 주역
-      traces.push({type:'scatter',mode:'markers+text',name:c+' 점',x:years,y:vv,text:vv.map(function(v,idx){return (v>0&&idx!==pi&&idx!==vi)?_man(v):'';}),textposition:'top center',textfont:{color:hex,size:8.5},marker:{color:hex,size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false,cliponaxis:false});   // [260723 운영자] 각 점 위 수치(만명·소수1) · 최고/최저는 콜아웃이 담당(중복 제거)
-      annos.push({x:years[pi],y:vv[pi],text:'최고 '+_man(vv[pi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:-24,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // [260723 운영자·한수] 최고 콜아웃(만명) — 리더선으로 빼내 불투명 칩+드롭섀도
-      if(vi>=0&&vi!==pi)annos.push({x:years[vi],y:vv[vi],text:'최저 '+_man(vv[vi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:28,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // 최저 콜아웃(만명)
+      traces.push({type:'scatter',mode:'markers+text',name:c+' 점',x:years,y:vm,customdata:vv,text:vv.map(function(v,idx){return (v>0&&idx!==pi&&idx!==vi)?_man(v):'';}),textposition:'top center',textfont:{color:hex,size:8.5},marker:{color:hex,size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{customdata:,}명<extra></extra>',showlegend:false,cliponaxis:false});   // [260723 운영자] 각 점 위 수치(만명·소수1) · 최고/최저는 콜아웃이 담당(중복 제거)
+      annos.push({x:years[pi],y:vm[pi],text:'최고 '+_man(vv[pi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:-24,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // [260723 운영자·한수] 최고 콜아웃(만명) — 리더선으로 빼내 불투명 칩+드롭섀도
+      if(vi>=0&&vi!==pi)annos.push({x:years[vi],y:vm[vi],text:'최저 '+_man(vv[vi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:28,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // 최저 콜아웃(만명)
     });
     annos.push({x:1,y:1.07,xref:'paper',yref:'paper',text:'(단위: 만명)',showarrow:false,xanchor:'right',yanchor:'bottom',font:{color:fc,size:10.5}});   // [260723 운영자] 우상단 단위 표기
-    layout={barmode:'group',height:410,margin:{t:34,r:22,b:48,l:70},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:0},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center'},bargap:.5,bargroupgap:.2,annotations:annos};   // 곡선 주역·막대 얇게·연도 라벨 수평 · 좌우 여백 = 양끝 점 라벨(만명) 잘림 방지
+    layout={barmode:'overlay',height:410,margin:{t:34,r:22,b:48,l:56},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:0},yaxis:{gridcolor:grid,zeroline:false,ticksuffix:'',rangemode:'tozero'},showlegend:true,legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center'},bargap:.6,annotations:annos};   // [260723 운영자] barmode overlay — 막대를 연도 중앙에 겹쳐 세워 곡선 점(마커)이 기둥 중앙에 정확히 얹힘(구 group=좌우 오프셋으로 점↔기둥 어긋남) · y축 만명 단위(÷10000)
   }else{
     var yi=years.indexOf(st.year);
     var ys=selCats.map(function(c){var r=_yrRow(c,st.metric);return r?(r.v[yi]||0):0;});
@@ -7738,7 +7741,8 @@ function _yrRender(){
   h+='</div>';
   h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">'+(st.year==='all'?('연도별 '+mLabel+' 추이'):(st.year+'년 분야별 '+mLabel))+' <span style="font-weight:400;color:var(--dim);font-size:11px">— '+catTxt+(st.year==='all'?' · 막대=실적, 선=추세, 점선=평균':' · 선택 연도')+'</span></div>';
   h+='<div id="yr-chart" style="height:360px;margin-bottom:18px;animation:fadeUp .45s ease"></div>';
-  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">전체 실적표 <span style="font-weight:400;color:var(--dim);font-size:11px">— 엑셀 원본 그대로 · 선택 연도 열 하이라이트 · 2025 최근 취합 강조</span></div>';
+  var _navCss='width:28px;height:28px;border-radius:8px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--glass-shadow)';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 8px"><div style="font-size:13px;font-weight:700;color:var(--text)">전체 실적표 <span style="font-weight:400;color:var(--dim);font-size:11px">— 엑셀 원본 그대로 · 선택 연도 열 하이라이트 · 2025 최근 취합 강조</span></div><div style="display:flex;gap:6px;flex-shrink:0"><button type="button" onclick="_yrScrollTable(-1)" title="이전 연도들 보기" style="'+_navCss+'">‹</button><button type="button" onclick="_yrScrollTable(1)" title="다음 연도들 보기" style="'+_navCss+'">›</button></div></div>';   // [260723 운영자] 묻히는 연도 열 = 부제줄 우측 ◀▶로 가로 스크롤(데이터 안 가리는 위치)
   h+=_yrTable();
   body.innerHTML=h;
   _yrCountUp(document.getElementById('yr-grand'),_YR.grand,1200);
