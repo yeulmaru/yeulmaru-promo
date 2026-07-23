@@ -7279,13 +7279,21 @@ function closeYearBoard(){if(_yrState.esc)document.removeEventListener('keydown'
 function _yrCard(label,id,suf,tok){
   return '<div style="flex:1;min-width:130px;padding:14px 16px;background:var(--past-bg);border-radius:12px;border:1px solid var(--border)"><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px">'+label+'</div><div style="font-size:22px;font-weight:800;color:var('+(tok||'--accent')+');font-variant-numeric:tabular-nums"><span id="'+id+'">0</span>'+(suf||'')+'</div></div>';
 }
+var _YR_RECENT=2025;   // 가장 최근 취합본(2026 1분기는 집계 전 0) — 상시 옅은 강조 열
+function _yrBand(y,hl){   // 최근(2025) 상시 강조 + 선택 하이라이트(선택 우선). 기존 토큰만.
+  var recent=(y===_YR_RECENT),s='';
+  if(hl)s+='background:var(--accent-light);';
+  else if(recent)s+='background:var(--accent-glow);';
+  if(recent)s+='border-left:2px solid var(--accent-light);border-right:2px solid var(--accent-light);';
+  return s;
+}
 function _yrTable(){
   var st=_yrState,years=_YR.years,thCss='padding:8px 10px;',tdCss='padding:7px 10px;';
   var h='<div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;margin-bottom:14px">';
   h+='<table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">';
   h+='<thead><tr style="background:var(--past-bg);color:var(--neutral-text);font-size:11px;font-weight:700">';
   h+='<td colspan="2" style="'+thCss+'text-align:left;position:sticky;left:0;background:var(--past-bg)">구분</td>';
-  years.forEach(function(y){var hl=(st.year===y);h+='<td style="'+thCss+'text-align:right;'+(hl?'background:var(--accent-light);color:var(--accent)':'')+'">'+y+'</td>';});
+  years.forEach(function(y){var hl=(st.year===y),recent=(y===_YR_RECENT);h+='<td style="'+thCss+'text-align:right;'+_yrBand(y,hl)+((hl||recent)?'color:var(--accent);':'')+'">'+y+(recent?'<br><span style="font-size:9px;font-weight:700;color:var(--accent)">최근 취합</span>':'')+'</td>';});
   h+='<td style="'+thCss+'text-align:right">2026<br>1분기</td><td style="'+thCss+'text-align:right;color:var(--accent)">누계</td></tr></thead><tbody>';
   ['공연','전시','교육','계'].forEach(function(cat){
     var rows=(cat==='계')?_YR.total:_YR.cats[cat].rows;
@@ -7295,17 +7303,17 @@ function _yrTable(){
       h+='<tr style="border-top:'+(ri===0?'2px solid var(--border2)':'1px solid var(--border)')+';'+(dim?'opacity:.38;':'')+'">';
       if(ri===0)h+='<td rowspan="'+rows.length+'" style="'+tdCss+'font-weight:800;color:var('+tok+');vertical-align:middle;text-align:center;border-right:1px solid var(--border);position:sticky;left:0;background:var(--surface-solid)">'+cat+'</td>';
       h+='<td style="'+tdCss+'color:var(--neutral-text);text-align:left;position:sticky;left:34px;background:var(--surface-solid)">'+r.sub+'</td>';
-      years.forEach(function(y,yi){var hl=(st.year===y);h+='<td style="'+tdCss+'text-align:right;font-variant-numeric:tabular-nums;'+(hl?'background:var(--accent-light);font-weight:700;color:var(--accent)':'')+'">'+_yrFmt(r.v[yi])+'</td>';});
+      years.forEach(function(y,yi){var hl=(st.year===y);h+='<td style="'+tdCss+'text-align:right;font-variant-numeric:tabular-nums;'+_yrBand(y,hl)+(hl?'font-weight:700;color:var(--accent)':'')+'">'+_yrFmt(r.v[yi])+'</td>';});
       h+='<td style="'+tdCss+'text-align:right;color:var(--muted)">'+_yrFmt(r.q)+'</td>';
       h+='<td style="'+tdCss+'text-align:right;font-weight:800;color:var('+tok+');font-variant-numeric:tabular-nums">'+_yrFmt(r.sum)+'</td>';
       h+='</tr>';
     });
   });
   h+='<tr style="border-top:2px solid var(--border2)"><td colspan="2" style="'+tdCss+'font-weight:800;color:var(--c5);text-align:center;border-right:1px solid var(--border);position:sticky;left:0;background:var(--surface-solid)">장도 방문객</td>';
-  years.forEach(function(y,yi){var hl=(st.year===y);h+='<td style="'+tdCss+'text-align:right;font-variant-numeric:tabular-nums;'+(hl?'background:var(--accent-light);color:var(--accent)':'')+'">'+_yrFmt(_YR.jangdo.v[yi])+'</td>';});
+  years.forEach(function(y,yi){var hl=(st.year===y);h+='<td style="'+tdCss+'text-align:right;font-variant-numeric:tabular-nums;'+_yrBand(y,hl)+(hl?'color:var(--accent)':'')+'">'+_yrFmt(_YR.jangdo.v[yi])+'</td>';});
   h+='<td style="'+tdCss+'"></td><td style="'+tdCss+'text-align:right;font-weight:800;color:var(--c5);font-variant-numeric:tabular-nums">'+_yrFmt(_YR.jangdo.sum)+'</td></tr>';
   h+='</tbody></table></div>';
-  h+='<div style="font-size:11px;color:var(--dim);line-height:1.7">※ 문화나눔 인원은 관람인원 숫자에 포함되어 있음<br>※ 단위: 회, 일, 명 · ~2026년 1분기는 집계 전(0)<br>※ 예울마루(망마/장도) 공연·전시 등 관람객 및 장도 방문객 합계(~2025년 누적) = <b style="color:var(--accent)">3,690,031</b> 명</div>';
+  h+='<div style="font-size:11px;color:var(--dim);line-height:1.7">※ 문화나눔 인원은 관람인원 숫자에 포함되어 있음<br>※ 단위: 회, 일, 명 · ~2026년 1분기는 집계 전(0) · <b style="color:var(--accent)">2025</b>년이 가장 최근 취합본<br>※ 예울마루(망마/장도) 공연·전시 등 관람객 및 장도 방문객 합계(~2025년 누적) = <b style="color:var(--accent)">3,690,031</b> 명</div>';
   return h;
 }
 function _yrDrawChart(first){
@@ -7314,10 +7322,18 @@ function _yrDrawChart(first){
   var selCats=_YR_CATLIST.filter(function(c){return st.cats[c];});
   var col={'공연':_yrCss('--accent'),'전시':_yrCss('--peach-text'),'교육':_yrCss('--green')};
   var grid=_yrCss('--border'),paper=_yrCss('--surface-solid'),fc=_yrCss('--neutral-text');
-  var traces=[],layout,transp='rgba(0,0,0,0)';
+  var traces=[],layout,transp='rgba(0,0,0,0)',labelBg='rgba(255,255,255,0.75)';
   if(st.year==='all'){
-    traces=selCats.map(function(c){var r=_yrRow(c,st.metric);return {type:'bar',name:c,x:years,y:r?r.v.slice():[],marker:{color:col[c]},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>'};});
-    layout={barmode:'group',height:360,margin:{t:14,r:16,b:44,l:60},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:-40},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.24,x:0.5,xanchor:'center'},bargap:.3,bargroupgap:.12};
+    var shapes=[],annos=[];
+    selCats.forEach(function(c){
+      var r=_yrRow(c,st.metric),vv=r?r.v.slice():[];
+      traces.push({type:'bar',name:c,x:years,y:vv,marker:{color:col[c],opacity:.5},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>'});   // 막대 = 실적(반투명 → 위 추세선 가독)
+      traces.push({type:'scatter',mode:'lines+markers',name:c+' 추세',x:years,y:vv,line:{color:col[c],width:2,shape:'linear'},marker:{color:col[c],size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false});   // 추세선 = 꼭지점 직선 연결(연도별 실측점 → 곡선보간은 없는 중간값 암시라 직선)
+      var nzv=vv.filter(function(x){return x>0;}),m=nzv.length?nzv.reduce(function(a,b){return a+b;},0)/nzv.length:0;
+      shapes.push({type:'line',xref:'x',yref:'y',x0:years[0]-0.45,x1:years[years.length-1]+0.45,y0:m,y1:m,line:{dash:'dash',color:col[c],width:1.3},opacity:.5});   // 평균 가로선
+      annos.push({x:years[years.length-1]+0.45,y:m,xref:'x',yref:'y',text:'평균 '+Math.round(m).toLocaleString(),showarrow:false,xanchor:'right',yanchor:'bottom',font:{color:col[c],size:9.5},bgcolor:labelBg,borderpad:1});
+    });
+    layout={barmode:'group',height:390,margin:{t:14,r:16,b:44,l:60},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:-40},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.2,x:0.5,xanchor:'center'},bargap:.3,bargroupgap:.12,shapes:shapes,annotations:annos};
   }else{
     var yi=years.indexOf(st.year);
     var ys=selCats.map(function(c){var r=_yrRow(c,st.metric);return r?(r.v[yi]||0):0;});
@@ -7346,8 +7362,8 @@ function _yrRender(){
   var h='';
   h+='<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:14px 18px;background:var(--accent-glow);border-radius:14px;border:1px solid var(--accent-light)"><span style="font-size:12px;color:var(--neutral-text);font-weight:700">누적 총 관람객 · 방문객<br><span style="font-weight:500;color:var(--dim)">~2025년</span></span><span style="font-size:26px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums"><span id="yr-grand">0</span> 명</span><span style="font-size:11px;color:var(--dim)">예울마루 관람 1,505,706 &nbsp;+&nbsp; 장도 방문 2,184,325</span></div>';
   h+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px">';
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="fbar-lbl">분야</span>';
-  _YR_CATLIST.forEach(function(c){var on=!!st.cats[c];var lock=on&&selCats.length===1;h+='<label class="fbar-chip'+(on?' on':'')+(lock?' lock':'')+'"><input type="checkbox" '+(on?'checked':'')+(lock?' disabled':'')+' onchange="_yrToggleCat(\''+c+'\')">'+c+'</label>';});
+  h+='<div class="fbar-seg"><span class="fbar-lbl">분야</span>';   // [260723 운영자] 체크박스 폐지 — on=accent 채움('불 들어옴')으로만 표현 → 글자가 버튼 정중앙(수직·수평) 정렬, 지표·연도 세그와 톤 통일
+  _YR_CATLIST.forEach(function(c){var on=!!st.cats[c];var lock=on&&selCats.length===1;h+='<button type="button" class="'+(on?'on':'')+'" onclick="_yrToggleCat(\''+c+'\')" title="'+(lock?'최소 1개 분야는 켜져 있어야 해요':(on?'끄기':'켜기'))+'">'+c+'</button>';});
   h+='</div>';
   h+='<div class="fbar-seg"><span class="fbar-lbl">지표</span>'+_YR_METRICS.map(function(m){var on=st.metric===m.k;return '<button class="'+(on?'on':'')+'" onclick="_yrSetMetric(\''+m.k+'\')">'+m.l+'</button>';}).join('')+'</div>';
   h+='<div class="fbar-seg"><span class="fbar-lbl">연도</span><select onchange="_yrSetYear(this.value)" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--glass-bd);background:var(--glass-surface);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer"><option value="all"'+(st.year==='all'?' selected':'')+'>전체 추이</option>'+years.map(function(y){return '<option value="'+y+'"'+(st.year===y?' selected':'')+'>'+y+'년</option>';}).join('')+'</select></div>';
@@ -7357,9 +7373,9 @@ function _yrRender(){
   h+=_yrCard('최고 연도 ('+years[bestIdx]+')','yr-k2','','--peach-text');
   h+=_yrCard('연평균','yr-k3','','--green');
   h+='</div>';
-  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">'+(st.year==='all'?('연도별 '+mLabel+' 추이'):(st.year+'년 분야별 '+mLabel))+' <span style="font-weight:400;color:var(--dim);font-size:11px">— '+catTxt+' · '+(st.year==='all'?'2012~2025':'선택 연도')+'</span></div>';
+  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">'+(st.year==='all'?('연도별 '+mLabel+' 추이'):(st.year+'년 분야별 '+mLabel))+' <span style="font-weight:400;color:var(--dim);font-size:11px">— '+catTxt+(st.year==='all'?' · 막대=실적, 선=추세, 점선=평균':' · 선택 연도')+'</span></div>';
   h+='<div id="yr-chart" style="height:360px;margin-bottom:18px;animation:fadeUp .45s ease"></div>';
-  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">전체 실적표 <span style="font-weight:400;color:var(--dim);font-size:11px">— 엑셀 원본 그대로 · 선택 분야 강조·연도 열 하이라이트</span></div>';
+  h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin:2px 0 8px">전체 실적표 <span style="font-weight:400;color:var(--dim);font-size:11px">— 엑셀 원본 그대로 · 선택 연도 열 하이라이트 · 2025 최근 취합 강조</span></div>';
   h+=_yrTable();
   body.innerHTML=h;
   _yrCountUp(document.getElementById('yr-grand'),_YR.grand,1200);
