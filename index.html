@@ -7251,6 +7251,7 @@ var _yrState={cats:{'공연':true,'전시':true,'교육':true},metric:'인원',y
 var _YR_METRICS=[{k:'인원',l:'관람·수강'},{k:'횟수',l:'횟수·건수'},{k:'일수',l:'일수'},{k:'나눔',l:'문화나눔'}];
 var _YR_CATLIST=['공연','전시','교육'];
 function _yrCss(n){try{return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}catch(e){return '';}}
+function _yrHexA(hex,a){var m=String(hex||'').trim().replace('#','');if(m.length===3)m=m[0]+m[0]+m[1]+m[1]+m[2]+m[2];var r=parseInt(m.slice(0,2),16),g=parseInt(m.slice(2,4),16),b=parseInt(m.slice(4,6),16);return isNaN(r)?'rgba(0,0,0,'+a+')':'rgba('+r+','+g+','+b+','+a+')';}   // 팔레트 토큰 해석값(hex)→rgba(area 음영 알파 변주 · 소스 raw hex 0)
 function _yrFmt(n){return (n===null||n===undefined||n==='')?'':Number(n).toLocaleString();}
 function _yrRow(cat,key){var rs=_YR.cats[cat].rows;for(var i=0;i<rs.length;i++)if(rs[i].key===key)return rs[i];return null;}
 function _yrMetricLabel(k){for(var i=0;i<_YR_METRICS.length;i++)if(_YR_METRICS[i].k===k)return _YR_METRICS[i].l;return '';}
@@ -7328,6 +7329,19 @@ function _yrMono(xs,ys,seg){   // [260723 운영자] 단조 큐빅(Fritsch–Car
     for(var k=0;k<seg;k++){ var u=k/seg,u2=u*u,u3=u2*u; ox.push(x0+u*h); oy.push((2*u3-3*u2+1)*y0+(u3-2*u2+u)*h*m0+(-2*u3+3*u2)*y1+(u3-u2)*h*m1); } }
   ox.push(xs[n-1]); oy.push(ys[n-1]); return {x:ox,y:oy};
 }
+function _yrApplyShadow(){   // [260723 운영자] 콜아웃 칩이 차트 위에 올라와도 확실히 구분되게 드롭섀도(SVG feDropShadow) — 불투명 칩 + 그림자
+  try{
+    var anno=document.querySelector('#yr-chart .annotation .bg'); if(!anno)return;
+    var svg=anno.ownerSVGElement; if(!svg)return; var NS='http://www.w3.org/2000/svg';
+    if(!document.getElementById('yrDrop')){
+      var defs=svg.querySelector('defs'); if(!defs){defs=document.createElementNS(NS,'defs');svg.insertBefore(defs,svg.firstChild);}
+      var f=document.createElementNS(NS,'filter'); f.setAttribute('id','yrDrop'); f.setAttribute('x','-40%');f.setAttribute('y','-40%');f.setAttribute('width','180%');f.setAttribute('height','180%');
+      var ds=document.createElementNS(NS,'feDropShadow'); ds.setAttribute('dx','0');ds.setAttribute('dy','1.2');ds.setAttribute('stdDeviation','1.8');ds.setAttribute('flood-color','rgba(26,26,46,0.32)');ds.setAttribute('flood-opacity','1');
+      f.appendChild(ds); defs.appendChild(f);
+    }
+    document.querySelectorAll('#yr-chart .annotation .bg').forEach(function(r){r.setAttribute('filter','url(#yrDrop)');});
+  }catch(e){}
+}
 function _yrDrawChart(first){
   var div=document.getElementById('yr-chart');if(!div||!window.Plotly)return;
   var st=_yrState,years=_YR.years;
@@ -7336,19 +7350,20 @@ function _yrDrawChart(first){
   var grid=_yrCss('--border'),paper=_yrCss('--surface-solid'),fc=_yrCss('--neutral-text');
   var traces=[],layout,transp='rgba(0,0,0,0)',labelBg='rgba(255,255,255,0.75)';
   if(st.year==='all'){
-    var shapes=[],annos=[];
-    selCats.forEach(function(c){
-      var r=_yrRow(c,st.metric),vv=r?r.v.slice():[];
-      traces.push({type:'bar',name:c,x:years,y:vv,marker:{color:col[c],opacity:.5},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>'});   // 막대 = 실적(반투명 → 위 추세선 가독)
+    var annos=[];
+    var ordered=selCats.slice().sort(function(a,b){var ra=_yrRow(a,st.metric),rb=_yrRow(b,st.metric);return (rb?Math.max.apply(null,rb.v):0)-(ra?Math.max.apply(null,ra.v):0);});   // [260723 운영자] z-순서: 값 큰 분야 먼저(아래)→작은 분야 나중(위) = 낮은 수치가 안 가려짐
+    ordered.forEach(function(c){
+      var r=_yrRow(c,st.metric),vv=r?r.v.slice():[],hex=col[c];
+      traces.push({type:'bar',name:c,x:years,y:vv,marker:{color:hex,opacity:.14},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false});   // [260723 운영자] 막대 = 얇고 옅은 보조(곡선이 주역)
       var _mo=_yrMono(years,vv,16);
-      traces.push({type:'scatter',mode:'lines',name:c+' 추세',x:_mo.x,y:_mo.y,line:{color:col[c],width:2.4,shape:'linear'},hoverinfo:'skip',showlegend:false});   // [260723 운영자] 추세선 = 단조 큐빅 곡선(왜곡 0 · 실측점 초과 안 함)
-      traces.push({type:'scatter',mode:'markers',name:c,x:years,y:vv,marker:{color:col[c],size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false});   // 실측점 마커(정확값 통과)
-      var nzv=vv.filter(function(x){return x>0;}),m=nzv.length?nzv.reduce(function(a,b){return a+b;},0)/nzv.length:0;
-      shapes.push({type:'rect',xref:'x',yref:'y',x0:years[0]-0.45,x1:years[years.length-1]+0.45,y0:0,y1:m,fillcolor:col[c],opacity:.055,line:{width:0},layer:'below'});   // [260723 운영자] 평균치 배경 밴드(0~평균) — 평균 이하 구간을 분야색으로 은은히(참조 대시보드 '평균 배경' 기법)
-      shapes.push({type:'line',xref:'x',yref:'y',x0:years[0]-0.45,x1:years[years.length-1]+0.45,y0:m,y1:m,line:{dash:'dash',color:col[c],width:1.3},opacity:.5});   // 평균 가로선
-      annos.push({x:years[years.length-1]+0.45,y:m,xref:'x',yref:'y',text:'평균 '+Math.round(m).toLocaleString(),showarrow:false,xanchor:'right',yanchor:'bottom',font:{color:col[c],size:9.5},bgcolor:labelBg,borderpad:1});
+      traces.push({type:'scatter',mode:'lines',name:c,x:_mo.x,y:_mo.y,line:{color:hex,width:2.6,shape:'linear'},fill:'tozeroy',fillcolor:_yrHexA(hex,.09),hoverinfo:'skip',showlegend:true});   // [260723 운영자] 곡선(단조 큐빅·왜곡0) + 아래 아주 옅은 area 음영 = 주역
+      traces.push({type:'scatter',mode:'markers',name:c+' 점',x:years,y:vv,marker:{color:hex,size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false});   // 실측점 마커
+      var pi=0;for(var i2=1;i2<vv.length;i2++)if(vv[i2]>vv[pi])pi=i2;
+      var vi=-1;for(var i3=0;i3<vv.length;i3++)if(vv[i3]>0&&(vi<0||vv[i3]<vv[vi]))vi=i3;
+      annos.push({x:years[pi],y:vv[pi],text:'최고 '+vv[pi].toLocaleString(),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:-24,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // [260723 운영자·한수] 최고 콜아웃 — 리더선(---)으로 빼내 whitespace에·불투명 칩(+드롭섀도)
+      if(vi>=0&&vi!==pi)annos.push({x:years[vi],y:vv[vi],text:'최저 '+vv[vi].toLocaleString(),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:28,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // 최저 콜아웃
     });
-    layout={barmode:'group',height:390,margin:{t:14,r:16,b:44,l:60},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:0},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.2,x:0.5,xanchor:'center'},bargap:.3,bargroupgap:.12,shapes:shapes,annotations:annos};   // [260723 운영자] 연도 라벨 가로(수평) — Plotly가 각 연도 눈금 중앙 정렬 → 기둥 그룹 중앙 ↔ 글자 중앙 수직 일치
+    layout={barmode:'group',height:410,margin:{t:30,r:16,b:48,l:60},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:0},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center'},bargap:.5,bargroupgap:.2,annotations:annos};   // 곡선 주역·막대 얇게(bargap .5)·연도 라벨 수평
   }else{
     var yi=years.indexOf(st.year);
     var ys=selCats.map(function(c){var r=_yrRow(c,st.metric);return r?(r.v[yi]||0):0;});
@@ -7358,10 +7373,7 @@ function _yrDrawChart(first){
   }
   var _ally=traces.reduce(function(a,t){return a.concat(t.y||[]);},[]);var _ymax=Math.max.apply(null,_ally.concat([0]));layout.yaxis.range=[0,_ymax>0?_ymax*1.08:1];   // [260723] y축 명시 고정 — newPlot(0)+animate가 축 재계산을 안 해 막대가 천장 뚫는 것 차단
   var cfg={responsive:true,displayModeBar:false};
-  if(first){
-    var z=traces.map(function(t){return Object.assign({},t,{y:(t.y||[]).map(function(){return 0;})});});
-    Plotly.newPlot(div,z,layout,cfg).then(function(){try{Plotly.animate(div,{data:traces},{transition:{duration:800,easing:'cubic-out'},frame:{duration:800}});}catch(e){Plotly.react(div,traces,layout,cfg);}});
-  }else Plotly.react(div,traces,layout,cfg);
+  Plotly.react(div,traces,layout,cfg).then(function(){try{_yrApplyShadow();}catch(e){}});   // [260723] 렌더 후 콜아웃 칩 드롭섀도 적용 · 첫 진입 페이드는 #yr-chart 컨테이너 CSS(fadeUp)가 담당
 }
 function _yrRender(){
   var body=document.getElementById('yr-body');if(!body)return;
