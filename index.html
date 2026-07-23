@@ -6324,10 +6324,10 @@ async function _opsMasterPatch(sheet, keyCol, patches){
   await api('POST','/api/ops',{sheet:sheet,headers:headers,rows:outRows});
   return {hit:hit, headers:headers, rows:outRows};
 }
-// [260723] 종류 선택 탭 — 담당이 전시 포함이고 진행중 전시가 있을 때만 노출. 아니면 기존 공연 단독 UI 100% 유지(디자인 기틀 계승).
+// [260723] 종류 선택 탭 — 진행중 전시가 있으면 노출. 아니면 기존 공연 단독 UI 100% 유지(디자인 기틀 계승).
+// [260723 운영자 버그수정] 구 게이트가 전시여부 플래그(또는 슈퍼admin)를 추가로 요구 → 슈퍼admin 폐기(role==='admin' 통일) 후 플래그 미보유 admin이 전시 입력 자체를 못 함. 모달이 이미 admin 전용(openDailyInput)이라 종류 제한은 불필요 → 진행중 전시 유무로만 판정.
 function _dailyKindTabs(){
-  var allowed=_dailyAllowedCats();
-  var showEx=(!allowed||allowed.indexOf('전시')>=0)&&_dailyExhibMasters().length>0;
+  var showEx=(typeof userRole!=='undefined'&&userRole==='admin')&&_dailyExhibMasters().length>0;
   if(!showEx){ if(_dailyKind!=='공연')_dailyKind='공연'; return ''; }
   var seg=function(k){ return '<button type="button" class="'+(_dailyKind===k?'on':'')+'" onclick="_dailySetKind(\''+k+'\')">'+k+'</button>'; };
   return '<div class="ana-seg" style="margin-bottom:16px">'+seg('공연')+seg('전시')+'</div>';
@@ -7496,17 +7496,18 @@ function _yrDrawChart(first){
     var ordered=selCats.slice().sort(function(a,b){var ra=_yrRow(a,st.metric),rb=_yrRow(b,st.metric);return (rb?Math.max.apply(null,rb.v):0)-(ra?Math.max.apply(null,ra.v):0);});   // [260723 운영자] z-순서: 값 큰 분야 먼저(아래)→작은 분야 나중(위) = 낮은 수치가 안 가려짐
     ordered.forEach(function(c){
       var r=_yrRow(c,st.metric),vv=r?r.v.slice():[],hex=col[c];
+      var vm=vv.map(function(v){return v/10000;});   // [260723 운영자] 만명 스케일 — 축·플롯·라벨 통일(눈금도 만명). hover는 customdata로 정확 명수.
       var pi=0;for(var i2=1;i2<vv.length;i2++)if(vv[i2]>vv[pi])pi=i2;
       var vi=-1;for(var i3=0;i3<vv.length;i3++)if(vv[i3]>0&&(vi<0||vv[i3]<vv[vi]))vi=i3;
-      traces.push({type:'bar',name:c,x:years,y:vv,marker:{color:hex,opacity:.14},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false});   // [260723 운영자] 막대 = 얇고 옅은 보조(곡선이 주역)
-      var _mo=_yrMono(years,vv,16);
+      traces.push({type:'bar',name:c,x:years,y:vm,customdata:vv,marker:{color:hex,opacity:.14},hovertemplate:'%{x}년 '+c+'<br>%{customdata:,}명<extra></extra>',showlegend:false});   // [260723 운영자] 막대 = 얇고 옅은 보조(곡선이 주역)
+      var _mo=_yrMono(years,vm,16);
       traces.push({type:'scatter',mode:'lines',name:c,x:_mo.x,y:_mo.y,line:{color:hex,width:2.6,shape:'linear'},fill:'tozeroy',fillcolor:_yrHexA(hex,.09),hoverinfo:'skip',showlegend:true});   // [260723 운영자] 곡선(단조 큐빅·왜곡0) + 아래 아주 옅은 area 음영 = 주역
-      traces.push({type:'scatter',mode:'markers+text',name:c+' 점',x:years,y:vv,text:vv.map(function(v,idx){return (v>0&&idx!==pi&&idx!==vi)?_man(v):'';}),textposition:'top center',textfont:{color:hex,size:8.5},marker:{color:hex,size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{y:,}<extra></extra>',showlegend:false,cliponaxis:false});   // [260723 운영자] 각 점 위 수치(만명·소수1) · 최고/최저는 콜아웃이 담당(중복 제거)
-      annos.push({x:years[pi],y:vv[pi],text:'최고 '+_man(vv[pi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:-24,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // [260723 운영자·한수] 최고 콜아웃(만명) — 리더선으로 빼내 불투명 칩+드롭섀도
-      if(vi>=0&&vi!==pi)annos.push({x:years[vi],y:vv[vi],text:'최저 '+_man(vv[vi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:28,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // 최저 콜아웃(만명)
+      traces.push({type:'scatter',mode:'markers+text',name:c+' 점',x:years,y:vm,customdata:vv,text:vv.map(function(v,idx){return (v>0&&idx!==pi&&idx!==vi)?_man(v):'';}),textposition:'top center',textfont:{color:hex,size:8.5},marker:{color:hex,size:5,line:{color:paper,width:1}},hovertemplate:'%{x}년 '+c+'<br>%{customdata:,}명<extra></extra>',showlegend:false,cliponaxis:false});   // [260723 운영자] 각 점 위 수치(만명·소수1) · 최고/최저는 콜아웃이 담당(중복 제거)
+      annos.push({x:years[pi],y:vm[pi],text:'최고 '+_man(vv[pi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:-24,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // [260723 운영자·한수] 최고 콜아웃(만명) — 리더선으로 빼내 불투명 칩+드롭섀도
+      if(vi>=0&&vi!==pi)annos.push({x:years[vi],y:vm[vi],text:'최저 '+_man(vv[vi]),showarrow:true,arrowhead:0,arrowwidth:1,arrowcolor:hex,ax:0,ay:28,font:{color:hex,size:9.5},bgcolor:paper,bordercolor:hex,borderwidth:1,borderpad:3});   // 최저 콜아웃(만명)
     });
     annos.push({x:1,y:1.07,xref:'paper',yref:'paper',text:'(단위: 만명)',showarrow:false,xanchor:'right',yanchor:'bottom',font:{color:fc,size:10.5}});   // [260723 운영자] 우상단 단위 표기
-    layout={barmode:'group',height:410,margin:{t:34,r:22,b:48,l:70},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:0},yaxis:{gridcolor:grid,zeroline:false,tickformat:','},showlegend:true,legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center'},bargap:.5,bargroupgap:.2,annotations:annos};   // 곡선 주역·막대 얇게·연도 라벨 수평 · 좌우 여백 = 양끝 점 라벨(만명) 잘림 방지
+    layout={barmode:'group',height:410,margin:{t:34,r:22,b:48,l:56},paper_bgcolor:paper,plot_bgcolor:paper,font:{family:'inherit',size:11,color:fc},xaxis:{dtick:1,gridcolor:transp,zeroline:false,tickangle:0},yaxis:{gridcolor:grid,zeroline:false,ticksuffix:'',rangemode:'tozero'},showlegend:true,legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center'},bargap:.5,bargroupgap:.2,annotations:annos};   // [260723 운영자] y축 만명 단위(플롯 ÷10000) — 눈금이 점 라벨과 일치 · 좌여백 축소(만명이라 자릿수↓)
   }else{
     var yi=years.indexOf(st.year);
     var ys=selCats.map(function(c){var r=_yrRow(c,st.metric);return r?(r.v[yi]||0):0;});
