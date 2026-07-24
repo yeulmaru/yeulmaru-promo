@@ -3465,9 +3465,45 @@ function _zombieToLogin(){try{['pw','role','myApplicant','myUserDept','subAdminP
 // [분신술 260710 감사2] 자동 loginRedirect 후 브라우저 뒤로가기 → bfcache 복원이면 '이동 중' 스피너로 동결(리로드가 없어 initLoginScreen 미재실행) — 로그인 화면 표시 중 복원 시에만 리로드로 재기동(앱 사용 중 복원은 무간섭)
 window.addEventListener('pageshow',function(e){ try{ if(e.persisted){ var _l=document.getElementById('login'); if(_l&&_l.style.display!=='none')location.reload(); } }catch(_e){} });
 var _idleLockDisabled=false; var IDLE_MS=30*60*1000; /* [260724 운영자] 자동 잠금 기본 = 30분(구 10분) · 관리자 전역설정(cfg:lock_minutes)이 있으면 _loadPetCfg→_applyLockMin이 덮어씀. 260717 원복: 점검용 임시 OFF가 44일 방치 → 보안 자동잠금 복구 */ // hoisted above session-restore IIFE: on F5 _enterAppFromSession→resetIdleTimer runs here, before the original (later) declaration executed; undefined IDLE_MS made setTimeout(lockScreen,undefined)=0ms → instant false lock
-(function(){try{localStorage.removeItem('myApplicant');localStorage.removeItem('myUserDept');}catch(e){}const s=sessionStorage.getItem('pw');if(s){var _lk=null;try{_lk=sessionStorage.getItem('_lockedAt');}catch(e){} if(_lk){try{if(!_loginEmail)_loginEmail=(sessionStorage.getItem('myEmail')||'').trim();}catch(e){} lockScreen();}else{_enterAppFromSession();_msalHasLiveSession();}}else{var _rp=null;try{_rp=localStorage.getItem('_resumePin');}catch(e){} if(_rp){try{localStorage.removeItem('_resumePin');}catch(e){} _loginEmail=_rp; if(typeof startLoginShader==='function'){try{startLoginShader();}catch(e){}} if(typeof goToPinStep==='function'){setTimeout(function(){goToPinStep(true);},0);}else{if(typeof initLoginScreen==='function')initLoginScreen();}}else{if(typeof initLoginScreen==='function')initLoginScreen();}}})();
+/* ═══ [QA 미리보기 · 개발 진입로] 운영자 260724 — MS 로그인 없이 UI만 렌더해 개발/검수용으로 진입.
+   공개 배포 안전장치: api()가 _QA 상태에선 실네트워크를 절대 안 타고 목(빈)데이터만 반환 → 실API·실데이터·PII 미접촉.
+   사용: promo.yeulmaru.org/?qa=1 (뷰어) · ?qa=admin (관리자 UI). 실사용 로그인 흐름은 무변경. ═══ */
+window._QA = /(?:^|[?&])qa=(1|user|admin)(?:&|$)/.test(location.search);
+window._QA_ROLE = /(?:^|[?&])qa=admin(?:&|$)/.test(location.search) ? 'admin' : 'user';
+function _qaEnter(){
+  try{
+    password='0510'; userRole=window._QA_ROLE||'user';
+    sessionStorage.setItem('pw','0510'); sessionStorage.setItem('role',userRole);
+    sessionStorage.setItem('myApplicant','QA미리보기'); sessionStorage.setItem('myUserDept','개발');
+    sessionStorage.setItem('myEmail','qa@preview.local');
+    if(userRole==='admin')sessionStorage.setItem('subAdminPin','0000');
+  }catch(e){}
+  try{ var _l=document.getElementById('login'); if(_l)_l.style.display='none'; }catch(e){}
+  try{ _enterApp(); }catch(e){ console.error('[QA] _enterApp fail',e); }
+  _qaBanner();
+  console.log('[QA] entered without MS auth · role='+(window._QA_ROLE||'user')+' · real API disabled');
+}
+async function _qaApi(method,path){
+  var p=String(path||'');
+  try{ if(console&&console.debug)console.debug('[QA] api intercepted (no real network):',method,p); }catch(e){}
+  if(p.indexOf('/api/programs')===0)return{programs:[]};
+  if(p.indexOf('/api/presence')===0)return{now:Date.now(),users:[]};
+  if(p.indexOf('/api/memo')===0)return{text:''};
+  if(p.indexOf('/api/config')===0||p.indexOf('/api/auth')===0)return{ok:true};
+  return{rows:[],headers:[],programs:[]};
+}
+function _qaBanner(){
+  try{ if(document.getElementById('qa-banner'))return;
+    var b=document.createElement('div'); b.id='qa-banner';
+    b.textContent='🧪 QA 미리보기 — MS 로그인·실데이터 없음 (샘플/빈 데이터)';
+    b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;color:var(--surface-solid);background:var(--accent);opacity:.93;letter-spacing:.3px;pointer-events:none';
+    (document.body||document.documentElement).appendChild(b);
+  }catch(e){}
+}
+(function(){if(window._QA){try{_qaEnter();}catch(_qe){console.error('[QA] enter fail',_qe);}return;}try{localStorage.removeItem('myApplicant');localStorage.removeItem('myUserDept');}catch(e){}const s=sessionStorage.getItem('pw');if(s){var _lk=null;try{_lk=sessionStorage.getItem('_lockedAt');}catch(e){} if(_lk){try{if(!_loginEmail)_loginEmail=(sessionStorage.getItem('myEmail')||'').trim();}catch(e){} lockScreen();}else{_enterAppFromSession();_msalHasLiveSession();}}else{var _rp=null;try{_rp=localStorage.getItem('_resumePin');}catch(e){} if(_rp){try{localStorage.removeItem('_resumePin');}catch(e){} _loginEmail=_rp; if(typeof startLoginShader==='function'){try{startLoginShader();}catch(e){}} if(typeof goToPinStep==='function'){setTimeout(function(){goToPinStep(true);},0);}else{if(typeof initLoginScreen==='function')initLoginScreen();}}else{if(typeof initLoginScreen==='function')initLoginScreen();}}})();
 
 async function api(method,path,body){
+  if(window._QA)return _qaApi(method,path,body);   // [QA] 실네트워크 차단 — 목데이터만(실API·실데이터 미접촉)
   const headers={'Content-Type':'application/json','X-App-Password':password};
   // 서브 admin: 본인 PIN을 헤더에 동봉 (Worker가 검증해 admin 권한 부여)
   const subPin=sessionStorage.getItem('subAdminPin');
@@ -10340,6 +10376,7 @@ var _msgApiAvailable = true;  // 초기 true — 실패(404/401) 시 false로 60
 //    let이면 TDZ ReferenceError로 initApp이 중단돼 F5 세션복원 시 모든 데이터 로더가 스킵됨(분신술 2호 MED-HIGH 실측).
 
 async function _msgApiCall(method, path, body){
+  if(window._QA) return null;  // [QA] 메시지 API 실네트워크 차단(실데이터·PII 미접촉)
   if(!_msgApiAvailable) return null;  // API 안 됨 알려진 상태면 skip
   // Worker는 /api/messages도 X-App-Password 게이트 뒤에 있음 — 헤더 없으면 401로
   // 전부 localStorage 폴백되어 크로스유저 알림이 끊긴다 (260610 라이브 probe로 확인)
@@ -13937,6 +13974,7 @@ function pwCollectFoldersFromDOM(){
 // ============================================================
 
 async function _msalGet(){
+  if(window._QA) return null;  // [QA] MSAL 인스턴스 미생성 → Microsoft discovery/로그인 네트워크 원천 차단
   if(!window.msal){
     showToast('MSAL 라이브러리 로드 실패. 새로고침 후 다시 시도해주세요','error');
     return null;
