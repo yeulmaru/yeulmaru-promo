@@ -1928,6 +1928,22 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 @keyframes uhaPulse{0%,100%{opacity:1}50%{opacity:.35}}
 /* 하단 슬라이드 토글 = 좌 보드 페이지 넘김(_bizmDots)의 .bizm-pgctl(‹ • • ›) 그대로 계승 = 좌·우 대칭(운영자 "대칭 슬라이드 토글") */
 .srail-uha-bar{flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:8px 10px;border-top:1px solid rgba(0,0,0,.07);background:rgba(255,255,255,.5)}
+/* [260724 운영자 3차] 우하단 = 좌 연간실적 통 미러 — 글래스 헤더(_bizmHead 톤) + KPI 스트립(.bizm-strip 계승) + 차트 카드(.bizm-card 계승, 1/3 KPI + 2/3 차트 우측정렬) */
+.uha-inner{padding:2px 18px 14px}
+.uha-head{display:flex;align-items:baseline;gap:10px;padding:10px 2px 12px;flex-wrap:wrap}
+.uha-nm{font-size:16.5px;font-weight:800;color:var(--text);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%}
+.uha-sub{font-size:12px;color:var(--neutral-text);font-weight:500;white-space:nowrap}
+.uha-hr{margin-left:auto;font-size:12px;color:var(--neutral-text);font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:10px}
+.uha-hr b{color:var(--accent);font-weight:800}
+.uha-auto{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);font-weight:600}
+.uha-chartrow{display:flex;gap:12px;align-items:stretch;padding:6px 10px 8px}
+.uha-kpicol{flex:0 0 33%;max-width:33%;min-width:0;display:flex;flex-direction:column;gap:10px;justify-content:center}
+.uha-kpi{background:var(--glass-surface);border:1px solid var(--glass-bd);border-radius:var(--radius);box-shadow:var(--glass-shadow);padding:13px 14px;position:relative;overflow:hidden}
+.uha-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--kpitok,var(--accent))}
+.uha-kpi .lab{font-size:11px;color:var(--dim);font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
+.uha-kpi .val{font-size:20px;font-weight:800;color:var(--kpitok,var(--accent));font-variant-numeric:tabular-nums;line-height:1.05}
+.uha-chart{flex:1 1 auto;min-width:0;display:flex;align-items:center}
+.uha-chart svg{width:100%;height:auto;display:block}
 /* [260710 운영자] 카드 도형 한 레이어 내림 — 흰 전경 도형(배경 .85·테두리·그림자·radius) 제거 = 캘린더 활성 셀(rgba(255,255,255,0), .c 계승)처럼
    글래스 위에 글자 직접 + 구분선(rgba(0,0,0,.07) = .week 주 구분선 계승)으로만 구분. 박스(.srail)·헤더(.srail-head)는 불변(운영자 "건들지 마"). */
 .srail-card{background:rgba(255,255,255,0);border:none;border-bottom:1px solid rgba(0,0,0,.07);border-radius:0;box-shadow:none;padding:15px 16px;margin-bottom:0;cursor:pointer;transition:background .15s}
@@ -2218,7 +2234,7 @@ html::-webkit-scrollbar{width:8px}
       </div>
       <!-- [260724 운영자] 2×2 우하단 = 「사업 판매현황」 자동전환(5초) 상세 — 판매현황 리스트 행 클릭 시 뜨는 개별 사업 상세(_srailRenderDrill)를 전 프로그램 자동순환 · 좌 전체실적표와 세로 대칭 · 헤더/유리박스/토글바 전부 기존 부품 계승 -->
       <div id="srail-uha" data-on="0" data-paused="0" aria-label="사업 판매현황 (자동 전환)" onpointerenter="_srailUhaPause()" onpointerleave="_srailUhaResume()">
-        <div class="srail-head" style="min-height:44px"><span class="srail-ttltext">사업 판매현황</span><span class="srail-uha-pos" id="srail-uha-pos">0 / 0</span><span class="srail-uha-auto" id="srail-uha-auto"><span class="srail-uha-pd" aria-hidden="true"></span>자동 5초</span></div>
+        <!-- [260724 운영자 3차] 흰 「사업 판매현황」 헤더 제거 → 좌 연간실적 통(_bizmHead+strip+card) 구조를 카드 본문(_srailUhaCard)이 그대로 미러 · 프로그램명·공연일 D-day는 카드 글래스 헤더에 -->
         <div class="srail-uha-body" id="srail-uha-body"></div>
         <div class="srail-uha-bar"><span class="bizm-pgctl" role="group" aria-label="사업 슬라이드 넘김"><button class="nav" type="button" aria-label="이전 사업" onclick="_srailUhaTo(_uhaCar.idx-1)">‹</button><span class="dots" id="srail-uha-dots"></span><button class="nav" type="button" aria-label="다음 사업" onclick="_srailUhaTo(_uhaCar.idx+1)">›</button></span></div>
       </div>
@@ -5725,11 +5741,51 @@ function _srailUhaDots(){
   e.dots.innerHTML=_uhaCar.list.map(function(x,k){ return '<button class="dot'+(k===i?' on':'')+'" type="button" aria-label="'+(k+1)+'번째 사업" aria-pressed="'+(k===i)+'" onclick="_srailUhaTo('+k+')"></button>'; }).join('');
   if(e.pos)e.pos.textContent=n?((i+1)+' / '+n):'0 / 0';
 }
+// [260724 운영자 3차] 좌 연간실적 KPI 스트립(_yrmRender) 값 그대로 복사 — placeholder(이후 사업 지표로 교체 결정 예정). .bizm-strip 부품 계승.
+function _uhaLeftStrip(){
+  try{
+    var tr=_yrmTotRow(); if(!tr||!tr.v)return '';
+    var years=_YR.years, vals=tr.v;
+    var bi=0; for(var i=1;i<vals.length;i++)if(vals[i]>vals[bi])bi=i;
+    var nz=vals.filter(function(v){return v>0;}); var avg=Math.round(nz.reduce(function(a,b){return a+b;},0)/(nz.length||1));
+    var i25=years.indexOf(2025),i24=years.indexOf(2024);
+    var dv=(i25>=0&&i24>=0)?(vals[i25]-vals[i24]):0, base=(i24>=0)?vals[i24]:0;
+    var dpct=base>0?(dv/base*100):0, dup=dv>=0;
+    var cell=function(lab,val,col){return '<div class="cell"><div class="lab">'+lab+'</div><div class="val" style="color:var('+col+')">'+val+'</div></div>';};
+    return '<div class="bizm-strip">'+cell('누계 관람·수강',tr.sum.toLocaleString(),'--accent')+cell('최고 연도 ('+years[bi]+')',vals[bi].toLocaleString(),'--text')+cell('연평균',avg.toLocaleString(),'--text')+cell('전년 대비',(dup?'+':'−')+Math.abs(dpct).toFixed(1)+'%',dup?'--green':'--danger')+'</div>';
+  }catch(_e){ console.warn('[uha strip]',_e); return ''; }
+}
+// [260724 운영자 3차] 우하단 카드 = 좌 연간실적 통 미러: 글래스 헤더(프로그램명+공연일 D-day) + KPI 스트립(좌 값 복사) + 차트 카드(1/3 지표[누적점유율·어제대비] + 2/3 차트 우측정렬)
+function _srailUhaCard(p,n,idx){
+  var e=_srailUhaEls(); if(!e.body)return;
+  var isEx=(p._kind==='ex');
+  var occ=p.occ, dpp=p.deltaPP, noData=!!p.noData, dStr, dCol;
+  if(dpp===null||dpp===undefined){dStr='수집 전';dCol='var(--dim)';}
+  else if(dpp>0.04){dStr='▲ +'+dpp.toFixed(1)+'%p';dCol='var(--green)';}
+  else if(dpp<-0.04){dStr='▼ '+dpp.toFixed(1)+'%p';dCol='var(--danger)';}
+  else {dStr='보합';dCol='var(--dim)';}
+  var ddTxt=isEx?((p._endD===null||p._endD===undefined)?'-':_salesDdayStr(p._endD)):(_salesDdayStr(p.dday)||'-');
+  var occTxt=noData?'집계 전':((occ!=null&&!isNaN(occ))?occ.toFixed(1)+'%':'-');
+  var occLab=isEx?'현재 달성률':'현재 누적 점유율';
+  var sub=isEx?('전시 · '+(p.profit||'')):((p.genre||'기타')+' · '+_anaProfitAxis(p['수익성']));
+  var chart=isEx?_anaExhibTrend(p.daily):_srailDrillSvg(p);
+  var h='<div class="uha-inner">';
+  h+='<div class="uha-head"><span class="uha-nm" title="'+escapeHtml(p.name)+'">'+escapeHtml(p.name)+'</span><span class="uha-sub">'+escapeHtml(sub)+'</span>'
+    +'<span class="uha-hr">'+(isEx?'종료까지 ':'공연일 ')+'<b>'+escapeHtml(ddTxt)+'</b><span class="uha-auto" aria-hidden="true"><span class="srail-uha-pd"></span>자동 5초 · '+(idx+1)+'/'+n+'</span></span></div>';
+  h+=_uhaLeftStrip();
+  h+='<div class="bizm-card"><div class="ct">'+(isEx?'일별 달성률 추이':'일자별 누적 점유율 추이')+' <span class="sub">선=누적 · 점선=목표</span></div>'
+    +'<div class="uha-chartrow"><div class="uha-kpicol">'
+    +'<div class="uha-kpi" style="--kpitok:var(--accent)"><div class="lab">'+occLab+'</div><div class="val">'+occTxt+'</div></div>'
+    +'<div class="uha-kpi" style="--kpitok:'+dCol+'"><div class="lab">어제대비</div><div class="val">'+dStr+'</div></div>'
+    +'</div><div class="uha-chart">'+chart+'</div></div></div>';
+  h+='</div>';
+  e.body.innerHTML=h;
+}
 function _srailUhaShow(i){
   var e=_srailUhaEls(); var list=_uhaCar.list; if(!e.body||!list.length)return;
   var n=list.length; i=((i%n)+n)%n; _uhaCar.idx=i;
-  var p=list[i], uhaEls={ body:e.body, cnt:null, asof:null, sum:null };
-  try{ if(p._kind==='ex')_srailRenderDrillEx(uhaEls,p,n,{noNav:true}); else _srailRenderDrill(uhaEls,p,n,{noNav:true}); }
+  var p=list[i];
+  try{ _srailUhaCard(p,n,i); }   // [260724 3차] 좌 연간실적 통 미러 카드(글래스헤더+KPI스트립+1/3KPI·2/3차트)
   catch(_e){ console.warn('[uha show]',_e); e.body.innerHTML='<div class="u-empty" style="padding:22px 8px"><div class="msg">상세를 그리지 못했어요</div></div>'; }
   e.body.scrollTop=0;   // 프로그램 전환 = 상세 상단부터(독립 스크롤 리셋)
   _srailUhaDots();
