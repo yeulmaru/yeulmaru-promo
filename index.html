@@ -2082,6 +2082,10 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 #app.biz-mode #sales-rail .srail{background:rgba(255,255,255,.55)}   /* 우 패널 = 블러 유지 + 흰색 상향(텍스트 가독) — 선택값 .35 supersede(시안 반영) */
 #app.biz-mode #sales-rail #srail-uha{background:rgba(255,255,255,.55)}   /* [260724] 우하단 상세 = .srail과 동일 흰색 상향(가독) · 노출(display)은 _srailUhaSync가 데이터 있을 때만 inline flex — 빈 박스 깜빡임 방지(캘린더 모드·데이터 0 = display:none) */
 #app.biz-mode #biz-main .bizm-box{background:rgba(255,255,255,.55)}   /* 좌 프레임도 동일 */
+/* [260724 운영자] 연간 실적 틀 우측 이식(1단계) — #rail-yrm = biz 모드에서만 노출(좌 연간실적 통 그대로 계승). 기존 판매현황(.srail)·우하단(#srail-uha)·타이틀존은 이 단계에서 가림(코드·데이터 보존 · 운영자 "우측 내용은 그 위에 이식할거니까 대기"). 신규 hex·토큰 0(부품·white alpha 계승). */
+#rail-yrm{display:none}
+#app.biz-mode #sales-rail #rail-yrm{display:block}
+#app.biz-mode #sales-rail>.srail-ttlzone,#app.biz-mode #sales-rail>.srail,#app.biz-mode #sales-rail>#srail-uha{display:none !important}
 /* KPI 스트립 = 흰 카드 1장 + 세로 구분선 4칸(시안 — 개별 글래스 카드 폐지) */
 .bizm-strip{display:flex;background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 10px rgba(74,77,231,.04);margin-bottom:14px;overflow:hidden}
 .bizm-strip .cell{flex:1;min-width:0;padding:14px 18px;border-left:1px solid var(--border)}
@@ -2222,6 +2226,8 @@ html::-webkit-scrollbar{width:8px}
          요약(srail-sum) = 같은 날 후속 지시로 흰 헤더 행(.srail-head, 캘린더 요일바 미러) 안에 복원 — 밴드는 정적 마크업이라 로딩·빈 상태에도 동일 유지.
          분석 보드 진입 = nav 사업현황▸판매 현황. -->
     <aside id="sales-rail" data-panel aria-label="판매 현황 (판매중 공연)">
+      <!-- [260724 운영자] 연간 실적 틀 우측 이식(1단계) — 좌 연간실적 통(_bizmHead+_BIZM_BOX+KPI스트립+차트카드+전체실적표) 그대로 복사. biz 모드에서만 노출(_railYrmRender) · 기존 판매현황(.srail)/우하단(#srail-uha)은 이 단계에서 가림(코드·데이터 보존, 운영자 "우측 내용은 그 위에 이식할거니까 대기") -->
+      <div id="rail-yrm" aria-label="연간 실적 (우측 이식 틀)"></div>
       <div class="srail-ttlzone" id="srail-ttlzone"></div>
       <div class="srail">
         <div class="srail-head" id="srail-head"><span class="srail-ttltext">판매 현황</span><span class="srail-cnt" id="srail-cnt" style="display:none">0</span><div class="srail-sum" id="srail-sum" style="display:none"></div><span id="srail-filter-slot" style="margin-left:auto;display:none;flex-shrink:0;align-items:center;gap:6px;flex-wrap:nowrap"></span><span id="srail-nav-slot" style="margin-left:auto;display:none;flex-shrink:0"></span><span id="chips-rail" style="margin-left:auto;display:inline-flex;align-items:center;flex-shrink:0;padding-left:6px"></span></div><!-- [260723 운영자] 필터 = 판매현황 우상단 — 활성필터칩(filter-slot) + 프로그램 필터 깔때기(chips-rail = 구 좌측 main-area sticky #chips에서 이동, 연간실적 헤더 겹침 해소) -->
@@ -4983,7 +4989,7 @@ function _mvApply(noRail){
   app.classList.toggle('biz-mode',_mainView==='biz');
   _mvSync();
   try{_srailAlignTop();}catch(_e){}
-  if(_mainView==='biz'){ try{_bizInlineRender();}catch(_e){console.warn('[bizm]',_e);} }
+  if(_mainView==='biz'){ try{_bizInlineRender();}catch(_e){console.warn('[bizm]',_e);} try{_railYrmRender();}catch(_e){} }
   if(noRail)return;   // initApp 부트 = 레일 fetch는 기존 게이트(_calP 뒤 _srailInit)가 담당 — 네트워크 우선권(260711) 불변
   // 레일 콘텐츠 = 모드에 맞게 재구성(카드 ⇄ 표). 데이터 있으면 즉시, 없으면 기존 로딩 플로우가 채움.
   if(typeof _salesState!=='undefined'&&_salesState&&_salesState.daily&&_salesState.master&&!_srailBusy){ try{_srailRender();}catch(_e){} }
@@ -5754,6 +5760,36 @@ function _uhaLeftStrip(){
     var cell=function(lab,val,col){return '<div class="cell"><div class="lab">'+lab+'</div><div class="val" style="color:var('+col+')">'+val+'</div></div>';};
     return '<div class="bizm-strip">'+cell('누계 관람·수강',tr.sum.toLocaleString(),'--accent')+cell('최고 연도 ('+years[bi]+')',vals[bi].toLocaleString(),'--text')+cell('연평균',avg.toLocaleString(),'--text')+cell('전년 대비',(dup?'+':'−')+Math.abs(dpct).toFixed(1)+'%',dup?'--green':'--danger')+'</div>';
   }catch(_e){ console.warn('[uha strip]',_e); return ''; }
+}
+// [260724 운영자] 연간 실적 틀 우측 이식(1단계) — 좌 연간실적 통(_bizmHead+_BIZM_BOX+KPI스트립+차트카드+전체실적표)을 우측 레일(#rail-yrm)에 그대로 복사. 정적 틀(차트 = 이식 대기 슬롯) · 부품·토큰 100% 계승(신규 hex·토큰 0). 운영자 "우측 내용은 그 위에 이식할거니까 대기".
+function _railYrmTable(){
+  var years=_YR.years, cols=[2020,2021,2022,2023,2024,2025];
+  var cats=[['공연','--accent'],['전시','--peach-text'],['교육','--green'],['계','--neutral-text']];
+  var rowOf=function(cat){ if(cat==='계')return _yrmTotRow(); var rs=_YR.cats[cat].rows,r=null; rs.forEach(function(x){if(x.key==='인원')r=x;}); return r; };
+  var h='<div class="bizm-card"><div class="ct" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px">전체 실적표'
+    +'<span class="bizm-yrnav" style="color:var(--dim)">'+cols[0]+'~'+cols[cols.length-1]+'<span class="sub" style="margin-left:2px">· 인원 기준</span></span></div>';
+  h+='<div style="padding:0 14px 12px;overflow-x:auto"><table class="bizm-ctbl"><thead><tr><td>구분</td>'+cols.map(function(y){return '<td'+(y===_YR_RECENT?' style="color:var(--accent)"':'')+'>'+y+'</td>';}).join('')+'<td style="color:var(--accent)">누계</td></tr></thead><tbody>';
+  cats.forEach(function(c){
+    var r=rowOf(c[0]); if(!r)return;
+    h+='<tr'+(c[0]==='계'?' class="sum"':'')+'><td class="cat" style="color:var('+c[1]+')">'+c[0]+'</td>'
+      +cols.map(function(y){var yi=years.indexOf(y);return '<td'+(y===_YR_RECENT?' style="font-weight:700"':'')+'>'+_yrFmt(r.v[yi])+'</td>';}).join('')
+      +'<td class="tot" style="color:var('+c[1]+')">'+_yrFmt(r.sum)+'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  return h;
+}
+function _railYrmFrame(){
+  var grand='<span style="font-size:11.5px;color:var(--neutral-text);font-weight:600;white-space:nowrap">누적 <b style="color:var(--accent);font-size:14px;font-weight:800;font-variant-numeric:tabular-nums">'+_YR.grand.toLocaleString()+'명</b></span>';
+  var h='<div style="position:relative">'+_bizmHead(grand,'연간 실적',' 2012~2026.1Q')+_BIZM_BOX;
+  h+=_uhaLeftStrip();
+  h+='<div class="bizm-card"><div class="ct">연도별 관람·수강 추이 <span class="sub">막대=실적 · 선=추세 (만명)</span></div><div style="height:410px;margin:0 6px 6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:600">이식 대기 · 차트 영역</div></div>';
+  h+=_railYrmTable();
+  h+='</div></div>';
+  return h;
+}
+function _railYrmRender(){
+  var el=document.getElementById('rail-yrm'); if(!el)return;
+  try{ el.innerHTML=_railYrmFrame(); }catch(_e){ console.warn('[rail-yrm]',_e); }
 }
 // [260724 운영자 3차] 우하단 카드 = 좌 연간실적 통 미러: 글래스 헤더(프로그램명+공연일 D-day) + KPI 스트립(좌 값 복사) + 차트 카드(1/3 지표[누적점유율·어제대비] + 2/3 차트 우측정렬)
 function _srailUhaCard(p,n,idx){
