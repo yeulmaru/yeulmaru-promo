@@ -2086,6 +2086,23 @@ table.promo-board-table thead th:last-child{border-top-right-radius:11px}
 #rail-yrm{display:none}
 #app.biz-mode #sales-rail #rail-yrm{display:block}
 #app.biz-mode #sales-rail>.srail-ttlzone,#app.biz-mode #sales-rail>.srail,#app.biz-mode #sales-rail>#srail-uha{display:none !important}
+/* [260724 운영자] 2단계 — 판매·진행중 공연·전시 블릿 리스트(KPI 4칸 아래) · 넘치면 기틀 오버레이 스크롤(.srail-body/.srail-uha-body 계승: 평소 width:0 콘텐츠 꽉 + 호버 8px 리빌 · 썸 흑알파 .15). 색 = 표 카테고리색(공연 --accent·전시 --peach-text)·중립 토큰만(신규 hex 0). */
+#rail-yrm-list{max-height:min(58vh,480px);overflow-y:auto;min-height:0;padding:2px 12px 8px;scrollbar-width:none;-ms-overflow-style:none;scrollbar-color:rgba(0,0,0,0.15) transparent}
+#rail-yrm-list::-webkit-scrollbar{width:0;height:0;background:transparent}
+#rail-yrm:hover #rail-yrm-list{scrollbar-width:thin}
+#rail-yrm:hover #rail-yrm-list::-webkit-scrollbar{width:7px}
+#rail-yrm-list::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15);border:0;border-radius:999px}
+#rail-yrm-list::-webkit-scrollbar-track{background:transparent;border:none;margin:0}
+.rail-yrm-li{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--border)}
+.rail-yrm-li:last-child{border-bottom:none}
+.rail-yrm-li .bu{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rail-yrm-li .tx{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.rail-yrm-li .tx b{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-yrm-li .tx .sb{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-yrm-li .dd{font-size:11px;color:var(--neutral-text);font-weight:600;white-space:nowrap;flex-shrink:0}
+.rail-yrm-li .dd b{color:var(--accent);font-variant-numeric:tabular-nums;margin-left:2px}
+.rail-yrm-gc{font-weight:700;color:var(--dim);font-size:11px}
+.rail-yrm-empty{padding:22px 8px;text-align:center;color:var(--dim);font-size:12.5px}
 /* KPI 스트립 = 흰 카드 1장 + 세로 구분선 4칸(시안 — 개별 글래스 카드 폐지) */
 .bizm-strip{display:flex;background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 10px rgba(74,77,231,.04);margin-bottom:14px;overflow:hidden}
 .bizm-strip .cell{flex:1;min-width:0;padding:14px 18px;border-left:1px solid var(--border)}
@@ -5579,6 +5596,7 @@ function _srailRenderInner(els){
     .sort(function(a,b){ var ad=(a._kind==='ex'?a._dday:a.dday), bd=(b._kind==='ex'?b._dday:b.dday); ad=(ad===null||ad===undefined)?9e9:ad; bd=(bd===null||bd===undefined)?9e9:bd; if(ad!==bd)return ad-bd; if(!!a.noData!==!!b.noData)return a.noData?1:-1; return a.occ-b.occ; });
   // [260724 운영자] 2×2 우하단 = 「사업 판매현황」 자동전환 — 상단 목록/드릴 분기와 독립으로 매 렌더 동기(biz 모드에서만 노출, 그 외 숨김·정지)
   try{ _srailUhaSync(actives); }catch(_e){ console.warn('[uha sync]',_e); }
+  try{ _railYrmSync(actives); }catch(_e){ console.warn('[rail-yrm sync]',_e); }   // [260724 운영자] 연간실적 틀 우측 이식(2단계) = 판매중 공연·전시 블릿 리스트 동기
   // 인라인 드릴 상태 — 대상이 갱신 후 사라졌으면(판매·전시 종료 등) 목록으로 복귀
   if(_srailView.mode==='drill'){
     var dp=actives.find(function(x){ return _srailView.kind==='ex'?(x._kind==='ex'&&x.id===_srailView.name):(x._kind==='perf'&&x.name===_srailView.name); });
@@ -5761,35 +5779,51 @@ function _uhaLeftStrip(){
     return '<div class="bizm-strip">'+cell('누계 관람·수강',tr.sum.toLocaleString(),'--accent')+cell('최고 연도 ('+years[bi]+')',vals[bi].toLocaleString(),'--text')+cell('연평균',avg.toLocaleString(),'--text')+cell('전년 대비',(dup?'+':'−')+Math.abs(dpct).toFixed(1)+'%',dup?'--green':'--danger')+'</div>';
   }catch(_e){ console.warn('[uha strip]',_e); return ''; }
 }
-// [260724 운영자] 연간 실적 틀 우측 이식(1단계) — 좌 연간실적 통(_bizmHead+_BIZM_BOX+KPI스트립+차트카드+전체실적표)을 우측 레일(#rail-yrm)에 그대로 복사. 정적 틀(차트 = 이식 대기 슬롯) · 부품·토큰 100% 계승(신규 hex·토큰 0). 운영자 "우측 내용은 그 위에 이식할거니까 대기".
-function _railYrmTable(){
-  var years=_YR.years, cols=[2020,2021,2022,2023,2024,2025];
-  var cats=[['공연','--accent'],['전시','--peach-text'],['교육','--green'],['계','--neutral-text']];
-  var rowOf=function(cat){ if(cat==='계')return _yrmTotRow(); var rs=_YR.cats[cat].rows,r=null; rs.forEach(function(x){if(x.key==='인원')r=x;}); return r; };
-  var h='<div class="bizm-card"><div class="ct" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px">전체 실적표'
-    +'<span class="bizm-yrnav" style="color:var(--dim)">'+cols[0]+'~'+cols[cols.length-1]+'<span class="sub" style="margin-left:2px">· 인원 기준</span></span></div>';
-  h+='<div style="padding:0 14px 12px;overflow-x:auto"><table class="bizm-ctbl"><thead><tr><td>구분</td>'+cols.map(function(y){return '<td'+(y===_YR_RECENT?' style="color:var(--accent)"':'')+'>'+y+'</td>';}).join('')+'<td style="color:var(--accent)">누계</td></tr></thead><tbody>';
-  cats.forEach(function(c){
-    var r=rowOf(c[0]); if(!r)return;
-    h+='<tr'+(c[0]==='계'?' class="sum"':'')+'><td class="cat" style="color:var('+c[1]+')">'+c[0]+'</td>'
-      +cols.map(function(y){var yi=years.indexOf(y);return '<td'+(y===_YR_RECENT?' style="font-weight:700"':'')+'>'+_yrFmt(r.v[yi])+'</td>';}).join('')
-      +'<td class="tot" style="color:var('+c[1]+')">'+_yrFmt(r.sum)+'</td></tr>';
-  });
-  h+='</tbody></table></div></div>';
+// [260724 운영자] 연간 실적 틀 우측 이식(2단계) — 상수 KPI 4칸(_uhaLeftStrip)은 유지, 그 아래 = 판매·진행중 공연·전시 블릿 리스트(공연/전시 구분 · 색 = 표 카테고리색 계승 공연 --accent·전시 --peach-text). 넘치면 기틀 오버레이 스크롤(#rail-yrm-list). 데이터 = _srailRenderInner의 actives(판매중 목록) 재사용(_railYrmSync). 부품·토큰 100% 계승(신규 hex·토큰 0).
+function _railYrmItem(x){
+  var isEx=(x._kind==='ex');
+  var tok=isEx?'--peach-text':'--accent';
+  var sub=isEx?('전시 · '+(x.profit||'')):((x.genre||'기타')+' · '+_anaProfitAxis(x['수익성']));
+  var ddTxt=isEx?((x._endD===null||x._endD===undefined)?'-':_salesDdayStr(x._endD)):(_salesDdayStr(x.dday)||'-');
+  var ddLab=isEx?'종료까지':'공연일';
+  return '<div class="rail-yrm-li"><span class="bu" style="background:var('+tok+')"></span>'
+    +'<span class="tx"><b title="'+escapeHtml(x.name)+'">'+escapeHtml(x.name)+'</b><span class="sb">'+escapeHtml(sub)+'</span></span>'
+    +'<span class="dd">'+ddLab+' <b>'+escapeHtml(ddTxt)+'</b></span></div>';
+}
+function _railYrmListHtml(actives){
+  if(!actives)return '<div class="rail-yrm-empty">'+_ldHtml(14)+'불러오는 중</div>';
+  if(!actives.length)return '<div class="rail-yrm-empty">🎫 지금 판매·진행중인 프로그램이 없어요</div>';
+  var perf=actives.filter(function(x){return x._kind!=='ex';});
+  var ex=actives.filter(function(x){return x._kind==='ex';});
+  var h='';
+  if(perf.length)h+='<div class="bizm-sec">공연 <span class="rail-yrm-gc">'+perf.length+'</span></div>'+perf.map(_railYrmItem).join('');
+  if(ex.length)h+='<div class="bizm-sec"'+(perf.length?' style="margin-top:12px"':'')+'>전시 <span class="rail-yrm-gc">'+ex.length+'</span></div>'+ex.map(_railYrmItem).join('');
   return h;
+}
+function _railYrmCardTitle(actives){
+  return '판매·진행중 공연·전시'+((actives&&actives.length)?' <span class="sub">· '+actives.length+'건</span>':'');
 }
 function _railYrmFrame(){
   var grand='<span style="font-size:11.5px;color:var(--neutral-text);font-weight:600;white-space:nowrap">누적 <b style="color:var(--accent);font-size:14px;font-weight:800;font-variant-numeric:tabular-nums">'+_YR.grand.toLocaleString()+'명</b></span>';
+  var acts=(typeof window!=='undefined')?window._railYrmActives:null;
   var h='<div style="position:relative">'+_bizmHead(grand,'연간 실적',' 2012~2026.1Q')+_BIZM_BOX;
   h+=_uhaLeftStrip();
-  h+='<div class="bizm-card"><div class="ct">연도별 관람·수강 추이 <span class="sub">막대=실적 · 선=추세 (만명)</span></div><div style="height:410px;margin:0 6px 6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:600">이식 대기 · 차트 영역</div></div>';
-  h+=_railYrmTable();
+  h+='<div class="bizm-card"><div class="ct">'+_railYrmCardTitle(acts)+'</div><div id="rail-yrm-list">'+_railYrmListHtml(acts)+'</div></div>';
   h+='</div></div>';
   return h;
 }
 function _railYrmRender(){
   var el=document.getElementById('rail-yrm'); if(!el)return;
   try{ el.innerHTML=_railYrmFrame(); }catch(_e){ console.warn('[rail-yrm]',_e); }
+}
+// 판매중 목록(actives) 도착·갱신마다 리스트만 in-place 갱신(틀·KPI 재생성 없음). 틀 미구축이면 통째 렌더.
+function _railYrmSync(actives){
+  try{ if(typeof window!=='undefined')window._railYrmActives=actives; }catch(_e){}
+  var el=document.getElementById('rail-yrm'); if(!el)return;
+  var list=document.getElementById('rail-yrm-list');
+  if(!list){ _railYrmRender(); return; }
+  list.innerHTML=_railYrmListHtml(actives);
+  var ct=el.querySelector('.bizm-card .ct'); if(ct)ct.innerHTML=_railYrmCardTitle(actives);
 }
 // [260724 운영자 3차] 우하단 카드 = 좌 연간실적 통 미러: 글래스 헤더(프로그램명+공연일 D-day) + KPI 스트립(좌 값 복사) + 차트 카드(1/3 지표[누적점유율·어제대비] + 2/3 차트 우측정렬)
 function _srailUhaCard(p,n,idx){
