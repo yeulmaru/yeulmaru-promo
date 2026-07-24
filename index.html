@@ -5819,7 +5819,36 @@ function _srailUhaDots(){
   e.dots.innerHTML=_uhaCar.list.map(function(x,k){ return '<button class="dot'+(k===i?' on':'')+'" type="button" aria-label="'+(k+1)+'번째 사업" aria-pressed="'+(k===i)+'" onclick="_srailUhaTo('+k+')"></button>'; }).join('');
   if(e.pos)e.pos.textContent=n?((i+1)+' / '+n):'0 / 0';
 }
-// [260724 운영자 3차] 좌 연간실적 KPI 스트립(_yrmRender) 값 그대로 복사 — placeholder(이후 사업 지표로 교체 결정 예정). .bizm-strip 부품 계승.
+// [260724 운영자 한 수 2] 2×2 상세 KPI = 그 프로그램 실지표(연간실적 복사 placeholder 교체 — "어떤 공연을 눌러도 같은 숫자" 해소). .bizm-strip 부품·역할색 그대로 계승(신규 hex 0).
+// 공연 = 누적 판매석 · 오픈석(회차) · 목표 대비 · 판매 경과 — 소스 = _salesBuild(p.seats·totalOpen·목표·_saleN·_roundsN/_rcEst)
+// 전시 = 누계 유료 · 누계 총인원 · 목표 관객 · 목표까지 — 소스 = _srailExhibs(e._paid·_total·_goal)
+function _uhaProgStrip(p){
+  try{
+    var cell=function(lab,val,col){return '<div class="cell"><div class="lab">'+lab+'</div><div class="val" style="color:var('+col+')">'+val+'</div></div>';};
+    var h='<div class="bizm-strip">';
+    if(p._kind==='ex'){
+      var paid=(p._paid!=null)?p._paid.toLocaleString()+'명':'집계 전';
+      var tot=(p._total!=null)?p._total.toLocaleString()+'명':'—';
+      var goal=(p._goal!=null)?p._goal.toLocaleString()+'명':'—';
+      var remain='—',rcol='--text';
+      if(p._goal!=null&&p._paid!=null){ var rv=p._goal-p._paid; remain=(rv>0?rv.toLocaleString()+'명 남음':'달성 +'+Math.abs(rv).toLocaleString()+'명'); rcol=(rv>0?'--danger':'--green'); }
+      h+=cell('누계 유료',paid,'--accent')+cell('누계 총인원',tot,'--text')+cell('목표 관객',goal,'--text')+cell('목표까지',remain,rcol);
+    }else{
+      var seats=(!p.noData&&p.seats!=null)?p.seats.toLocaleString()+'석':'집계 전';
+      var open=(p.totalOpen!=null)?p.totalOpen.toLocaleString()+'석':'—';
+      var rn=p._roundsN||(p._rcSrc==='span'?p._rcEst:null);
+      var tgt=p.목표||50, gap=(p.occ!=null)?(p.occ-tgt):null;
+      var gapTxt=(p.noData||gap===null)?'—':((gap>=0?'+':'')+gap.toFixed(1)+'%p');
+      var saleN=(p._saleN!=null)?(p._saleN+'일차'):((p.dday!==null&&p.dday>0)?'오픈 전':'—');
+      h+=cell('누적 판매석',seats,'--accent')
+        +cell('오픈석'+(rn?' · 회차 '+rn:''),open,'--text')
+        +cell('목표 '+tgt+'% 대비',gapTxt,(gap!==null&&gap<0)?'--danger':'--green')
+        +cell('판매 경과',saleN,'--text');
+    }
+    return h+'</div>';
+  }catch(_e){ console.warn('[uha prog strip]',_e); return ''; }
+}
+// 좌 연간실적 KPI 스트립(_yrmRender 값 복사) — 우측 틀(#rail-yrm) 상수 4칸 전용(운영자 "상수 4개 구간은 놔두고"). .bizm-strip 부품 계승.
 function _uhaLeftStrip(){
   try{
     var tr=_yrmTotRow(); if(!tr||!tr.v)return '';
@@ -5949,7 +5978,7 @@ function _srailUhaCard(p,n,idx){
   var h='<div class="uha-inner">';
   h+='<div class="uha-head"><span class="uha-nm" title="'+escapeHtml(p.name)+'">'+escapeHtml(p.name)+'</span><span class="uha-sub">'+escapeHtml(sub)+'</span>'
     +'<span class="uha-hr">'+(isEx?'종료까지 ':'공연일 ')+'<b>'+escapeHtml(ddTxt)+'</b><span class="uha-auto" aria-hidden="true"><span class="srail-uha-pd"></span>자동 5초 · '+(idx+1)+'/'+n+'</span></span></div>';
-  h+=_uhaLeftStrip();
+  h+=_uhaProgStrip(p);   // [260724 한 수 2] 그 프로그램 실지표(구 _uhaLeftStrip 연간실적 복사 placeholder 교체)
   h+='<div class="bizm-card"><div class="ct">'+(isEx?'일별 달성률 추이':'일자별 누적 점유율 추이')+' <span class="sub">선=누적 · 점선=목표</span></div>'
     +'<div class="uha-chartrow"><div class="uha-kpicol">'
     +'<div class="uha-kpi" style="--kpitok:var(--accent)"><div class="lab">'+occLab+'</div><div class="val">'+occTxt+'</div></div>'
