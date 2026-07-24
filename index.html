@@ -5647,6 +5647,7 @@ function _srailRenderDrill(els,p,activeCount){
 function _srailNavSlot(html){
   var s=document.getElementById('srail-nav-slot'); if(!s)return;
   s.innerHTML=html||''; s.style.display=html?'':'none';
+  s.style.marginLeft=html?'0':'auto';   // [260724 운영자] 드릴 = ← 목록을 좌측(판매현황 제목 옆·헤더 gap 10)으로 · 목록 복귀 = 우측 auto 복원 (뒤로가기가 가운데 부유하던 것 해소)
   if(html){ var f=document.getElementById('srail-filter-slot'); if(f)f.style.display='none'; }   // [260723 운영자] 드릴 진입 = 우상단 필터 숨김(목록 복귀 시 표 렌더가 재표시)
 }
 // 전시 인라인 드릴 — 분석 보드 전시 드릴(_anaExhibDrillRender) 계승: KPI + 일별 달성률 추이(_anaExhibTrend 재사용)
