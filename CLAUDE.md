@@ -103,6 +103,7 @@
 - 루트 `index.html` = 원페이지 프로모 웹앱(라이브 = CNAME 커스텀 도메인 · Cloudflare `wrangler.toml`) · `src/`·`shared/`·`tools/` = 모듈·도구 · `image/`·`signage/` = 자산 · `playground/` = 시안 · `drafts/` = 초안 · `_versions/` = 백업 · `docs/` = 기틀·원장·ingest 스크립트(구 CLAUDE.md 전문 백업 = `docs/CLAUDE_full_backup_260601.md`).
 
 [16]【레포 바인딩】 공통 골격이 참조하는 이 레포의 정본 값 (레포 고유 · 전파 제외)
+- [E1] 서빙 엔트리(실브라우저 현물 확인) = 루트 index.html · 라이브 https://promo.yeulmaru.org/?qa=1 (뷰 딥링크 #cal·#sales·#bizstatus) · 무로그인 QA·실데이터 0.
 - [4] 디자인 진입점 = `docs/디자인기틀.md` + `docs/절대명령2_정본인덱스.md`(위치 인덱스) + `docs/브랜드컬러_확립본.html` · 값 실물 = 루트 `index.html` (⚠ 구 CLAUDE.md의 'docs/디자인기틀_SSOT.md·viewer/index.html' = 오기 — viewer/ 부재 실측 260717).
 - [4] 팔레트 예외 = 선언분 없음.
 - [5] 플레이그라운드 = `playground/`(서빙 경로) · `docs/reports/` · 골격 = `docs/플레이그라운드_포터블.md`.
