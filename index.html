@@ -16104,8 +16104,8 @@ function _validateScheduleChange(rec, newDate, newTime, opts){
   var perf=_findPerfByName(opts.program!=null?opts.program:(rec?rec['프로그램']:''));
   if(perf){
     var _ppe=perf.se||perf.e;
-    // 전 콘텐츠 opt-in: 노출일(홍보시작일) 미지정 프로그램은 신규 홍보 신청 불가.
-    // 과도기 폴백: 노출일 가진 프로그램이 하나도 없으면 opt-in 미적용(구 동작)
+    // 전 콘텐츠 opt-in: 홍보 OFF(명시 홍보노출=N · 미마이그레이션이면 홍보시작일 미지정) 프로그램은 신규 홍보 신청 불가 — 판정 = _promoOn.
+    // 과도기 폴백: 홍보 ON인 프로그램이 하나도 없으면 opt-in 미적용(구 동작)
     if((action==='submit'||action==='copy') && !_promoOn(perf) && (typeof PERFS!=='undefined'&&PERFS.some(function(x){return _promoOn(x);})))return {ok:false, reason:'이 프로그램은 홍보가 꺼져 있어 홍보할 수 없어요 (F3: 복사 포함)'};
     if(perf.ps && newDate<perf.ps)return {ok:false, reason:'홍보 시작('+perf.ps+') 전이라 홍보할 수 없어요'};
     if(_ppe && newDate>_ppe)return {ok:false, reason:'홍보 종료('+_ppe+') 후라 홍보할 수 없어요'};
@@ -17092,8 +17092,11 @@ async function saveProgram(rowIndex){
     }
     if(_errs.length){ showToast('저장할 수 없어요 · '+_errs.join(' · '),'error'); return; }
   }
-  if(!rowIndex){try{await loadPrograms();}catch(_e){}}   // [검증반영] 신규 저장 직전 프로그램 재조회 → _genProgramId 순번을 최신 캐시로 계산(동시/연속 등록 완화). 완전 차단은 Worker 유일성 몫.
-  // ⚠️ 실제 '프로그램' 시트: A~M(폼 관리) + N~Q(구분=장르·공동기획·지원사업·GS아트센터협업 = 운영자 엑셀 수동관리 · 폼 미노출) — 구 저장은 A~M만 써서 N~Q 무접촉 보존.
+  // [260724 · 평의회] 저장 직전 프로그램 시트 재조회 → existing(N~Q 운영자 수동열 포함)·헤더·ID 순번을 최신화.
+  //   헤더 경로는 N~Q를 existing에서 되쓰므로(위치 저장은 A~M만 써서 물리적 무접촉이었음), 관리자 패널 연 뒤 엑셀서 N~Q를 직접 수정한 경우
+  //   stale 되쓰기로 그 수정이 유실될 수 있어 여기서 fresh로 당겨 최소화(잔여 = 재조회~기록 사이 sub-초 레이스만). 신규는 _genProgramId 순번도 최신화.
+  try{ const _d=await api('GET','/api/sheet/program'); _programsCache=(_d.rows||[]).filter(r=>r['NO']!==''&&r['NO']!=null); _programHeaders=(_d.headers||[]); }catch(_e){}
+  // ⚠️ 실제 '프로그램' 시트: A~M(폼 관리) + N~Q(구분=장르·공동기획·지원사업·GS아트센터협업 = 운영자 엑셀 수동관리 · 폼 미노출).
   const existing=rowIndex?(_programsCache.find(p=>p._rowIndex===rowIndex)||null):null;
   // [260724 운영자] 홍보 ON/OFF 명시 플래그 승격 — 토글 상태를 '홍보노출'(Y/N) 열에 저장(빈 홍보시작일에서 파생 X). 읽기는 _promoOn(플래그 우선·구값 폴백).
   const _pid=(existing&&(existing['프로그램ID']||existing['공연ID']))||_genProgramId(fd.get('시작일'));   // L 프로그램ID: 기존 보존, 신규·빈값이면 시작일 기반 생성(YYMMDD_NN)
@@ -17104,17 +17107,21 @@ async function saveProgram(rowIndex){
     'NO':Number(fd.get('NO'))||'', '콘텐츠구분':fd.get('콘텐츠구분')||'', '풀네임':fd.get('풀네임')||'', '줄임말':fd.get('줄임말')||'',
     '판매시작일':isoToExcelSerial(fd.get('판매시작일')), '판매종료일':isoToExcelSerial(fd.get('판매종료일')),
     '시작일':isoToExcelSerial(fd.get('시작일')), '종료일':isoToExcelSerial(fd.get('종료일')),
-    '담당자':fd.get('담당자')||'', '장소':fd.get('장소')||'', 'URL':(fd.get('URL')||'').trim(),
+    '담당자':fd.get('담당자')||'', '장소':fd.get('장소')||'',
     '홍보시작일':isoToExcelSerial(fd.get('홍보시작일')), '홍보노출':_promoFlag
   };
+  // [평의회] URL 헤더명은 시트마다 다를 수 있음(읽기 폴백 = URL|공연 URL|상세 링크|링크). 실제 헤더 키로 매핑 — 안 그러면 헤더 경로에서 'URL' 리터럴이 어느 헤더와도 안 맞아 폼의 URL 수정이 유실되고 옛값이 되쓰기됨.
+  const _urlKey=['URL','공연 URL','상세 링크','링크'].filter(function(k){return _programHeaders.indexOf(k)>=0;})[0]||'URL';
+  _fx[_urlKey]=(fd.get('URL')||'').trim();
   let values;
-  // 헤더 기반 안전 배선: '홍보노출' 헤더가 실제 시트에 있을 때만 헤더 순서대로 재구성(N~Q 운영자 수동열은 existing에서 보존, 플래그는 제자리에).
-  //   헤더가 아직 없으면(미마이그레이션) 구 A~M 13열 그대로 = N~Q 무접촉·동작 무변(운영자가 시트 맨 끝에 '홍보노출' 헤더 1칸 추가하면 그때부터 플래그 활성 — 예측제외·임시저장과 동일 점진 이행).
-  if(_programHeaders && _programHeaders.indexOf('홍보노출')>=0){
+  // [평의회] 헤더 경로는 '홍보노출' 헤더가 실재 + 헤더에 중복/공백(2+) 없음일 때만(handleGetSheet last-wins 오염 방지). 아니면 구 A~M 13열 위치 저장 = N~Q 무접촉·동작 무변.
+  //   (운영자가 시트 맨 끝에 '홍보노출' 헤더 1칸 추가하면 그때부터 플래그 활성 — 예측제외·임시저장과 동일 점진 이행.)
+  const _hdrPath = !!(_programHeaders && _programHeaders.indexOf('홍보노출')>=0 && (new Set(_programHeaders).size===_programHeaders.length));
+  if(_hdrPath){
     values=_programHeaders.map(function(h){
       if(h==='프로그램ID'||h==='공연ID') return _pid;
       if(Object.prototype.hasOwnProperty.call(_fx,h)) return _fx[h];
-      return existing?(existing[h]!=null?existing[h]:''):'';   // 그 외(운영자 수동열) = 기존값 보존, 신규는 빈값
+      return existing?(existing[h]!=null?existing[h]:''):'';   // 그 외(운영자 수동열 N~Q) = 기존값 보존, 신규는 빈값
     });
   }else{
     values=[
