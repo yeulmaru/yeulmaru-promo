@@ -3521,6 +3521,8 @@ function _qaEnter(){
   try{ var _l=document.getElementById('login'); if(_l)_l.style.display='none'; }catch(e){}
   try{ _enterApp(); }catch(e){ console.error('[QA] _enterApp fail',e); }
   _qaBanner();
+  try{ window.addEventListener('hashchange', _qaDeepLink); }catch(e){}
+  _qaDeepLink();   // ?qa=1#<메뉴id> 딥링크 = 해당 네비 버튼 클릭 재사용
   console.log('[QA] entered without MS auth · role='+(window._QA_ROLE||'user')+' · real API disabled');
 }
 async function _qaApi(method,path){
@@ -3539,6 +3541,23 @@ function _qaBanner(){
     b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;color:var(--surface-solid);background:var(--accent);opacity:.93;letter-spacing:.3px;pointer-events:none';
     (document.body||document.documentElement).appendChild(b);
   }catch(e){}
+}
+/* [QA] 뷰 딥링크 — ?qa=1#<화면>으로 그 화면 직행. 기존 네비 버튼(data-mid)을 그대로 .click() = 새 라우팅 창작 없음.
+   화면 id = biz(대시보드)·cal(캘린더)·prodreg(상품등록)·promoapply(홍보)·sales(사업실적)·bizstatus(사업현황)·content(콘텐츠)·playzone. */
+function _qaDeepLink(){
+  if(!window._QA) return;
+  var raw=(location.hash||'').replace(/^#/,'').trim().toLowerCase();
+  if(!raw) return;
+  var ids=['biz','cal','prodreg','promoapply','sales','bizstatus','content','playzone'];
+  var alias={dashboard:'biz',dash:'biz',home:'biz',calendar:'cal',year:'bizstatus',status:'bizstatus',product:'prodreg',prod:'prodreg',promo:'promoapply',apply:'promoapply',sale:'sales',play:'playzone'};
+  var id = ids.indexOf(raw)>=0 ? raw : (alias[raw]||null);
+  if(!id){ try{console.warn('[QA] 알 수 없는 딥링크 해시:',raw,'· 사용가능=',ids.join('/'));}catch(e){} return; }
+  var tries=0;
+  (function go(){
+    var b=document.querySelector('.nav-btn[data-mid="'+id+'"]');
+    if(b){ try{ b.click(); console.log('[QA] deep-link →',id); }catch(e){ try{console.error('[QA] deep-link click fail',e);}catch(_){} } return; }
+    if(tries++<40){ setTimeout(go,100); }   // nav 빌드 대기(최대 ~4초)
+  })();
 }
 (function(){if(window._QA){try{_qaEnter();}catch(_qe){console.error('[QA] enter fail',_qe);}return;}try{localStorage.removeItem('myApplicant');localStorage.removeItem('myUserDept');}catch(e){}const s=sessionStorage.getItem('pw');if(s){var _lk=null;try{_lk=sessionStorage.getItem('_lockedAt');}catch(e){} if(_lk){try{if(!_loginEmail)_loginEmail=(sessionStorage.getItem('myEmail')||'').trim();}catch(e){} lockScreen();}else{_enterAppFromSession();_msalHasLiveSession();}}else{var _rp=null;try{_rp=localStorage.getItem('_resumePin');}catch(e){} if(_rp){try{localStorage.removeItem('_resumePin');}catch(e){} _loginEmail=_rp; if(typeof startLoginShader==='function'){try{startLoginShader();}catch(e){}} if(typeof goToPinStep==='function'){setTimeout(function(){goToPinStep(true);},0);}else{if(typeof initLoginScreen==='function')initLoginScreen();}}else{if(typeof initLoginScreen==='function')initLoginScreen();}}})();
 
