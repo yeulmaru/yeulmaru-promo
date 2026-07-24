@@ -210,6 +210,24 @@ async function graphPatch(token, path, body) {
 }
 __name(graphPatch, "graphPatch");
 
+// [260724] graphPatch + transient(429/423/5xx) 재시도(graphGet과 동일 백오프). 홍보노출 플래그 single-cell write 견고화용.
+async function graphPatchRetry(token, path, body) {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((res) => setTimeout(res, 200 * attempt));
+    try { return await graphPatch(token, path, body); }
+    catch (e) {
+      lastErr = e;
+      const m = String((e && e.message) || "").match(/PATCH (\d+)/);
+      const st = m ? parseInt(m[1]) : 0;
+      if (st === 429 || st === 423 || st >= 500) continue;   // transient만 재시도, 4xx 등은 즉시 throw
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+__name(graphPatchRetry, "graphPatchRetry");
+
 async function findFile(token) {
   if (fileCache.driveId && Date.now() < fileCache.expires) return { driveId: fileCache.driveId, itemId: fileCache.itemId };
   const site = await graphGet(token, `/sites/${SP.siteHost}:${SP.sitePath}`);
@@ -377,10 +395,15 @@ __name(handleGetSheet, "handleGetSheet");
 
 async function handleAddSheetRow(token, sheetName, body, role, slug) {
   const { driveId, itemId } = await findFile(token);
-  const { rows } = await handleGetSheet(token, sheetName);
+  const { headers, rows } = await handleGetSheet(token, sheetName);
   const nextRow = rows.length > 0 ? Math.max(...rows.map((r) => r._rowIndex)) + 1 : 2;
   const lastCol = colLetter(body.values.length);
   await graphPatch(token, `${sheetPathFor(driveId, itemId, sheetName)}/range(address='A${nextRow}:${lastCol}${nextRow}')`, { values: [body.values] });
+  // [260724] 프로그램 홍보 ON/OFF 플래그 = '홍보노출' 열 단일 셀로 별도 기록(본 A~M 저장과 분리 → N~Q 운영자 수동열 무접촉). best-effort: 실패해도 본 저장 유지.
+  if (slug === "program" && body.promoFlag != null) {
+    try { await writeProgramPromoFlag(token, driveId, itemId, sheetName, nextRow, body.promoFlag, headers); }
+    catch (e) { console.error("promo flag write (add)", e); }
+  }
   if (slug !== "log") await logToSheet(token, role, "CREATE", sheetName, nextRow, summarize(body.values));
   invalidateSheetCache(slug);
   return { ok: true, row: nextRow };
@@ -391,11 +414,37 @@ async function handleUpdateSheetRow(token, sheetName, row, body, role, slug) {
   const { driveId, itemId } = await findFile(token);
   const lastCol = colLetter(body.values.length);
   await graphPatch(token, `${sheetPathFor(driveId, itemId, sheetName)}/range(address='A${row}:${lastCol}${row}')`, { values: [body.values] });
+  // [260724] 홍보 ON/OFF 플래그 = '홍보노출' 열 단일 셀 별도 기록(N~Q 무접촉). best-effort: 실패해도 본 A~M 저장은 이미 성공.
+  if (slug === "program" && body.promoFlag != null) {
+    try { await writeProgramPromoFlag(token, driveId, itemId, sheetName, row, body.promoFlag); }
+    catch (e) { console.error("promo flag write (update)", e); }
+  }
   if (slug !== "log") await logToSheet(token, role, "UPDATE", sheetName, row, summarize(body.values));
   invalidateSheetCache(slug);
   return { ok: true };
 }
 __name(handleUpdateSheetRow, "handleUpdateSheetRow");
+
+// [260724] 프로그램 '홍보노출'(Y/N) 명시 플래그를 그 열 단일 셀에만 기록 — 본 A~M 위치 저장과 분리해 N~Q(구분=장르 등 운영자 수동열)를 어떤 write 범위에도 넣지 않음(물리적 무접촉).
+//   '홍보노출' 헤더가 없으면 맨 끝(1행)에 자동 보강(예측제외·임시저장과 동일 이행 → 배포만으로 활성, 운영자 수동 스텝 0). 호출부가 try/catch(best-effort).
+async function writeProgramPromoFlag(token, driveId, itemId, sheetName, row, flagVal, knownHeaders) {
+  let headers = knownHeaders;
+  if (!headers) {
+    const hdr = await graphGet(token, `${sheetPathFor(driveId, itemId, sheetName)}/usedRange?$select=values`);
+    headers = (hdr.values && hdr.values[0]) ? hdr.values[0] : [];
+  }
+  let idx = headers.indexOf("홍보노출");   // '홍보노출' 0-based col index
+  if (idx < 0) {
+    // [평의회] 보강 위치를 usedRange 폭이 아니라 '스키마 예약 블록 뒤'로 하드 고정 — A~M(폼 13) + N~Q(운영자 수동 4) = A~Q(1~17) 예약.
+    //   맨 오른쪽 수동열(N~Q)이 비어 usedRange가 M~P에서 끊겨도 '홍보노출'이 N~Q(14~17) 안으로 절대 안 들어가게 하한 17(→ colLetter(18)=R열) 적용 = N~Q 무접촉 불변식 보장.
+    idx = Math.max(headers.length, 17);
+    const hc = colLetter(idx + 1);
+    await graphPatchRetry(token, `${sheetPathFor(driveId, itemId, sheetName)}/range(address='${hc}1:${hc}1')`, { values: [["홍보노출"]] });
+  }
+  const fc = colLetter(idx + 1);
+  await graphPatchRetry(token, `${sheetPathFor(driveId, itemId, sheetName)}/range(address='${fc}${row}:${fc}${row}')`, { values: [[flagVal]] });
+}
+__name(writeProgramPromoFlag, "writeProgramPromoFlag");
 
 async function handleDeleteSheetRow(token, sheetName, row, role, slug) {
   const { driveId, itemId } = await findFile(token);
