@@ -105,6 +105,7 @@
 
 [16]【레포 바인딩】 공통 골격이 참조하는 이 레포의 정본 값 (레포 고유 · 전파 제외)
 - [E1] 서빙 엔트리(실브라우저 현물 확인) = 루트 index.html · 라이브 https://promo.yeulmaru.org/?qa=1 (뷰 딥링크 #cal·#sales·#bizstatus) · 무로그인 QA·실데이터 0.
+- [E13] QA경로 = 루트 index.html ?qa=1 (뷰 #cal·#sales·#bizstatus · 시드 ?annual) · 대표데이터 = QA 목/빈(최악케이스 대표데이터 심기 예정).
 - [4] 디자인 진입점 = `docs/디자인기틀.md` + `docs/절대명령2_정본인덱스.md`(위치 인덱스) + `docs/브랜드컬러_확립본.html` · 값 실물 = 루트 `index.html` (⚠ 구 CLAUDE.md의 'docs/디자인기틀_SSOT.md·viewer/index.html' = 오기 — viewer/ 부재 실측 260717).
 - [4] 팔레트 예외 = 선언분 없음.
 - [5] 플레이그라운드 = `playground/`(서빙 경로) · `docs/reports/` · 골격 = `docs/플레이그라운드_포터블.md`.
