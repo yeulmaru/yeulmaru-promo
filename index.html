@@ -4771,9 +4771,9 @@ function _srailAlignTop(){
       var _capH=0;
       if(bmB&&bmB.offsetParent!==null&&_bx){ _capH=Math.round(_bx.getBoundingClientRect().bottom-bmB.getBoundingClientRect().top); }
       else if(bmB&&bmB.offsetParent!==null&&bmB.offsetHeight>0){ _capH=bmB.offsetHeight; }
-      // [260724 운영자] 우하단 상세(#srail-uha) 노출 시 = .srail을 좌 박스 높이로 '핀'(flex:0 0)해 하단 정렬 고정 → 남는 아래공간을 우하단이 flex:1로 흡수(2×2). 우하단 없으면 종전대로 maxHeight만(flex:1 채움).
+      // [260724 운영자 2차] 우하단 상세(#srail-uha) 노출 시 = .srail을 '내용 높이'(flex:0 1 auto, 상한 = 좌 박스 capH)로 → 판매 행이 적으면 표가 그만큼만 차지하고 남는 아래공간을 우하단이 flex:1로 끌어올려 흡수(빈 갭 제거). 행이 많으면 capH에서 표 내부 스크롤. 우하단 없으면 종전대로 maxHeight만(flex:1 채움).
       var _uha=document.getElementById('srail-uha'), _uhaOn=(_uha&&_uha.getAttribute('data-on')==='1');
-      if(_capH>0){ sbB.style.maxHeight=_capH+'px'; if(_uhaOn){ sbB.style.height=_capH+'px'; sbB.style.flex='0 0 auto'; } else { sbB.style.height=''; sbB.style.flex=''; } }
+      if(_capH>0){ sbB.style.maxHeight=_capH+'px'; if(_uhaOn){ sbB.style.height=''; sbB.style.flex='0 1 auto'; } else { sbB.style.height=''; sbB.style.flex=''; } }
       else { sbB.style.maxHeight=''; sbB.style.height=''; sbB.style.flex=''; }
     }
     return;
